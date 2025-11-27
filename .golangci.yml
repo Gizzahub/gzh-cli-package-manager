@@ -1,3 +1,5 @@
+version: 2
+
 run:
   timeout: 5m
   tests: true
@@ -6,19 +8,20 @@ run:
 linters:
   enable:
     - errcheck      # Check for unchecked errors
-    - gosimple      # Simplify code
     - govet         # Examine Go source code and reports suspicious constructs
     - ineffassign   # Detect ineffectual assignments
-    - staticcheck   # Static analysis
+    - staticcheck   # Static analysis (includes gosimple)
     - unused        # Check for unused constants, variables, functions and types
-    - gofmt         # Check whether code was gofmt-ed
-    - goimports     # Check import statements are formatted correctly
     - misspell      # Finds commonly misspelled English words
     - revive        # Fast, configurable, extensible, flexible linter
     - gosec         # Inspect source code for security problems
     - unconvert     # Remove unnecessary type conversions
     - prealloc      # Find slice declarations that could potentially be pre-allocated
     - nolintlint    # Reports ill-formed or insufficient nolint directives
+    - gocyclo       # Check cyclomatic complexity (ADR-002 requirement)
+    - goconst       # Find repeated strings that could be constants
+    - godot         # Check comments end in period
+    - unparam       # Find unused function parameters
 
 linters-settings:
   errcheck:
@@ -29,8 +32,19 @@ linters-settings:
     check-shadowing: true
     enable-all: true
 
-  gofmt:
-    simplify: true
+  gocyclo:
+    # Maximum cyclomatic complexity (ADR-002 requirement: < 15)
+    min-complexity: 15
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  godot:
+    scope: declarations
+    exclude:
+      - "^TODO:"
+      - "^FIXME:"
 
   revive:
     rules:
@@ -38,6 +52,13 @@ linters-settings:
         severity: warning
       - name: package-comments
         severity: warning
+      - name: var-naming
+        severity: warning
+
+  stylecheck:
+    checks: ["all", "-ST1000", "-ST1003"]
+    # ST1000: Incorrect or missing package comment
+    # ST1003: Underscores in package names
 
   gosec:
     excludes:
@@ -50,16 +71,27 @@ issues:
       linters:
         - gosec
         - errcheck
+        - gocyclo
+        - dupl
 
     # Exclude doc.go files from requiring package comments
     - path: doc\.go
       linters:
         - revive
+        - stylecheck
+
+    # Exclude generated files
+    - path: ".*\\.pb\\.go"
+      linters:
+        - all
 
   max-issues-per-linter: 0
   max-same-issues: 0
+  new: false
 
 output:
   format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
+  uniq-by-line: true
+  sort-results: true
