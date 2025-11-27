@@ -35,6 +35,30 @@ func (m *mockLogger) Info(_ context.Context, _ string, _ ...output.Field)       
 func (m *mockLogger) Warn(_ context.Context, _ string, _ ...output.Field)           {}
 func (m *mockLogger) Error(_ context.Context, _ string, _ error, _ ...output.Field) {}
 
+func TestAdapter_GetConfigPath(t *testing.T) {
+	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command == brewCommand && args[0] == "--prefix" {
+			return &output.ExecutionResult{
+				Stdout:   "/usr/local\n",
+				ExitCode: 0,
+			}, nil
+		}
+		return &output.ExecutionResult{ExitCode: 1}, nil
+	}
+
+	adapter := NewAdapter(&mockExecutor{execFunc: execFunc}, &mockLogger{})
+	path, err := adapter.GetConfigPath(context.Background())
+
+	if err != nil {
+		t.Errorf("GetConfigPath() unexpected error: %v", err)
+	}
+
+	// Should return Homebrew prefix path
+	if path == "" {
+		t.Error("GetConfigPath() returned empty path")
+	}
+}
+
 func TestAdapter_Detect(t *testing.T) {
 	tests := []struct {
 		name     string

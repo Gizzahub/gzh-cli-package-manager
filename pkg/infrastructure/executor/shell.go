@@ -36,11 +36,18 @@ func (e *ShellExecutor) Execute(ctx context.Context, command string, args ...str
 
 	err := cmd.Run()
 
+	exitCode := -1
+	success := false
+	if cmd.ProcessState != nil {
+		exitCode = cmd.ProcessState.ExitCode()
+		success = cmd.ProcessState.Success()
+	}
+
 	result := &output.ExecutionResult{
 		Stdout:   stdout.String(),
 		Stderr:   stderr.String(),
-		ExitCode: cmd.ProcessState.ExitCode(),
-		Success:  cmd.ProcessState.Success(),
+		ExitCode: exitCode,
+		Success:  success,
 	}
 
 	if err != nil {
@@ -76,11 +83,18 @@ func (e *ShellExecutor) ExecuteWithInput(ctx context.Context, input string, comm
 
 	err := cmd.Run()
 
+	exitCode := -1
+	success := false
+	if cmd.ProcessState != nil {
+		exitCode = cmd.ProcessState.ExitCode()
+		success = cmd.ProcessState.Success()
+	}
+
 	result := &output.ExecutionResult{
 		Stdout:   stdout.String(),
 		Stderr:   stderr.String(),
-		ExitCode: cmd.ProcessState.ExitCode(),
-		Success:  cmd.ProcessState.Success(),
+		ExitCode: exitCode,
+		Success:  success,
 	}
 
 	if err != nil {
