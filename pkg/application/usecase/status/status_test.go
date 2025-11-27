@@ -446,3 +446,299 @@ func TestUseCase_GetStatus_DTOMapping(t *testing.T) {
 		t.Errorf("UpdatableCount = %v, want 1", status.UpdatableCount)
 	}
 }
+func TestUseCase_GetStatus_VerboseMode(t *testing.T) {
+	now := time.Now()
+
+	tests := []struct {
+		name            string
+		verbose         bool
+		mockManagers    []*manager.Manager
+		wantPackagesLen map[manager.ManagerID]int
+	}{
+		{
+			name:    "verbose mode populates packages",
+			verbose: true,
+			mockManagers: []*manager.Manager{
+				{
+					ID:          manager.ManagerNPM,
+					Name:        "NPM",
+					Type:        manager.TypeLanguage,
+					Installed:   true,
+					Version:     "10.5.0",
+					Status:      manager.StatusHealthy,
+					LastChecked: now,
+					Packages: []manager.Package{
+						{
+							Name:             "react",
+							CurrentVersion:   "18.0.0",
+							AvailableVersion: "18.2.0",
+							UpdateType:       manager.UpdateMinor,
+							Description:      "React library",
+						},
+						{
+							Name:           "vue",
+							CurrentVersion: "3.0.0",
+							UpdateType:     manager.UpdateNone,
+							Description:    "Vue framework",
+						},
+					},
+				},
+			},
+			wantPackagesLen: map[manager.ManagerID]int{
+				manager.ManagerNPM: 2,
+			},
+		},
+		{
+			name:    "non-verbose mode does not populate packages",
+			verbose: false,
+			mockManagers: []*manager.Manager{
+				{
+					ID:          manager.ManagerNPM,
+					Name:        "NPM",
+					Type:        manager.TypeLanguage,
+					Installed:   true,
+					Version:     "10.5.0",
+					Status:      manager.StatusHealthy,
+					LastChecked: now,
+					Packages: []manager.Package{
+						{
+							Name:           "react",
+							CurrentVersion: "18.0.0",
+							UpdateType:     manager.UpdateNone,
+						},
+					},
+				},
+			},
+			wantPackagesLen: map[manager.ManagerID]int{
+				manager.ManagerNPM: 0, // Should be empty in non-verbose mode
+			},
+		},
+		{
+			name:    "verbose mode only populates installed managers",
+			verbose: true,
+			mockManagers: []*manager.Manager{
+				{
+					ID:          manager.ManagerNPM,
+					Name:        "NPM",
+					Installed:   true,
+					LastChecked: now,
+					Packages: []manager.Package{
+						{Name: "pkg1", CurrentVersion: "1.0.0"},
+					},
+				},
+				{
+					ID:          manager.ManagerPip,
+					Name:        "Pip",
+					Installed:   false, // Not installed
+					LastChecked: now,
+					Packages:    []manager.Package{}, // Should not be populated even if present
+				},
+			},
+			wantPackagesLen: map[manager.ManagerID]int{
+				manager.ManagerNPM: 1,
+				manager.ManagerPip: 0, // Not installed, so no packages
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &mockRepository{
+				findAllFunc: func(_ context.Context) ([]*manager.Manager, error) {
+					return tt.mockManagers, nil
+				},
+			}
+			logger := &mockLogger{}
+			uc := NewUseCase(repo, logger)
+
+			req := &dto.StatusRequest{
+				Verbose: tt.verbose,
+			}
+
+			resp, err := uc.GetStatus(context.Background(), req)
+			if err != nil {
+				t.Fatalf("GetStatus() unexpected error: %v", err)
+			}
+
+			// Verify package population for each manager
+			for _, mgrStatus := range resp.Managers {
+				expectedLen, exists := tt.wantPackagesLen[mgrStatus.ID]
+				if !exists {
+					continue
+				}
+
+				if len(mgrStatus.Packages) != expectedLen {
+					t.Errorf("Manager %s: got %d packages, want %d",
+						mgrStatus.ID, len(mgrStatus.Packages), expectedLen)
+				}
+			}
+		})
+	}
+}
+
+func TestUseCase_GetStatus_VerbosePackageMapping(t *testing.T) {
+	now := time.Now()
+
+	inputPackages := []manager.Package{
+		{
+			Name:             "typescript",
+			CurrentVersion:   "5.0.0",
+			AvailableVersion: "5.3.0",
+			UpdateType:       manager.UpdateMinor,
+			Description:      "TypeScript compiler",
+		},
+		{
+			Name:             "eslint",
+			CurrentVersion:   "8.0.0",
+			AvailableVersion: "9.0.0",
+			UpdateType:       manager.UpdateMajor,
+			Description:      "Linting tool",
+		},
+	}
+
+	repo := &mockRepository{
+		findAllFunc: func(_ context.Context) ([]*manager.Manager, error) {
+			return []*manager.Manager{
+				{
+					ID:          manager.ManagerNPM,
+					Name:        "NPM",
+					Installed:   true,
+					LastChecked: now,
+					Packages:    inputPackages,
+				},
+			}, nil
+		},
+	}
+	logger := &mockLogger{}
+	uc := NewUseCase(repo, logger)
+
+	req := &dto.StatusRequest{Verbose: true}
+	resp, err := uc.GetStatus(context.Background(), req)
+
+	if err != nil {
+		t.Fatalf("GetStatus() unexpected error: %v", err)
+	}
+
+	if len(resp.Managers) != 1 {
+		t.Fatalf("Expected 1 manager, got %d", len(resp.Managers))
+	}
+
+	mgrStatus := resp.Managers[0]
+	if len(mgrStatus.Packages) != 2 {
+		t.Fatalf("Expected 2 packages, got %d", len(mgrStatus.Packages))
+	}
+
+	// Verify first package mapping
+	pkg1 := mgrStatus.Packages[0]
+	if pkg1.Name != "typescript" {
+		t.Errorf("Package[0].Name = %v, want typescript", pkg1.Name)
+	}
+	if pkg1.CurrentVersion != "5.0.0" {
+		t.Errorf("Package[0].CurrentVersion = %v, want 5.0.0", pkg1.CurrentVersion)
+	}
+	if pkg1.AvailableVersion != "5.3.0" {
+		t.Errorf("Package[0].AvailableVersion = %v, want 5.3.0", pkg1.AvailableVersion)
+	}
+	if pkg1.UpdateType != manager.UpdateMinor {
+		t.Errorf("Package[0].UpdateType = %v, want %v", pkg1.UpdateType, manager.UpdateMinor)
+	}
+	if pkg1.Description != "TypeScript compiler" {
+		t.Errorf("Package[0].Description = %v, want TypeScript compiler", pkg1.Description)
+	}
+
+	// Verify second package mapping
+	pkg2 := mgrStatus.Packages[1]
+	if pkg2.Name != "eslint" {
+		t.Errorf("Package[1].Name = %v, want eslint", pkg2.Name)
+	}
+	if pkg2.UpdateType != manager.UpdateMajor {
+		t.Errorf("Package[1].UpdateType = %v, want %v", pkg2.UpdateType, manager.UpdateMajor)
+	}
+}
+
+func TestUseCase_GetStatus_VerboseWithMultipleManagers(t *testing.T) {
+	now := time.Now()
+
+	repo := &mockRepository{
+		findAllFunc: func(_ context.Context) ([]*manager.Manager, error) {
+			return []*manager.Manager{
+				{
+					ID:          manager.ManagerNPM,
+					Name:        "NPM",
+					Installed:   true,
+					LastChecked: now,
+					Packages: []manager.Package{
+						{Name: "npm-pkg1", CurrentVersion: "1.0.0"},
+						{Name: "npm-pkg2", CurrentVersion: "2.0.0"},
+					},
+				},
+				{
+					ID:          manager.ManagerPip,
+					Name:        "Pip",
+					Installed:   true,
+					LastChecked: now,
+					Packages: []manager.Package{
+						{Name: "pip-pkg1", CurrentVersion: "3.0.0"},
+					},
+				},
+				{
+					ID:          manager.ManagerHomebrew,
+					Name:        "Homebrew",
+					Installed:   false, // Not installed
+					LastChecked: now,
+					Packages:    []manager.Package{},
+				},
+			}, nil
+		},
+	}
+	logger := &mockLogger{}
+	uc := NewUseCase(repo, logger)
+
+	req := &dto.StatusRequest{Verbose: true}
+	resp, err := uc.GetStatus(context.Background(), req)
+
+	if err != nil {
+		t.Fatalf("GetStatus() unexpected error: %v", err)
+	}
+
+	if len(resp.Managers) != 3 {
+		t.Fatalf("Expected 3 managers, got %d", len(resp.Managers))
+	}
+
+	// Verify NPM has packages
+	npmMgr := findManagerByID(resp.Managers, manager.ManagerNPM)
+	if npmMgr == nil {
+		t.Fatal("NPM manager not found")
+	}
+	if len(npmMgr.Packages) != 2 {
+		t.Errorf("NPM: expected 2 packages, got %d", len(npmMgr.Packages))
+	}
+
+	// Verify Pip has packages
+	pipMgr := findManagerByID(resp.Managers, manager.ManagerPip)
+	if pipMgr == nil {
+		t.Fatal("Pip manager not found")
+	}
+	if len(pipMgr.Packages) != 1 {
+		t.Errorf("Pip: expected 1 package, got %d", len(pipMgr.Packages))
+	}
+
+	// Verify Homebrew has no packages (not installed)
+	brewMgr := findManagerByID(resp.Managers, manager.ManagerHomebrew)
+	if brewMgr == nil {
+		t.Fatal("Homebrew manager not found")
+	}
+	if len(brewMgr.Packages) != 0 {
+		t.Errorf("Homebrew: expected 0 packages (not installed), got %d", len(brewMgr.Packages))
+	}
+}
+
+// Helper function to find manager by ID in response.
+func findManagerByID(managers []*dto.ManagerStatus, id manager.ManagerID) *dto.ManagerStatus {
+	for _, mgr := range managers {
+		if mgr.ID == id {
+			return mgr
+		}
+	}
+	return nil
+}
