@@ -1,15 +1,24 @@
 package command
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/dto"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/input"
 	"github.com/spf13/cobra"
 )
 
 var (
 	statusVerbose bool
 	statusOutput  string
+	statusUseCase input.StatusUseCase
 )
+
+// SetStatusUseCase injects the status use case dependency.
+func SetStatusUseCase(uc input.StatusUseCase) {
+	statusUseCase = uc
+}
 
 // statusCmd represents the status command.
 var statusCmd = &cobra.Command{
@@ -20,12 +29,49 @@ var statusCmd = &cobra.Command{
 Shows which managers are installed, their versions, and package counts.
 Use --verbose for detailed information including health checks.`,
 	Run: func(_ *cobra.Command, _ []string) {
-		// TODO: Implement status command logic
+		if statusUseCase == nil {
+			fmt.Println("❌ Error: Status use case not initialized")
+			return
+		}
+
+		ctx := context.Background()
+		req := &dto.StatusRequest{
+			Verbose: statusVerbose,
+			Refresh: false,
+		}
+
+		resp, err := statusUseCase.GetStatus(ctx, req)
+		if err != nil {
+			fmt.Printf("❌ Error: %v\n", err)
+			return
+		}
+
+		// Display results
 		fmt.Println("📋 Package Manager Status")
 		fmt.Println()
-		fmt.Println("Implementation coming soon...")
-		fmt.Println()
-		fmt.Printf("Flags: verbose=%v, output=%s\n", statusVerbose, statusOutput)
+
+		for _, mgr := range resp.Managers {
+			statusIcon := "⛔"
+			if mgr.Installed {
+				statusIcon = "✅"
+			}
+
+			fmt.Printf("%s %s (%s)\n", statusIcon, mgr.Name, mgr.Type)
+			if mgr.Installed {
+				fmt.Printf("   Version: %s\n", mgr.Version)
+				fmt.Printf("   Status: %s\n", mgr.Status)
+				fmt.Printf("   Packages: %d (Updates: %d)\n", mgr.PackageCount, mgr.UpdatableCount)
+			}
+			fmt.Println()
+		}
+
+		// Display summary
+		fmt.Println("📊 Summary")
+		fmt.Printf("   Total Managers: %d\n", resp.Summary.TotalManagers)
+		fmt.Printf("   Installed: %d\n", resp.Summary.InstalledManagers)
+		fmt.Printf("   Healthy: %d\n", resp.Summary.HealthyManagers)
+		fmt.Printf("   Total Packages: %d\n", resp.Summary.TotalPackages)
+		fmt.Printf("   Updates Available: %d\n", resp.Summary.UpdatablePackages)
 	},
 }
 
