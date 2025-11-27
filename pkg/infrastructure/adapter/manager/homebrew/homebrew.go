@@ -106,20 +106,20 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	// Parse JSON output
 	var brewInfo struct {
 		Formulae []struct {
-			Name            string   `json:"name"`
-			FullName        string   `json:"full_name"`
-			Desc            string   `json:"desc"`
-			Version         string   `json:"version"`
+			Name              string `json:"name"`
+			FullName          string `json:"full_name"`
+			Desc              string `json:"desc"`
+			Version           string `json:"version"`
 			InstalledOnDemand bool   `json:"installed_on_demand"`
-			Versions        struct {
+			Versions          struct {
 				Stable string `json:"stable"`
 			} `json:"versions"`
 		} `json:"formulae"`
 		Casks []struct {
-			Token   string `json:"token"`
+			Token   string   `json:"token"`
 			Name    []string `json:"name"`
-			Desc    string `json:"desc"`
-			Version string `json:"version"`
+			Desc    string   `json:"desc"`
+			Version string   `json:"version"`
 		} `json:"casks"`
 	}
 

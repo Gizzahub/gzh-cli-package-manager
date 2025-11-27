@@ -45,8 +45,8 @@ type Status string
 
 // Health status values.
 const (
-	StatusHealthy     Status = "healthy"      // Manager is installed and working
-	StatusDegraded    Status = "degraded"     // Manager works but has issues
-	StatusUnavailable Status = "unavailable"  // Manager is not installed
-	StatusError       Status = "error"        // Manager has errors
+	StatusHealthy     Status = "healthy"     // Manager is installed and working
+	StatusDegraded    Status = "degraded"    // Manager works but has issues
+	StatusUnavailable Status = "unavailable" // Manager is not installed
+	StatusError       Status = "error"       // Manager has errors
 )

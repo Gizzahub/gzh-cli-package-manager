@@ -2,7 +2,9 @@ package command
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/dto"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/input"
@@ -55,61 +57,82 @@ Example:
 			return
 		}
 
-		// Display results
-		fmt.Println("📋 Package Manager Status")
-		fmt.Println()
+		// Handle output format
+		switch statusOutput {
+		case "json":
+			displayJSON(resp)
+		case "text":
+			displayText(resp)
+		default:
+			fmt.Printf("❌ Error: Unknown output format: %s\n", statusOutput)
+			fmt.Println("Supported formats: text, json")
+		}
+	},
+}
 
-		for _, mgr := range resp.Managers {
-			statusIcon := "⛔"
-			if mgr.Installed {
-				statusIcon = "✅"
-			}
+func displayText(resp *dto.StatusResponse) {
+	// Display results
+	fmt.Println("📋 Package Manager Status")
+	fmt.Println()
 
-			fmt.Printf("%s %s (%s)\n", statusIcon, mgr.Name, mgr.Type)
-			if mgr.Installed {
-				fmt.Printf("   Version: %s\n", mgr.Version)
-				fmt.Printf("   Status: %s\n", mgr.Status)
-				fmt.Printf("   Packages: %d (Updates: %d)\n", mgr.PackageCount, mgr.UpdatableCount)
-
-				// Show package details in verbose mode
-				if statusVerbose && len(mgr.Packages) > 0 {
-					fmt.Println("   ")
-					// Show up to 10 packages
-					limit := len(mgr.Packages)
-					if limit > 10 {
-						limit = 10
-					}
-
-					for i := 0; i < limit; i++ {
-						pkg := mgr.Packages[i]
-						updateIcon := "  "
-						if pkg.UpdateType != "" && pkg.UpdateType != "none" {
-							updateIcon = "⬆️ "
-						}
-
-						fmt.Printf("   %s %s %s", updateIcon, pkg.Name, pkg.CurrentVersion)
-						if pkg.AvailableVersion != "" {
-							fmt.Printf(" → %s", pkg.AvailableVersion)
-						}
-						fmt.Println()
-					}
-
-					if len(mgr.Packages) > 10 {
-						fmt.Printf("   ... and %d more packages\n", len(mgr.Packages)-10)
-					}
-				}
-			}
-			fmt.Println()
+	for _, mgr := range resp.Managers {
+		statusIcon := "⛔"
+		if mgr.Installed {
+			statusIcon = "✅"
 		}
 
-		// Display summary
-		fmt.Println("📊 Summary")
-		fmt.Printf("   Total Managers: %d\n", resp.Summary.TotalManagers)
-		fmt.Printf("   Installed: %d\n", resp.Summary.InstalledManagers)
-		fmt.Printf("   Healthy: %d\n", resp.Summary.HealthyManagers)
-		fmt.Printf("   Total Packages: %d\n", resp.Summary.TotalPackages)
-		fmt.Printf("   Updates Available: %d\n", resp.Summary.UpdatablePackages)
-	},
+		fmt.Printf("%s %s (%s)\n", statusIcon, mgr.Name, mgr.Type)
+		if mgr.Installed {
+			fmt.Printf("   Version: %s\n", mgr.Version)
+			fmt.Printf("   Status: %s\n", mgr.Status)
+			fmt.Printf("   Packages: %d (Updates: %d)\n", mgr.PackageCount, mgr.UpdatableCount)
+
+			// Show package details in verbose mode
+			if statusVerbose && len(mgr.Packages) > 0 {
+				fmt.Println("   ")
+				// Show up to 10 packages
+				limit := len(mgr.Packages)
+				if limit > 10 {
+					limit = 10
+				}
+
+				for i := 0; i < limit; i++ {
+					pkg := mgr.Packages[i]
+					updateIcon := "  "
+					if pkg.UpdateType != "" && pkg.UpdateType != "none" {
+						updateIcon = "⬆️ "
+					}
+
+					fmt.Printf("   %s %s %s", updateIcon, pkg.Name, pkg.CurrentVersion)
+					if pkg.AvailableVersion != "" {
+						fmt.Printf(" → %s", pkg.AvailableVersion)
+					}
+					fmt.Println()
+				}
+
+				if len(mgr.Packages) > 10 {
+					fmt.Printf("   ... and %d more packages\n", len(mgr.Packages)-10)
+				}
+			}
+		}
+		fmt.Println()
+	}
+
+	// Display summary
+	fmt.Println("📊 Summary")
+	fmt.Printf("   Total Managers: %d\n", resp.Summary.TotalManagers)
+	fmt.Printf("   Installed: %d\n", resp.Summary.InstalledManagers)
+	fmt.Printf("   Healthy: %d\n", resp.Summary.HealthyManagers)
+	fmt.Printf("   Total Packages: %d\n", resp.Summary.TotalPackages)
+	fmt.Printf("   Updates Available: %d\n", resp.Summary.UpdatablePackages)
+}
+
+func displayJSON(resp *dto.StatusResponse) {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(resp); err != nil {
+		fmt.Fprintf(os.Stderr, "❌ Error encoding JSON: %v\n", err)
+	}
 }
 
 func init() {

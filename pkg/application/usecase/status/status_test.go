@@ -93,8 +93,8 @@ func TestUseCase_GetStatus_AllManagers(t *testing.T) {
 		wantErr         bool
 	}{
 		{
-			name: "no managers",
-			mockManagers: []*manager.Manager{},
+			name:            "no managers",
+			mockManagers:    []*manager.Manager{},
 			wantManagersLen: 0,
 			wantInstalled:   0,
 			wantHealthy:     0,

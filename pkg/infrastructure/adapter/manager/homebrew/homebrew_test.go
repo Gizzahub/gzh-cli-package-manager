@@ -30,9 +30,9 @@ func (m *mockExecutor) ExecuteWithInput(_ context.Context, _ string, _ string, _
 // mockLogger implements output.Logger for testing.
 type mockLogger struct{}
 
-func (m *mockLogger) Debug(_ context.Context, _ string, _ ...output.Field)      {}
-func (m *mockLogger) Info(_ context.Context, _ string, _ ...output.Field)       {}
-func (m *mockLogger) Warn(_ context.Context, _ string, _ ...output.Field)       {}
+func (m *mockLogger) Debug(_ context.Context, _ string, _ ...output.Field)          {}
+func (m *mockLogger) Info(_ context.Context, _ string, _ ...output.Field)           {}
+func (m *mockLogger) Warn(_ context.Context, _ string, _ ...output.Field)           {}
 func (m *mockLogger) Error(_ context.Context, _ string, _ error, _ ...output.Field) {}
 
 func TestAdapter_Detect(t *testing.T) {
