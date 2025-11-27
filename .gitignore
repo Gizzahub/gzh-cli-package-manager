@@ -1,0 +1,66 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+coverage.html
+*.coverprofile
+
+# Go workspace file
+go.work
+
+# Build artifacts
+/bin/
+/build/
+/dist/
+/tmp/
+pmctl
+pmctl-*
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Dependency directories
+vendor/
+
+# Environment and configuration
+.env
+.env.local
+*.local
+
+# Logs
+*.log
+logs/
+
+# Test caches and temporary files
+.cache/
+*.tmp
+
+# CI/CD artifacts
+.artifacts/
+
+# Documentation build artifacts
+docs/_build/
+
+# OS-specific files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# pmctl specific
+.pmctl/
+!.pmctl/.gitkeep
