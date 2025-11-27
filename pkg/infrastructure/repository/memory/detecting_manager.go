@@ -9,6 +9,7 @@ import (
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	adapterpkg "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/apt"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/homebrew"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/npm"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/pacman"
@@ -44,13 +45,12 @@ func NewDetectingManagerRepository(executor output.CommandExecutor, logger outpu
 
 // registerAdapters initializes adapters for supported package managers.
 func (r *DetectingManagerRepository) registerAdapters() {
-	// Register Homebrew adapter
+	// Register system package managers
+	r.adapters[manager.ManagerApt] = apt.NewAdapter(r.executor, r.logger)
 	r.adapters[manager.ManagerHomebrew] = homebrew.NewAdapter(r.executor, r.logger)
-
-	// Register Pacman adapter
 	r.adapters[manager.ManagerPacman] = pacman.NewAdapter(r.executor, r.logger)
 
-	// Register NPM adapter
+	// Register language package managers
 	r.adapters[manager.ManagerNPM] = npm.NewAdapter(r.executor, r.logger)
 
 	// TODO: Register other adapters as they are implemented
