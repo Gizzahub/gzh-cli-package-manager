@@ -55,6 +55,27 @@ type ManagerStatus struct {
 
 	// ConfigPath is the path to the manager configuration.
 	ConfigPath string
+
+	// Packages is the list of packages (only populated in verbose mode).
+	Packages []PackageInfo
+}
+
+// PackageInfo contains information about a package.
+type PackageInfo struct {
+	// Name is the package name.
+	Name string
+
+	// CurrentVersion is the installed version.
+	CurrentVersion string
+
+	// AvailableVersion is the latest available version (empty if no update).
+	AvailableVersion string
+
+	// UpdateType indicates the type of update (none, patch, minor, major).
+	UpdateType manager.UpdateType
+
+	// Description is a brief description of the package.
+	Description string
 }
 
 // StatusSummary provides aggregate statistics across all managers.

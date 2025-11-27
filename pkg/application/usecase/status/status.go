@@ -73,6 +73,22 @@ func (uc *UseCase) GetStatus(ctx context.Context, req *dto.StatusRequest) (*dto.
 			BinaryPath:     mgr.BinaryPath,
 			ConfigPath:     mgr.ConfigPath,
 		}
+
+		// Include package details in verbose mode
+		if req.Verbose && mgr.Installed {
+			packages := make([]dto.PackageInfo, 0, len(mgr.Packages))
+			for _, pkg := range mgr.Packages {
+				packages = append(packages, dto.PackageInfo{
+					Name:             pkg.Name,
+					CurrentVersion:   pkg.CurrentVersion,
+					AvailableVersion: pkg.AvailableVersion,
+					UpdateType:       pkg.UpdateType,
+					Description:      pkg.Description,
+				})
+			}
+			status.Packages = packages
+		}
+
 		managerStatuses = append(managerStatuses, status)
 
 		// Update summary
