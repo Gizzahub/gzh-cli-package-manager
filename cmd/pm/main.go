@@ -16,10 +16,10 @@ func main() {
 		os.Exit(0)
 	}
 
-	fmt.Println("pmctl - Package Manager Control")
+	fmt.Println("gz-pm - Package Manager Control")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Println("  pmctl --version    Show version information")
+	fmt.Println("  gz-pm --version    Show version information")
 	fmt.Println()
 	fmt.Println("Full CLI implementation coming soon...")
 }

@@ -22,6 +22,8 @@ go.work
 /build/
 /dist/
 /tmp/
+gz-pm
+gz-pm-*
 pmctl
 pmctl-*
 
@@ -61,6 +63,8 @@ Thumbs.db
 .AppleDouble
 .LSOverride
 
-# pmctl specific
+# Application specific
 .pmctl/
 !.pmctl/.gitkeep
+.gz-pm/
+!.gz-pm/.gitkeep

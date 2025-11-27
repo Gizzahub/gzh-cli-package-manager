@@ -39,7 +39,7 @@ func Get() Info {
 
 // String returns a formatted version string.
 func (i Info) String() string {
-	return fmt.Sprintf("pmctl version %s (%s) %s %s",
+	return fmt.Sprintf("gz-pm version %s (%s) %s %s",
 		i.Version,
 		i.GitCommit,
 		i.Platform,
