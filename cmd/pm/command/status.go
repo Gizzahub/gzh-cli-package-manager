@@ -11,7 +11,7 @@ var (
 	statusOutput  string
 )
 
-// statusCmd represents the status command
+// statusCmd represents the status command.
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Display package manager status",
@@ -19,7 +19,7 @@ var statusCmd = &cobra.Command{
 
 Shows which managers are installed, their versions, and package counts.
 Use --verbose for detailed information including health checks.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// TODO: Implement status command logic
 		fmt.Println("📋 Package Manager Status")
 		fmt.Println()

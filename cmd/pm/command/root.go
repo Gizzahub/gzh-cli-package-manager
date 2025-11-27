@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	// rootCmd represents the base command when called without any subcommands
+	// rootCmd represents the base command when called without any subcommands.
 	rootCmd = &cobra.Command{
 		Use:   "gz-pm",
 		Short: "Package Manager Control - Unified package manager orchestration",

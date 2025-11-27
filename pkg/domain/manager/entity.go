@@ -69,6 +69,7 @@ type Package struct {
 // UpdateType represents the semantic versioning update type.
 type UpdateType string
 
+// Update type classifications.
 const (
 	UpdateNone  UpdateType = "none"  // No update available
 	UpdatePatch UpdateType = "patch" // Patch version update (x.x.X)

@@ -14,7 +14,7 @@ var (
 	updateOutput   string
 )
 
-// updateCmd represents the update command
+// updateCmd represents the update command.
 var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update package managers and packages",
@@ -32,7 +32,7 @@ Examples:
 
   # Use specific update strategy
   gz-pm update --all --strategy stable`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// TODO: Implement update command logic
 		fmt.Println("📦 Package Manager Update")
 		fmt.Println()

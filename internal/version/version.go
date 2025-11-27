@@ -1,3 +1,4 @@
+// Package version provides build and version information for gz-pm.
 package version
 
 import (

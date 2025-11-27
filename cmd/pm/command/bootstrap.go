@@ -12,7 +12,7 @@ var (
 	bootstrapDryRun      bool
 )
 
-// bootstrapCmd represents the bootstrap command
+// bootstrapCmd represents the bootstrap command.
 var bootstrapCmd = &cobra.Command{
 	Use:   "bootstrap",
 	Short: "Bootstrap package managers on a new system",
@@ -30,7 +30,7 @@ Examples:
 
   # Preview what would be installed
   gz-pm bootstrap --config mysetup.yaml --dry-run`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// TODO: Implement bootstrap command logic
 		fmt.Println("🚀 Package Manager Bootstrap")
 		fmt.Println()
