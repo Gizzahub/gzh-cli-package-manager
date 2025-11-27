@@ -1,10 +1,10 @@
 .PHONY: help build build-all install clean test test-unit test-integration test-e2e test-coverage lint lint-fix fmt vet check-go-version deps
 
 # Variables
-BINARY_NAME=pmctl
+BINARY_NAME=gz-pm
 BUILD_DIR=./build
 BIN_DIR=./bin
-CMD_DIR=./cmd/pmctl
+CMD_DIR=./cmd/pm
 PKG_DIRS=$(shell go list ./... | grep -v /vendor/)
 
 # Build variables
@@ -27,7 +27,7 @@ COLOR_BLUE=\033[34m
 ##@ General
 
 help: ## Display this help message
-	@echo "$(COLOR_BOLD)pmctl Makefile$(COLOR_RESET)"
+	@echo "$(COLOR_BOLD)gz-pm Makefile$(COLOR_RESET)"
 	@echo ""
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make $(COLOR_BLUE)<target>$(COLOR_RESET)\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  $(COLOR_BLUE)%-20s$(COLOR_RESET) %s\n", $$1, $$2 } /^##@/ { printf "\n$(COLOR_BOLD)%s$(COLOR_RESET)\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
@@ -49,7 +49,7 @@ deps: check-go-version ## Download dependencies
 
 ##@ Build
 
-build: check-go-version ## Build pmctl binary
+build: check-go-version ## Build gz-pm binary
 	@echo "$(COLOR_YELLOW)Building $(BINARY_NAME)...$(COLOR_RESET)"
 	@mkdir -p $(BIN_DIR)
 	@go build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) $(CMD_DIR)
@@ -82,7 +82,7 @@ build-all: check-go-version ## Build binaries for all platforms
 	@echo "$(COLOR_GREEN)✓ Built all platform binaries in $(BUILD_DIR)/$(COLOR_RESET)"
 	@ls -lh $(BUILD_DIR)/
 
-install: build ## Install pmctl to /usr/local/bin
+install: build ## Install gz-pm to /usr/local/bin
 	@echo "$(COLOR_YELLOW)Installing $(BINARY_NAME) to /usr/local/bin...$(COLOR_RESET)"
 	@sudo cp $(BIN_DIR)/$(BINARY_NAME) /usr/local/bin/
 	@echo "$(COLOR_GREEN)✓ Installed: /usr/local/bin/$(BINARY_NAME)$(COLOR_RESET)"
@@ -154,8 +154,8 @@ lint-fix: ## Run golangci-lint with auto-fix
 
 ##@ Development
 
-dev: ## Build and run pmctl in development mode
-	@echo "$(COLOR_YELLOW)Running pmctl in development mode...$(COLOR_RESET)"
+dev: ## Build and run gz-pm in development mode
+	@echo "$(COLOR_YELLOW)Running gz-pm in development mode...$(COLOR_RESET)"
 	@go run $(CMD_DIR) $(ARGS)
 
 watch: ## Watch for changes and rebuild (requires entr)

@@ -44,7 +44,7 @@ jobs:
         GOARCH: ${{ matrix.goarch }}
         CGO_ENABLED: 0
       run: |
-        OUTPUT_NAME=pmctl-${{ matrix.goos }}-${{ matrix.goarch }}
+        OUTPUT_NAME=gz-pm-${{ matrix.goos }}-${{ matrix.goarch }}
         if [ "${{ matrix.goos }}" = "windows" ]; then
           OUTPUT_NAME="${OUTPUT_NAME}.exe"
         fi
@@ -55,13 +55,13 @@ jobs:
             -X github.com/gizzahub/gzh-cli-package-manager/internal/version.GitCommit=$(git rev-parse --short HEAD) \
             -X github.com/gizzahub/gzh-cli-package-manager/internal/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
           -o "build/${OUTPUT_NAME}" \
-          ./cmd/pmctl
+          ./cmd/pm
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: pmctl-${{ matrix.goos }}-${{ matrix.goarch }}
-        path: build/pmctl-*
+        name: gz-pm-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: build/gz-pm-*
 
   release:
     name: Release

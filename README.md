@@ -1,4 +1,4 @@
-# pmctl - Package Manager Control
+# gz-pm - Package Manager Control
 
 > **Unified package manager orchestration for multi-platform development environments**
 
@@ -6,13 +6,13 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-## 🎯 What is pmctl?
+## 🎯 What is gz-pm?
 
-`pmctl` (Package Manager Control) is a CLI tool that orchestrates multiple package managers across your system, providing a unified interface for updates, configuration, and management.
+`gz-pm` (Package Manager Control) is a CLI tool that orchestrates multiple package managers across your system, providing a unified interface for updates, configuration, and management.
 
 **Problem**: Modern development environments use multiple package managers (Homebrew, npm, pip, asdf, apt, etc.), each with different commands, update processes, and configurations.
 
-**Solution**: pmctl provides a single, consistent interface to manage them all.
+**Solution**: gz-pm provides a single, consistent interface to manage them all.
 
 ```bash
 # Instead of:
@@ -23,7 +23,7 @@ pip install --upgrade pip
 sdk selfupdate && sdk update
 
 # Just run:
-pmctl update --all
+gz-pm update --all
 ```
 
 ## ✨ Features
@@ -44,13 +44,13 @@ pmctl update --all
 
 ```bash
 brew tap gizzahub/tap
-brew install pmctl
+brew install gz-pm
 ```
 
 ### Go Install
 
 ```bash
-go install github.com/gizzahub/gzh-cli-package-manager/cmd/pmctl@latest
+go install github.com/gizzahub/gzh-cli-package-manager/cmd/pm@latest
 ```
 
 ### From Source
@@ -72,46 +72,46 @@ Download pre-built binaries from [GitHub Releases](https://github.com/gizzahub/g
 
 ```bash
 # Update all detected package managers
-pmctl update --all
+gz-pm update --all
 
 # Preview changes without executing
-pmctl update --all --dry-run
+gz-pm update --all --dry-run
 
 # Update specific managers only
-pmctl update --managers brew,asdf,npm
+gz-pm update --managers brew,asdf,npm
 
 # JSON output for scripting
-pmctl update --all --output json
+gz-pm update --all --output json
 ```
 
 ### Check Status
 
 ```bash
 # View installed managers and their status
-pmctl status
+gz-pm status
 
 # Detailed status with package counts
-pmctl status --verbose
+gz-pm status --verbose
 ```
 
 ### Bootstrap a New System
 
 ```bash
 # Install and configure from a config file
-pmctl bootstrap --config mysetup.yaml
+gz-pm bootstrap --config mysetup.yaml
 
 # Interactive setup wizard
-pmctl bootstrap --interactive
+gz-pm bootstrap --interactive
 ```
 
 ### Export Configuration
 
 ```bash
 # Export current setup to YAML
-pmctl export --output mysetup.yaml
+gz-pm export --output mysetup.yaml
 
 # Include specific managers only
-pmctl export --managers brew,asdf --output brew-asdf.yaml
+gz-pm export --managers brew,asdf --output brew-asdf.yaml
 ```
 
 ## 📋 Supported Package Managers
@@ -133,7 +133,7 @@ pmctl export --managers brew,asdf --output brew-asdf.yaml
 ## 🎨 Example Output
 
 ```text
-📦 Package Manager Update - pmctl v1.0.0
+📦 Package Manager Update - gz-pm v1.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🔍 Performing pre-flight checks...
@@ -185,7 +185,7 @@ pmctl export --managers brew,asdf --output brew-asdf.yaml
 
 ## 🏗️ Architecture
 
-pmctl follows **Clean Architecture** with **Hexagonal (Ports & Adapters)** pattern:
+gz-pm follows **Clean Architecture** with **Hexagonal (Ports & Adapters)** pattern:
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -249,7 +249,7 @@ make install
 
 ```
 gzh-cli-package-manager/
-├── cmd/pmctl/              # CLI entry point
+├── cmd/pm/                 # CLI entry point
 ├── pkg/
 │   ├── domain/            # Core business logic (entities, interfaces)
 │   ├── application/       # Use cases and workflows
