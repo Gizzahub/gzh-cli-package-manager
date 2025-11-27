@@ -10,9 +10,12 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	adapterpkg "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/apt"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/asdf"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cargo"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/homebrew"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/npm"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/pacman"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/pip"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
@@ -52,11 +55,11 @@ func (r *DetectingManagerRepository) registerAdapters() {
 
 	// Register language package managers
 	r.adapters[manager.ManagerNPM] = npm.NewAdapter(r.executor, r.logger)
+	r.adapters[manager.ManagerPip] = pip.NewAdapter(r.executor, r.logger)
+	r.adapters[manager.ManagerCargo] = cargo.NewAdapter(r.executor, r.logger)
 
-	// TODO: Register other adapters as they are implemented
-	// r.adapters[manager.ManagerPip] = pip.NewAdapter(r.executor, r.logger)
-	// r.adapters[manager.ManagerCargo] = cargo.NewAdapter(r.executor, r.logger)
-	// etc.
+	// Register version managers
+	r.adapters[manager.ManagerASDF] = asdf.NewAdapter(r.executor, r.logger)
 }
 
 // FindAll returns all managers with detection performed.
