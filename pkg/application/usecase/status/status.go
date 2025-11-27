@@ -1,3 +1,6 @@
+// Package status implements the status use case for querying package manager status.
+// It orchestrates fetching manager information from the repository and
+// converting domain entities to DTOs for presentation.
 package status
 
 import (
