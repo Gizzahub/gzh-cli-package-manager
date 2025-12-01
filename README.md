@@ -59,7 +59,7 @@ go install github.com/gizzahub/gzh-cli-package-manager/cmd/pm@latest
 git clone https://github.com/gizzahub/gzh-cli-package-manager.git
 cd gzh-cli-package-manager
 make build
-sudo make install  # Installs to /usr/local/bin
+make install  # Installs to $GOPATH/bin (no sudo required)
 ```
 
 ### Binary Releases

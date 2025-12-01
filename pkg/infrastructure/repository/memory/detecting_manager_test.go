@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"runtime"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
@@ -37,6 +38,14 @@ func (m *mockLogger) Warn(_ context.Context, _ string, _ ...output.Field)       
 func (m *mockLogger) Error(_ context.Context, _ string, _ error, _ ...output.Field) {}
 
 func TestDetectingManagerRepository_FindAll(t *testing.T) {
+	// Expected manager count varies by platform
+	// Darwin/macOS: 5 (homebrew, asdf, npm, pip, cargo)
+	// Linux: 7 (+ apt, pacman)
+	expectedManagerCount := 5
+	if runtime.GOOS == "linux" {
+		expectedManagerCount = 7
+	}
+
 	tests := []struct {
 		name              string
 		execFunc          func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
@@ -49,7 +58,7 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 				// All 'which' commands fail
 				return &output.ExecutionResult{ExitCode: 1}, nil
 			},
-			wantTotalManagers: 7, // All default managers
+			wantTotalManagers: expectedManagerCount,
 			wantInstalled:     0,
 		},
 		{
@@ -93,7 +102,7 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 				}
 				return &output.ExecutionResult{ExitCode: 1}, nil
 			},
-			wantTotalManagers: 7,
+			wantTotalManagers: expectedManagerCount,
 			wantInstalled:     1,
 		},
 	}

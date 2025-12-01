@@ -82,10 +82,18 @@ build-all: check-go-version ## Build binaries for all platforms
 	@echo "$(COLOR_GREEN)✓ Built all platform binaries in $(BUILD_DIR)/$(COLOR_RESET)"
 	@ls -lh $(BUILD_DIR)/
 
-install: build ## Install gz-pm to /usr/local/bin
-	@echo "$(COLOR_YELLOW)Installing $(BINARY_NAME) to /usr/local/bin...$(COLOR_RESET)"
-	@sudo cp $(BIN_DIR)/$(BINARY_NAME) /usr/local/bin/
-	@echo "$(COLOR_GREEN)✓ Installed: /usr/local/bin/$(BINARY_NAME)$(COLOR_RESET)"
+install: build ## Install gz-pm to GOPATH/bin (no sudo required)
+	@if [ -z "$(GOPATH)" ]; then \
+		echo "$(COLOR_YELLOW)⚠ GOPATH not set, using default: $(HOME)/go$(COLOR_RESET)"; \
+		GOPATH_BIN="$(HOME)/go/bin"; \
+	else \
+		GOPATH_BIN="$(GOPATH)/bin"; \
+	fi; \
+	echo "$(COLOR_YELLOW)Installing $(BINARY_NAME) to $$GOPATH_BIN...$(COLOR_RESET)"; \
+	mkdir -p $$GOPATH_BIN; \
+	cp $(BIN_DIR)/$(BINARY_NAME) $$GOPATH_BIN/$(BINARY_NAME); \
+	echo "$(COLOR_GREEN)✓ Installed: $$GOPATH_BIN/$(BINARY_NAME)$(COLOR_RESET)"; \
+	echo "$(COLOR_YELLOW)Note: Ensure $$GOPATH_BIN is in your PATH$(COLOR_RESET)"
 
 clean: ## Remove build artifacts
 	@echo "$(COLOR_YELLOW)Cleaning build artifacts...$(COLOR_RESET)"

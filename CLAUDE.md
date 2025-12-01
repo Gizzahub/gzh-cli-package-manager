@@ -25,8 +25,8 @@ make build
 # Build for all platforms (macOS, Linux, Windows)
 make build-all
 
-# Install to /usr/local/bin
-sudo make install
+# Install to $GOPATH/bin (no sudo required)
+make install
 
 # Run in development mode
 make dev ARGS="--version"
