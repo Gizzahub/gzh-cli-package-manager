@@ -8,6 +8,11 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
 
+// Test-specific constants
+const (
+	pipConfigPath = "~/.pip/pip.conf"
+)
+
 // mockExecutor implements output.CommandExecutor for testing.
 type mockExecutor struct {
 	execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
@@ -209,7 +214,7 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 	if err != nil {
 		t.Errorf("GetConfigPath() error = %v", err)
 	}
-	if got != "~/.pip/pip.conf" {
+	if got != pipConfigPath {
 		t.Errorf("GetConfigPath() = %v, want ~/.pip/pip.conf", got)
 	}
 }

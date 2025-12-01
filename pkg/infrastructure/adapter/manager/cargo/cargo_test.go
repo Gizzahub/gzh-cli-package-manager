@@ -8,6 +8,11 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
 
+// Test-specific constants
+const (
+	versionFlag = "--version"
+)
+
 // mockExecutor implements output.CommandExecutor for testing.
 type mockExecutor struct {
 	execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
@@ -93,7 +98,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "valid version output",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == cargoCommand && len(args) == 1 && args[0] == "--version" {
+				if command == cargoCommand && len(args) == 1 && args[0] == versionFlag {
 					return &output.ExecutionResult{
 						Stdout:   "cargo 1.75.0 (1d8b05cdd 2023-11-20)\n",
 						ExitCode: 0,
@@ -280,7 +285,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "healthy system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == cargoCommand && len(args) == 1 && args[0] == "--version" {
+				if command == cargoCommand && len(args) == 1 && args[0] == versionFlag {
 					return &output.ExecutionResult{
 						Stdout:   "cargo 1.75.0 (1d8b05cdd 2023-11-20)\n",
 						ExitCode: 0,
@@ -294,7 +299,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "degraded system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == cargoCommand && args[0] == "--version" {
+				if command == cargoCommand && args[0] == versionFlag {
 					return &output.ExecutionResult{
 						Stderr:   "error: failed to run cargo\n",
 						ExitCode: 1,

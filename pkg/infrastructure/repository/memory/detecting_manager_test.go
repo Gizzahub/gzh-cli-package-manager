@@ -9,6 +9,14 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
 
+// Test-specific constants
+const (
+	npmCommand    = "npm"
+	pip3Command   = "pip3"
+	versionFlag   = "--version"
+	listCommand   = "list"
+)
+
 // mockExecutor implements output.CommandExecutor for testing.
 type mockExecutor struct {
 	execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
@@ -64,13 +72,13 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 		{
 			name: "npm detected",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 && args[0] == "npm" {
+				if command == "which" && len(args) == 1 && args[0] == npmCommand {
 					return &output.ExecutionResult{
 						Stdout:   "/usr/bin/npm\n",
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == "--version" {
+				if command == "npm" && args[0] == versionFlag {
 					return &output.ExecutionResult{
 						Stdout:   "10.0.0\n",
 						ExitCode: 0,
@@ -82,7 +90,7 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == "list" {
+				if command == "npm" && args[0] == listCommand {
 					return &output.ExecutionResult{
 						Stdout:   `{"dependencies": {}}`,
 						ExitCode: 0,
@@ -153,19 +161,19 @@ func TestDetectingManagerRepository_FindInstalled(t *testing.T) {
 		{
 			name: "pip detected",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 && args[0] == "pip3" {
+				if command == "which" && len(args) == 1 && args[0] == pip3Command {
 					return &output.ExecutionResult{
 						Stdout:   "/usr/bin/pip3\n",
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "pip3" && args[0] == "--version" {
+				if command == "pip3" && args[0] == versionFlag {
 					return &output.ExecutionResult{
 						Stdout:   "pip 23.0.1 from /usr/lib/python3.11/site-packages/pip (python 3.11)\n",
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "pip3" && args[0] == "list" {
+				if command == "pip3" && args[0] == listCommand {
 					return &output.ExecutionResult{
 						Stdout:   `[{"name": "pip", "version": "23.0.1"}]`,
 						ExitCode: 0,
@@ -230,13 +238,13 @@ func TestDetectingManagerRepository_FindByID(t *testing.T) {
 			name:      "npm installed",
 			managerID: manager.ManagerNPM,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && args[0] == "npm" {
+				if command == "which" && args[0] == npmCommand {
 					return &output.ExecutionResult{
 						Stdout:   "/usr/bin/npm\n",
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == "--version" {
+				if command == "npm" && args[0] == versionFlag {
 					return &output.ExecutionResult{
 						Stdout:   "10.0.0\n",
 						ExitCode: 0,
@@ -248,7 +256,7 @@ func TestDetectingManagerRepository_FindByID(t *testing.T) {
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == "list" {
+				if command == "npm" && args[0] == listCommand {
 					return &output.ExecutionResult{
 						Stdout:   `{"dependencies": {}}`,
 						ExitCode: 0,

@@ -8,6 +8,11 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
 
+// Test-specific constants
+const (
+	versionArg = "version"
+)
+
 // mockExecutor implements output.CommandExecutor for testing.
 type mockExecutor struct {
 	execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
@@ -93,7 +98,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "valid version output",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == asdfCommand && len(args) == 1 && args[0] == "version" {
+				if command == asdfCommand && len(args) == 1 && args[0] == versionArg {
 					return &output.ExecutionResult{
 						Stdout:   "v0.13.1\n",
 						ExitCode: 0,
@@ -288,7 +293,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "healthy system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == asdfCommand && len(args) == 1 && args[0] == "version" {
+				if command == asdfCommand && len(args) == 1 && args[0] == versionArg {
 					return &output.ExecutionResult{
 						Stdout:   "v0.13.1\n",
 						ExitCode: 0,
@@ -302,7 +307,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "degraded system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == asdfCommand && args[0] == "version" {
+				if command == asdfCommand && args[0] == versionArg {
 					return &output.ExecutionResult{
 						Stderr:   "error: asdf not properly installed\n",
 						ExitCode: 1,
