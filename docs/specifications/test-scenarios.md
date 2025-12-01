@@ -733,9 +733,9 @@ RUN apt-get update && apt-get install -y \
 # Install asdf
 RUN git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
 
-# Install pmctl
-COPY pmctl /usr/local/bin/pmctl
-RUN chmod +x /usr/local/bin/pmctl
+# Install gz-pm
+COPY gz-pm /usr/local/bin/gz-pm
+RUN chmod +x /usr/local/bin/gz-pm
 
 CMD ["bash"]
 ```
