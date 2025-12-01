@@ -733,9 +733,11 @@ RUN apt-get update && apt-get install -y \
 # Install asdf
 RUN git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
 
-# Install gz-pm
-COPY gz-pm /usr/local/bin/gz-pm
-RUN chmod +x /usr/local/bin/gz-pm
+# Install gz-pm to Go bin directory
+RUN mkdir -p /root/go/bin
+COPY gz-pm /root/go/bin/gz-pm
+RUN chmod +x /root/go/bin/gz-pm
+ENV PATH="/root/go/bin:${PATH}"
 
 CMD ["bash"]
 ```
