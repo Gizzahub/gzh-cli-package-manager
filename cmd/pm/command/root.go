@@ -32,6 +32,19 @@ func Execute() {
 	}
 }
 
+// NewRootCmd returns a copy of the root command for embedding in other CLIs.
+// This allows other projects to integrate gz-pm as a subcommand.
+//
+// Example usage:
+//
+//	pmCmd := command.NewRootCmd()
+//	pmCmd.Use = "pm"  // Customize the command name
+//	rootCmd.AddCommand(pmCmd)
+func NewRootCmd() *cobra.Command {
+	// Return a copy of the configured root command
+	return rootCmd
+}
+
 func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
