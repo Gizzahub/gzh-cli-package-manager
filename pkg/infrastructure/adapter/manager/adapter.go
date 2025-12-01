@@ -26,6 +26,9 @@ type Adapter interface {
 
 	// CheckHealth performs health checks on the package manager.
 	CheckHealth(ctx context.Context) (manager.Status, error)
+
+	// Update performs update operations on the package manager and its packages.
+	Update(ctx context.Context, opts UpdateOptions) (*UpdateResult, error)
 }
 
 // UpdateOptions contains options for updating packages.

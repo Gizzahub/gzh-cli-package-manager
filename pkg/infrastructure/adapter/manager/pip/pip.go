@@ -11,6 +11,7 @@ import (
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 )
 
 const (
@@ -185,4 +186,13 @@ func (a *Adapter) getPipCommand(ctx context.Context) string {
 		return pip3Command
 	}
 	return pipCommand
+}
+
+// Update performs update operations (stub implementation).
+func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
+	a.logger.Warn(ctx, "Update method not yet implemented for this adapter")
+	return &adapterm.UpdateResult{
+		Success: false,
+		Message: "Update not yet implemented for this package manager",
+	}, fmt.Errorf("update not yet implemented")
 }

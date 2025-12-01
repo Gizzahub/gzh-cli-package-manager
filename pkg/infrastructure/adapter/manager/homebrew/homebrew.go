@@ -11,6 +11,7 @@ import (
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 )
 
 // Adapter implements the manager.Adapter interface for Homebrew.
@@ -185,10 +186,86 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	}
 
 	// Check if there are warnings (exit code 1) or errors
-	output := strings.ToLower(result.Stdout + result.Stderr)
-	if strings.Contains(output, "warning") {
+	outputStr := strings.ToLower(result.Stdout + result.Stderr)
+	if strings.Contains(outputStr, "warning") {
 		return manager.StatusDegraded, nil
 	}
 
 	return manager.StatusError, nil
+}
+
+// Update performs update operations on Homebrew and its packages.
+func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
+	a.logger.Info(ctx, "Starting Homebrew update",
+		output.Field{Key: "dry_run", Value: opts.DryRun},
+		output.Field{Key: "strategy", Value: string(opts.Strategy)})
+
+	result := &adapterm.UpdateResult{
+		Success:         true,
+		UpdatedPackages: []string{},
+		FailedPackages:  []string{},
+	}
+
+	// If dry-run, just simulate
+	if opts.DryRun {
+		result.Message = "Dry-run: would update Homebrew and packages"
+		a.logger.Info(ctx, "Dry-run mode: skipping actual update")
+		return result, nil
+	}
+
+	// Step 1: Update Homebrew itself
+	updateResult, err := a.executor.Execute(ctx, "brew", "update")
+	if err != nil {
+		result.Success = false
+		result.Message = fmt.Sprintf("brew update failed: %v", err)
+		return result, fmt.Errorf("brew update failed: %w", err)
+	}
+
+	if updateResult.ExitCode != 0 {
+		result.Success = false
+		result.Message = fmt.Sprintf("brew update failed: %s", updateResult.Stderr)
+		return result, fmt.Errorf("brew update failed with exit code %d", updateResult.ExitCode)
+	}
+
+	a.logger.Info(ctx, "Homebrew updated successfully")
+
+	// Step 2: Upgrade packages (skip if strategy is "fixed")
+	if opts.Strategy == adapterm.StrategyFixed {
+		result.Message = "Strategy 'fixed': Homebrew updated, packages not upgraded"
+		return result, nil
+	}
+
+	upgradeResult, err := a.executor.Execute(ctx, "brew", "upgrade")
+	if err != nil {
+		a.logger.Warn(ctx, "brew upgrade failed", output.Field{Key: "error", Value: err.Error()})
+		result.Message = "Homebrew updated, but package upgrade failed"
+		// Don't fail completely if upgrade fails
+		return result, nil
+	}
+
+	if upgradeResult.ExitCode != 0 {
+		a.logger.Warn(ctx, "brew upgrade returned non-zero exit code",
+			output.Field{Key: "exit_code", Value: upgradeResult.ExitCode})
+		result.Message = "Homebrew updated, but some packages failed to upgrade"
+		return result, nil
+	}
+
+	// Parse upgraded packages from output
+	// Homebrew upgrade output typically shows "Upgrading <package> ..." lines
+	lines := strings.Split(upgradeResult.Stdout, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "Upgrading ") {
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				result.UpdatedPackages = append(result.UpdatedPackages, parts[1])
+			}
+		}
+	}
+
+	result.Message = fmt.Sprintf("Homebrew and %d packages updated successfully", len(result.UpdatedPackages))
+	a.logger.Info(ctx, "Homebrew update completed",
+		output.Field{Key: "updated_packages", Value: len(result.UpdatedPackages)})
+
+	return result, nil
 }

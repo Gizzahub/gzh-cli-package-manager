@@ -11,10 +11,10 @@ import (
 
 // Test-specific constants
 const (
-	npmCommand    = "npm"
-	pip3Command   = "pip3"
-	versionFlag   = "--version"
-	listCommand   = "list"
+	npmCommand  = "npm"
+	pip3Command = "pip3"
+	versionFlag = "--version"
+	listCommand = "list"
 )
 
 // mockExecutor implements output.CommandExecutor for testing.
