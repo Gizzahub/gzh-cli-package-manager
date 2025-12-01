@@ -7,17 +7,17 @@
 **Command**:
 
 ```bash
-pmctl update
+gz-pm update
 ```
 
 **Alternative Invocations**:
 
 ```bash
-pmctl update --all                      # Explicit all (same as default)
-pmctl update --manager brew             # Single manager
-pmctl update --managers brew,asdf,npm   # Multiple specific managers
+gz-pm update --all                      # Explicit all (same as default)
+gz-pm update --manager brew             # Single manager
+gz-pm update --managers brew,asdf,npm   # Multiple specific managers
 pm ctl update --all --dry-run            # Preview changes without executing
-pmctl update --all --output json        # Machine-readable JSON output
+gz-pm update --all --output json        # Machine-readable JSON output
 ```
 
 **Prerequisites**:
@@ -140,7 +140,7 @@ Expected updates:
    - Estimated time: 2-4 minutes
 
 ⚠️  This was a dry run. No changes were made.
-To execute: pmctl update --all
+To execute: gz-pm update --all
 
 Exit Code: 0
 ```
@@ -149,8 +149,8 @@ Exit Code: 0
 
 **Files Created**:
 
-- `~/.pmctl/logs/update-<timestamp>.log` - Detailed update log
-- `~/.pmctl/state/last-update.json` - Last update metadata
+- `~/.gz-pm/logs/update-<timestamp>.log` - Detailed update log
+- `~/.gz-pm/state/last-update.json` - Last update metadata
 - Package manager cache files (various locations)
 
 **Files Modified**:
@@ -172,7 +172,7 @@ Exit Code: 0
 
 ```bash
 # Test update command (requires actual package managers)
-result=$(pmctl update 2>&1)
+result=$(gz-pm update 2>&1)
 exit_code=$?
 
 # Should find at least one package manager in CI/test environment
@@ -180,20 +180,20 @@ assert_not_contains "$result" "No supported package managers found"
 assert_contains "$result" "Updating package managers"
 
 # Check log file creation
-assert_file_exists "$HOME/.pmctl/logs/update-*.log"
+assert_file_exists "$HOME/.gz-pm/logs/update-*.log"
 
 # Test dry-run mode
-dry_result=$(pmctl update --all --dry-run 2>&1)
+dry_result=$(gz-pm update --all --dry-run 2>&1)
 assert_contains "$dry_result" "DRY RUN"
 assert_contains "$dry_result" "No changes were made"
 
 # Test specific manager selection
-brew_result=$(pmctl update --manager brew 2>&1)
+brew_result=$(gz-pm update --manager brew 2>&1)
 assert_contains "$brew_result" "Homebrew"
 assert_not_contains "$brew_result" "asdf"  # Other managers not processed
 
 # Test JSON output
-json_result=$(pmctl update --all --dry-run --output json 2>&1)
+json_result=$(gz-pm update --all --dry-run --output json 2>&1)
 echo "$json_result" | jq . >/dev/null  # Validate JSON format
 assert_exit_code 0
 ```
@@ -218,7 +218,7 @@ assert_exit_code 0
 **Permission Issues**:
 
 - **System package managers**: apt, pacman require sudo
-  - Error message: "Permission denied. Try: sudo pmctl update --manager apt"
+  - Error message: "Permission denied. Try: sudo gz-pm update --manager apt"
 - **User-space installations**: Homebrew, asdf work without sudo
 - **Directory permissions**: Clearly report which directories lack permissions
 
@@ -226,7 +226,7 @@ assert_exit_code 0
 
 - **Insufficient space**: Pre-flight check should detect and warn
   - Error: "Insufficient disk space: need 500MB, available 200MB"
-  - Suggestion: "Run pmctl cleanup or free disk space"
+  - Suggestion: "Run gz-pm cleanup or free disk space"
 - **Cache cleanup**: Automatic or prompted cleanup of old downloads
 
 **Version Conflicts**:
@@ -290,52 +290,52 @@ assert_exit_code 0
 ### Update All Managers
 
 ```bash
-pmctl update --all
+gz-pm update --all
 # or simply
-pmctl update
+gz-pm update
 ```
 
 ### Update Specific Manager
 
 ```bash
-pmctl update --manager brew
+gz-pm update --manager brew
 ```
 
 ### Update Multiple Managers
 
 ```bash
-pmctl update --managers brew,asdf,npm
+gz-pm update --managers brew,asdf,npm
 ```
 
 ### Dry Run (Preview Changes)
 
 ```bash
-pmctl update --all --dry-run
+gz-pm update --all --dry-run
 ```
 
 ### JSON Output for Scripts
 
 ```bash
-pmctl update --all --output json | jq '.managers[].status'
+gz-pm update --all --output json | jq '.managers[].status'
 ```
 
 ### Quiet Mode for Automation
 
 ```bash
-pmctl update --all --quiet --yes
+gz-pm update --all --quiet --yes
 ```
 
 ### Latest Version Strategy
 
 ```bash
-pmctl update --all --strategy latest
+gz-pm update --all --strategy latest
 ```
 
 ## Integration Points
 
 ### Configuration File
 
-Uses `~/.pmctl/config.yaml` for:
+Uses `~/.gz-pm/config.yaml` for:
 - Default update strategy
 - Manager-specific preferences
 - Excluded packages or managers
@@ -343,15 +343,15 @@ Uses `~/.pmctl/config.yaml` for:
 
 ### Logging
 
-- **Location**: `~/.pmctl/logs/update-<timestamp>.log`
+- **Location**: `~/.gz-pm/logs/update-<timestamp>.log`
 - **Format**: Structured logging with timestamps
 - **Retention**: Last 10 update sessions (configurable)
 
 ### State Management
 
-- **Current state**: `~/.pmctl/state/current.json`
-- **Last update**: `~/.pmctl/state/last-update.json`
-- **Update history**: `~/.pmctl/state/history.json` (last 100 updates)
+- **Current state**: `~/.gz-pm/state/current.json`
+- **Last update**: `~/.gz-pm/state/last-update.json`
+- **Update history**: `~/.gz-pm/state/history.json` (last 100 updates)
 
 ## Notes
 

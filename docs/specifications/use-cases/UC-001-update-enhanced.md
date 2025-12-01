@@ -6,7 +6,7 @@
 ## Synopsis
 
 ```bash
-pmctl update [--all | --manager <name> | --managers <list>] [options]
+gz-pm update [--all | --manager <name> | --managers <list>] [options]
 ```
 
 Update package managers and their managed packages with rich progress indication, resource management, and intelligent conflict detection.
@@ -14,14 +14,14 @@ Update package managers and their managed packages with rich progress indication
 ## Command Variants
 
 ```bash
-pmctl update --all                      # All detected managers (default)
-pmctl update --manager brew             # Single manager
-pmctl update --managers brew,asdf,npm   # Multiple specific managers
-pmctl update --all --strategy latest    # Update strategy control
-pmctl update --all --dry-run            # Preview changes
-pmctl update --all --output json        # JSON output for scripts
-pmctl update --all --check-duplicates   # Detect duplicate binaries
-pmctl update --manager pip --pip-allow-conda  # Override conda check
+gz-pm update --all                      # All detected managers (default)
+gz-pm update --manager brew             # Single manager
+gz-pm update --managers brew,asdf,npm   # Multiple specific managers
+gz-pm update --all --strategy latest    # Update strategy control
+gz-pm update --all --dry-run            # Preview changes
+gz-pm update --all --output json        # JSON output for scripts
+gz-pm update --all --check-duplicates   # Detect duplicate binaries
+gz-pm update --manager pip --pip-allow-conda  # Override conda check
 ```
 
 ## Prerequisites
@@ -37,7 +37,7 @@ pmctl update --manager pip --pip-allow-conda  # Override conda check
 ### Enhanced Output (Default for TTY)
 
 ```text
-📦 Package Manager Update - pmctl v1.0.0
+📦 Package Manager Update - gz-pm v1.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🔍 Performing pre-flight checks...
@@ -169,7 +169,7 @@ Exit Code: 0
 ### Partial Success with Detailed Errors
 
 ```text
-📦 Package Manager Update - pmctl v1.0.0
+📦 Package Manager Update - gz-pm v1.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🔍 Performing pre-flight checks...
@@ -222,7 +222,7 @@ Troubleshooting steps:
    2. Check DNS resolution: nslookup get.sdkman.io
    3. Check firewall settings
    4. Verify proxy configuration: echo $HTTP_PROXY
-   5. Retry: pmctl update --manager sdkman
+   5. Retry: gz-pm update --manager sdkman
 
 Skipping sdkman updates for this session.
 
@@ -243,10 +243,10 @@ Recommended approach:
    • Use conda/mamba for package management:
      conda update --all
    • Or deactivate conda before using pip:
-     conda deactivate && pmctl update --manager pip
+     conda deactivate && gz-pm update --manager pip
 
 Override (not recommended):
-   pmctl update --manager pip --pip-allow-conda
+   gz-pm update --manager pip --pip-allow-conda
 
 Skipping pip updates for this session.
 
@@ -272,14 +272,14 @@ Skipping pip updates for this session.
    # Or free 400MB+ manually
 
 3. Network connectivity (sdkman):
-   Check firewall/DNS and retry: pmctl update --manager sdkman
+   Check firewall/DNS and retry: gz-pm update --manager sdkman
 
 4. Conda environment (pip):
    Use conda instead: conda update --all
-   Or override: pmctl update --manager pip --pip-allow-conda
+   Or override: gz-pm update --manager pip --pip-allow-conda
 
 💡 Quick retry for failed managers:
-   pmctl update --managers sdkman
+   gz-pm update --managers sdkman
 
 ⏰ Update completed in 1m 45s (partial)
 
@@ -289,7 +289,7 @@ Exit Code: 1
 ### Dry Run Example
 
 ```text
-📦 Package Manager Update - pmctl v1.0.0 [DRY RUN]
+📦 Package Manager Update - gz-pm v1.0.0 [DRY RUN]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⚠️  DRY RUN MODE: No changes will be made
@@ -355,10 +355,10 @@ Estimated time: 30-45 seconds
 ⚠️  This was a dry run. No changes were made.
 
 To execute these updates:
-   pmctl update --all
+   gz-pm update --all
 
 To execute specific managers only:
-   pmctl update --managers brew,npm
+   gz-pm update --managers brew,npm
 
 Exit Code: 0
 ```
@@ -367,10 +367,10 @@ Exit Code: 0
 
 ### Files Created
 
-- `~/.pmctl/logs/update-<timestamp>.log` - Detailed timestamped update log
-- `~/.pmctl/state/update-<timestamp>.json` - Update session results (JSON)
-- `~/.pmctl/cache/` - Package manager cache files
-- `/tmp/pmctl-*.tmp` - Temporary download and processing files (auto-cleaned)
+- `~/.gz-pm/logs/update-<timestamp>.log` - Detailed timestamped update log
+- `~/.gz-pm/state/update-<timestamp>.json` - Update session results (JSON)
+- `~/.gz-pm/cache/` - Package manager cache files
+- `/tmp/gz-pm-*.tmp` - Temporary download and processing files (auto-cleaned)
 
 ### Files Modified
 
@@ -394,35 +394,35 @@ Exit Code: 0
 
 ```bash
 # Test enhanced output format
-result=$(pmctl update --all --dry-run 2>&1)
-assert_contains "$result" "Package Manager Update - pmctl"
+result=$(gz-pm update --all --dry-run 2>&1)
+assert_contains "$result" "Package Manager Update - gz-pm"
 assert_contains "$result" "Resource Availability Check"
 assert_contains "$result" "Manager Overview"
 assert_contains "$result" "Dry Run Summary"
 
 # Test progress indication
-result=$(pmctl update --manager brew 2>&1)
+result=$(gz-pm update --manager brew 2>&1)
 assert_contains "$result" "▓"  # Progress bar character
 assert_contains "$result" "⏳"  # Progress indicator
 
 # Test resource checks
-result=$(pmctl update --all 2>&1)
+result=$(gz-pm update --all 2>&1)
 assert_contains "$result" "Disk:"
 assert_contains "$result" "Network:"
 assert_contains "$result" "Memory:"
 
 # Test duplicate detection
-result=$(pmctl update --all --check-duplicates 2>&1)
+result=$(gz-pm update --all --check-duplicates 2>&1)
 assert_contains "$result" "Duplicate Installation Check"
 
 # Test error reporting
-result=$(pmctl update --manager nonexistent 2>&1)
+result=$(gz-pm update --manager nonexistent 2>&1)
 exit_code=$?
 assert_exit_code 3  # Invalid arguments
 assert_contains "$result" "Unknown package manager"
 
 # Test JSON output structure
-json=$(pmctl update --all --dry-run --output json 2>&1)
+json=$(gz-pm update --all --dry-run --output json 2>&1)
 echo "$json" | jq . >/dev/null  # Validate JSON
 echo "$json" | jq -r '.summary.total_managers' | grep -qE '^[0-9]+$'
 echo "$json" | jq -r '.managers[0].name' | grep -q '.'
@@ -484,7 +484,7 @@ echo "$json" | jq -r '.managers[0].name' | grep -q '.'
 ```text
 ⚠️  Conda environment detected: /opt/miniconda3/envs/myproject
    • Use conda/mamba for package management instead
-   • Override with: pmctl update --manager pip --pip-allow-conda
+   • Override with: gz-pm update --manager pip --pip-allow-conda
 ```
 
 **Virtual Environment**:
@@ -554,7 +554,7 @@ Found potential conflicts:
 
 ```json
 {
-  "pmctl_version": "1.0.0",
+  "gz-pm_version": "1.0.0",
   "timestamp": "2025-01-27T10:30:00Z",
   "operation": "update",
   "dry_run": false,

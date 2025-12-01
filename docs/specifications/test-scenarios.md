@@ -28,7 +28,7 @@
 ### Test 1.1: Simple Update Success
 ```bash
 # Setup: System with brew and npm installed
-pmctl update --all --dry-run
+gz-pm update --all --dry-run
 
 # Expected:
 - Shows update plan for all detected managers
@@ -45,7 +45,7 @@ assert_contains "$output" "npm"
 ### Test 1.2: Single Manager Update
 ```bash
 # Setup: System with multiple managers
-pmctl update --manager brew --dry-run
+gz-pm update --manager brew --dry-run
 
 # Expected:
 - Updates only Homebrew
@@ -61,7 +61,7 @@ assert_not_contains "$output" "npm"
 ### Test 1.3: Multiple Specific Managers
 ```bash
 # Setup: System with brew, asdf, npm
-pmctl update --managers brew,npm --dry-run
+gz-pm update --managers brew,npm --dry-run
 
 # Expected:
 - Updates only specified managers (brew, npm)
@@ -77,7 +77,7 @@ assert_not_contains "$output" "asdf"
 ### Test 1.4: No Managers Found
 ```bash
 # Setup: Clean system with no package managers
-pmctl update --all
+gz-pm update --all
 
 # Expected:
 - Error message about no managers found
@@ -94,7 +94,7 @@ assert_exit_code 2
 ### Test 1.5: All Managers Up-to-Date
 ```bash
 # Setup: System with all packages already latest
-pmctl update --all
+gz-pm update --all
 
 # Expected:
 - Shows "already latest" messages
@@ -109,7 +109,7 @@ assert_not_contains "$output" "Downloaded"
 ### Test 1.6-1.15: Additional Basic Tests
 - Default behavior (no flags) == `--all`
 - Help flag shows usage
-- Version flag shows pmctl version
+- Version flag shows gz-pm version
 - Invalid flag shows error
 - Conflicting flags handled gracefully
 - Update with no network (pre-flight check fails)
@@ -124,7 +124,7 @@ assert_not_contains "$output" "Downloaded"
 
 ### Test 2.1: Text Output (Default)
 ```bash
-pmctl update --all --dry-run
+gz-pm update --all --dry-run
 
 # Expected:
 - Human-readable text with emojis
@@ -140,7 +140,7 @@ assert_contains "$output" "━━━"
 
 ### Test 2.2: JSON Output Format
 ```bash
-pmctl update --all --dry-run --output json
+gz-pm update --all --dry-run --output json
 
 # Expected:
 - Valid JSON structure
@@ -155,7 +155,7 @@ assert_contains "$(echo "$output" | jq -r '.summary.total_managers')" "[0-9]+"
 
 ### Test 2.3: Simple Output Format
 ```bash
-pmctl update --all --dry-run --output simple
+gz-pm update --all --dry-run --output simple
 
 # Expected:
 - Plain text without emojis or colors
@@ -170,7 +170,7 @@ assert_not_contains "$output" "━━━"
 ### Test 2.4: Auto-Detection (Non-TTY)
 ```bash
 # Pipe output (non-TTY)
-pmctl update --all --dry-run | cat
+gz-pm update --all --dry-run | cat
 
 # Expected:
 - Automatically uses simple format
@@ -178,7 +178,7 @@ pmctl update --all --dry-run | cat
 - No progress bars
 
 # Verify:
-output=$(pmctl update --all --dry-run | cat)
+output=$(gz-pm update --all --dry-run | cat)
 assert_not_contains "$output" $'\033'  # No ANSI escape codes
 ```
 
@@ -196,7 +196,7 @@ assert_not_contains "$output" $'\033'  # No ANSI escape codes
 ```bash
 # Setup: macOS system
 # Platform: darwin (x86_64 or arm64)
-pmctl update --all --dry-run
+gz-pm update --all --dry-run
 
 # Expected:
 - Detects: brew, asdf, npm, pip, sdkman, cargo
@@ -212,7 +212,7 @@ assert_contains "$output" "apt.*🚫"
 ```bash
 # Setup: Ubuntu system
 # Platform: linux (x86_64 or aarch64)
-pmctl update --all --dry-run
+gz-pm update --all --dry-run
 
 # Expected:
 - Detects: apt, asdf, npm, pip, cargo
@@ -227,7 +227,7 @@ assert_contains "$output" "pacman.*🚫"
 ### Test 3.3: Linux (Arch) Package Managers
 ```bash
 # Setup: Arch Linux system
-pmctl update --all --dry-run
+gz-pm update --all --dry-run
 
 # Expected:
 - Detects: pacman, yay (if installed), asdf, npm, pip
@@ -257,7 +257,7 @@ assert_contains "$output" "apt.*🚫"
 ```bash
 # Simulate: Block network access
 # (Use Docker network isolation or iptables)
-pmctl update --manager brew
+gz-pm update --manager brew
 
 # Expected:
 - Clear error about network failure
@@ -274,7 +274,7 @@ assert_contains "$output" "Retry"
 ### Test 4.2: DNS Resolution Failure
 ```bash
 # Simulate: Invalid DNS (point to 127.0.0.1)
-pmctl update --manager sdkman
+gz-pm update --manager sdkman
 
 # Expected:
 - DNS resolution failure reported
@@ -290,7 +290,7 @@ assert_contains "$output" "nslookup"
 ```bash
 # Setup: Run as non-privileged user
 # Platform: Linux
-pmctl update --manager apt
+gz-pm update --manager apt
 
 # Expected:
 - Permission error message
@@ -299,13 +299,13 @@ pmctl update --manager apt
 
 # Verify:
 assert_contains "$output" "Permission denied"
-assert_contains "$output" "sudo pmctl"
+assert_contains "$output" "sudo gz-pm"
 ```
 
 ### Test 4.4: Insufficient Disk Space
 ```bash
 # Simulate: System with very low disk space (<500MB)
-pmctl update --manager brew
+gz-pm update --manager brew
 
 # Expected:
 - Pre-flight check detects low disk space
@@ -334,7 +334,7 @@ assert_contains "$output" "cleanup"
 - Interrupted download recovery
 - Disk quota exceeded
 - Package cache corruption
-- Concurrent pmctl processes
+- Concurrent gz-pm processes
 
 ---
 
@@ -344,7 +344,7 @@ assert_contains "$output" "cleanup"
 ```bash
 # Setup: Activate conda environment
 conda activate myproject
-pmctl update --manager pip
+gz-pm update --manager pip
 
 # Expected:
 - Detects conda environment
@@ -364,7 +364,7 @@ assert_contains "$output" "--pip-allow-conda"
 # Setup: Python virtual environment
 python -m venv venv
 source venv/bin/activate
-pmctl update --manager pip --dry-run
+gz-pm update --manager pip --dry-run
 
 # Expected:
 - Detects virtual environment
@@ -380,7 +380,7 @@ assert_contains "$pip_path" "venv"
 ### Test 5.3: Multiple Node Version Managers
 ```bash
 # Setup: Both nvm and asdf with node
-pmctl update --all --check-duplicates
+gz-pm update --all --check-duplicates
 
 # Expected:
 - Detects node from multiple sources
@@ -408,7 +408,7 @@ assert_contains "$output" "node.*brew.*asdf"
 ### Test 6.1: Homebrew - Formula and Cask
 ```bash
 # macOS only
-pmctl update --manager brew
+gz-pm update --manager brew
 
 # Verify:
 - Formula updates (CLI tools)
@@ -427,7 +427,7 @@ pmctl update --manager brew
 
 ### Test 6.3: ASDF - Plugin Updates
 ```bash
-pmctl update --manager asdf
+gz-pm update --manager asdf
 
 # Verify:
 - Plugin updates executed first
@@ -459,10 +459,10 @@ pmctl update --manager asdf
 ### Test 7.1: Dry Run Prediction Accuracy
 ```bash
 # Capture dry-run output
-dry_result=$(pmctl update --all --dry-run --output json)
+dry_result=$(gz-pm update --all --dry-run --output json)
 
 # Execute actual update
-real_result=$(pmctl update --all --output json)
+real_result=$(gz-pm update --all --output json)
 
 # Verify:
 # Actual package counts match predictions (±2)
@@ -473,7 +473,7 @@ real_result=$(pmctl update --all --output json)
 ### Test 7.2: No Changes When Up-to-Date (Dry Run)
 ```bash
 # System already updated
-pmctl update --all --dry-run
+gz-pm update --all --dry-run
 
 # Verify:
 assert_contains "$output" "already latest"
@@ -492,7 +492,7 @@ assert_contains "$output" "No changes"
 
 ### Test 8.1: Update Strategy - Latest
 ```bash
-pmctl update --all --strategy latest
+gz-pm update --all --strategy latest
 
 # Expected:
 - Updates to absolute latest versions
@@ -501,7 +501,7 @@ pmctl update --all --strategy latest
 
 ### Test 8.2: Update Strategy - Stable
 ```bash
-pmctl update --all --strategy stable
+gz-pm update --all --strategy stable
 
 # Expected:
 - Updates to latest stable versions only
@@ -510,7 +510,7 @@ pmctl update --all --strategy stable
 
 ### Test 8.3: Update Strategy - Minor
 ```bash
-pmctl update --all --strategy minor
+gz-pm update --all --strategy minor
 
 # Expected:
 - Updates to latest patch/minor versions
@@ -531,7 +531,7 @@ pmctl update --all --strategy minor
 ### Test 9.1: Large Package Set
 ```bash
 # Setup: System with 100+ packages
-time pmctl update --all --dry-run
+time gz-pm update --all --dry-run
 
 # Expected:
 - Completes within 60 seconds
@@ -560,13 +560,13 @@ assert_less_than "$duration" 60
 ### Test 10.1: Interrupted Update Recovery
 ```bash
 # Start update, kill mid-way
-pmctl update --all &
+gz-pm update --all &
 PID=$!
 sleep 30
 kill $PID
 
 # Restart
-pmctl update --all
+gz-pm update --all
 
 # Expected:
 - Continues from safe state
@@ -590,10 +590,10 @@ pmctl update --all
 ### Test 11.1: Full Workflow
 ```bash
 # Complete workflow:
-pmctl status                    # Before state
-pmctl update --all --dry-run    # Plan
-pmctl update --all              # Execute
-pmctl status                    # After state
+gz-pm status                    # Before state
+gz-pm update --all --dry-run    # Plan
+gz-pm update --all              # Execute
+gz-pm status                    # After state
 
 # Verify state changes consistent
 ```
@@ -771,7 +771,7 @@ jobs:
       with:
         go-version: '1.24'
 
-    - name: Build pmctl
+    - name: Build gz-pm
       run: make build
 
     - name: Run test scenarios

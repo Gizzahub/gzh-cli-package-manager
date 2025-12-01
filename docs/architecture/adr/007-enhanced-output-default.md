@@ -36,16 +36,16 @@ We need to decide on the default output format for gzh-cli-package-manager comma
 
 **Default behavior**:
 ```bash
-$ pmctl update --all
+$ gz-pm update --all
 # Shows enhanced output (progress bars, colors, structure)
 ```
 
 **Alternatives via flags**:
 ```bash
-$ pmctl update --all --simple
+$ gz-pm update --all --simple
 # Plain text, no colors, no progress bars
 
-$ pmctl update --all --json
+$ gz-pm update --all --json
 # JSON output for scripting
 ```
 
@@ -70,7 +70,7 @@ Enhanced format provides:
 
 Example:
 ```
-📦 Package Manager Update - pmctl v1.0.0
+📦 Package Manager Update - gz-pm v1.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🔍 Detection Phase
@@ -119,7 +119,7 @@ Total: 2/2 managers updated
 
 - Simple output → Similar to `brew update && asdf update`
 - Enhanced output → Unified, professional experience
-- **Value proposition**: "Why use pmctl?" → Better UX
+- **Value proposition**: "Why use gz-pm?" → Better UX
 
 **4. Feedback for Long Operations**
 
@@ -166,7 +166,7 @@ Users expect rich output by default.
 
 **3. Less Professional**
 - Simple output feels unfinished
-- Doesn't showcase pmctl's capabilities
+- Doesn't showcase gz-pm's capabilities
 
 ### Why Auto-Detection is Essential?
 
@@ -174,19 +174,19 @@ Users expect rich output by default.
 
 ```bash
 # In CI (non-TTY), automatically uses simple format
-$ pmctl update --all
+$ gz-pm update --all
 Homebrew: updated (45.3s)
 ASDF: updated (38.0s)
 # No ANSI codes, no progress bars
 
 # In interactive terminal, uses enhanced
-$ pmctl update --all
+$ gz-pm update --all
 # Shows progress bars, colors, structure
 ```
 
 **NO_COLOR Env Var** (standard):
 ```bash
-$ NO_COLOR=1 pmctl update --all
+$ NO_COLOR=1 gz-pm update --all
 # Enhanced structure, but no colors
 ```
 
@@ -231,7 +231,7 @@ $ NO_COLOR=1 pmctl update --all
 6. **Marketing Value**
    - Screenshots look professional
    - Demos are impressive
-   - "Why pmctl?" → UX is a clear answer
+   - "Why gz-pm?" → UX is a clear answer
 
 ### Negative ❌
 
@@ -403,7 +403,7 @@ func NewEnhancedFormatter(writer io.Writer, colors bool) *EnhancedFormatter {
 func (f *EnhancedFormatter) Header(title string, version string) {
     separator := strings.Repeat("━", 50)
 
-    fmt.Fprintf(f.writer, "📦 %s - pmctl %s\n", title, version)
+    fmt.Fprintf(f.writer, "📦 %s - gz-pm %s\n", title, version)
     fmt.Fprintln(f.writer, separator)
     fmt.Fprintln(f.writer)
 }
@@ -479,7 +479,7 @@ func NewSimpleFormatter(writer io.Writer) *SimpleFormatter {
 }
 
 func (f *SimpleFormatter) Header(title string, version string) {
-    fmt.Fprintf(f.writer, "%s (pmctl %s)\n", title, version)
+    fmt.Fprintf(f.writer, "%s (gz-pm %s)\n", title, version)
 }
 
 func (f *SimpleFormatter) Section(name string) {
@@ -559,7 +559,7 @@ type Message struct {
 ### CLI Flag Configuration
 
 ```go
-// cmd/pmctl/command/root.go
+// cmd/gz-pm/command/root.go
 package command
 
 import "github.com/spf13/cobra"
@@ -568,7 +568,7 @@ var outputFormat string
 
 func NewRootCommand() *cobra.Command {
     cmd := &cobra.Command{
-        Use:   "pmctl",
+        Use:   "gz-pm",
         Short: "Package manager orchestration tool",
     }
 
@@ -589,7 +589,7 @@ func NewRootCommand() *cobra.Command {
 ### Usage in Commands
 
 ```go
-// cmd/pmctl/command/update.go
+// cmd/gz-pm/command/update.go
 package command
 
 func NewUpdateCommand(updateUC port.UpdateUseCase) *cobra.Command {
@@ -762,7 +762,7 @@ From `specs/cli/pm/UC-001-update-enhanced.md`:
 
 ### Alternative 1: Simple as Default
 
-**Rejected**: Poor UX for long operations, lacks visual feedback, doesn't differentiate pmctl from basic commands
+**Rejected**: Poor UX for long operations, lacks visual feedback, doesn't differentiate gz-pm from basic commands
 
 ### Alternative 2: No Default (Require Flag)
 

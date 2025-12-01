@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-This directory contains comprehensive specifications for `pmctl` (Package Manager Control), following **Specification-Driven Development (SDD)** methodology. These specifications define the behavior, interface, and quality requirements for the package manager orchestration tool.
+This directory contains comprehensive specifications for `gz-pm` (Package Manager Control), following **Specification-Driven Development (SDD)** methodology. These specifications define the behavior, interface, and quality requirements for the package manager orchestration tool.
 
 ## 📁 Directory Structure
 
@@ -141,18 +141,18 @@ From `test-scenarios.md`:
 
 ### UC-001: Update Command (Core Feature)
 
-**Synopsis**: `pmctl update [flags]`
+**Synopsis**: `gz-pm update [flags]`
 
 **Purpose**: Update package managers and their managed packages
 
 **Variants**:
 ```bash
-pmctl update --all                      # All detected managers
-pmctl update --manager brew             # Single manager
-pmctl update --managers brew,asdf,npm   # Multiple specific
-pmctl update --all --strategy stable    # With update strategy
-pmctl update --all --dry-run            # Preview changes
-pmctl update --all --output json        # Machine-readable output
+gz-pm update --all                      # All detected managers
+gz-pm update --manager brew             # Single manager
+gz-pm update --managers brew,asdf,npm   # Multiple specific
+gz-pm update --all --strategy stable    # With update strategy
+gz-pm update --all --dry-run            # Preview changes
+gz-pm update --all --output json        # Machine-readable output
 ```
 
 **Compliance Target**: 95%
@@ -169,7 +169,7 @@ pmctl update --all --output json        # Machine-readable output
 
 ### UC-002: Bootstrap Command
 
-**Synopsis**: `pmctl bootstrap [flags]`
+**Synopsis**: `gz-pm bootstrap [flags]`
 
 **Purpose**: Set up development environment from configuration
 
@@ -181,7 +181,7 @@ pmctl update --all --output json        # Machine-readable output
 
 ### UC-003: Sync Command
 
-**Synopsis**: `pmctl sync [flags]`
+**Synopsis**: `gz-pm sync [flags]`
 
 **Purpose**: Synchronize packages with configuration file
 
@@ -193,7 +193,7 @@ pmctl update --all --output json        # Machine-readable output
 
 ### UC-004: Status Command
 
-**Synopsis**: `pmctl status [flags]`
+**Synopsis**: `gz-pm status [flags]`
 
 **Purpose**: Display package manager health and status
 
@@ -206,7 +206,7 @@ pmctl update --all --output json        # Machine-readable output
 
 ### UC-005: Export Command
 
-**Synopsis**: `pmctl export [flags]`
+**Synopsis**: `gz-pm export [flags]`
 
 **Purpose**: Export current configuration to file
 

@@ -32,7 +32,7 @@ We need to decide on the architectural pattern for gzh-cli-package-manager. The 
 
 **Layer Structure**:
 ```
-Presentation (cmd/pmctl)
+Presentation (cmd/gz-pm)
     ↓
 Application (pkg/application)
     ↓
@@ -202,7 +202,7 @@ Infrastructure (pkg/infrastructure)
 - **Example**: `HomebrewAdapter`, `YAMLConfigRepository`
 - **Rule**: Implements domain and application interfaces
 
-**Presentation Layer** (`cmd/pmctl/`):
+**Presentation Layer** (`cmd/gz-pm/`):
 - **Contains**: CLI Commands, Input Validation, Output Formatting
 - **Dependencies**: Application (use cases), Infrastructure (for DI)
 - **Example**: `UpdateCommand`, `TextFormatter`
@@ -215,7 +215,7 @@ Manual DI in `main.go` (no DI frameworks):
 ```go
 func main() {
     // 1. Infrastructure
-    logger := logger.NewStructuredLogger("pmctl")
+    logger := logger.NewStructuredLogger("gz-pm")
     executor := executor.NewShellExecutor(logger)
 
     // 2. Repositories
@@ -354,7 +354,7 @@ pkg/infrastructure/
   adapter/manager/homebrew/
     adapter.go (300 lines, Homebrew-specific)
 
-cmd/pmctl/
+cmd/gz-pm/
   command/
     update.go (100 lines, CLI only)
 ```

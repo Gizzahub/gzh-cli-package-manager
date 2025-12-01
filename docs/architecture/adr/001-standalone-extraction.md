@@ -24,7 +24,7 @@ The PM (package manager) functionality currently exists within the gzh-cli monol
 
 ## Decision
 
-**Extract PM functionality into standalone `gzh-cli-package-manager` project with binary name `pmctl`.**
+**Extract PM functionality into standalone `gzh-cli-package-manager` project with binary name `gz-pm`.**
 
 **Scope**:
 - All code from `cmd/pm` and `internal/pm`
@@ -88,7 +88,7 @@ The PM (package manager) functionality currently exists within the gzh-cli monol
 ### Positive ✅
 
 1. **Clear Product Identity**
-   - `pmctl` is discoverable standalone tool
+   - `gz-pm` is discoverable standalone tool
    - Can build dedicated community around PM orchestration
    - Easier marketing/positioning
 
@@ -108,33 +108,33 @@ The PM (package manager) functionality currently exists within the gzh-cli monol
    - Debugging is more straightforward
 
 5. **Flexible Distribution**
-   - Homebrew formula for just `pmctl`
+   - Homebrew formula for just `gz-pm`
    - Go install without gzh-cli dependencies
    - Smaller binary size (~15MB vs ~33MB)
 
 ### Negative ❌
 
 1. **Increased Repository Overhead**
-   - Two repos to maintain (gzh-cli + pmctl)
+   - Two repos to maintain (gzh-cli + gz-pm)
    - Duplicate CI/CD configuration
    - Separate issue tracking
 
    **Mitigation**: Use GitHub templates, share workflows
 
 2. **Code Duplication**
-   - Logger interface copied to pmctl
+   - Logger interface copied to gz-pm
    - Config utilities duplicated
    - ~200 lines of shared code
 
    **Mitigation**: Acceptable for now, extract to library if grows >1,000 lines
 
 3. **User Migration Required**
-   - Existing `gz pm` users must transition to `pmctl`
+   - Existing `gz pm` users must transition to `gz-pm`
    - Documentation updates needed
    - Support two tools during transition period
 
    **Mitigation**:
-   - Maintain `gz pm` in gzh-cli as thin wrapper (calls pmctl)
+   - Maintain `gz pm` in gzh-cli as thin wrapper (calls gz-pm)
    - Comprehensive migration guide
    - 6-month deprecation timeline
 
@@ -151,7 +151,7 @@ The PM (package manager) functionality currently exists within the gzh-cli monol
    - Core functionality maintained
    - Configuration format compatible
    - JSON output structure preserved
-   - Command naming changed (`pmctl` vs `gz pm`)
+   - Command naming changed (`gz-pm` vs `gz pm`)
 
 2. **Build/Release Process Changes**
    - Separate goreleaser configuration
@@ -165,7 +165,7 @@ The PM (package manager) functionality currently exists within the gzh-cli monol
 ### Migration Path
 
 **Phase 1: Extract (Week 3)**
-1. Copy `cmd/pm` → `cmd/pmctl`
+1. Copy `cmd/pm` → `cmd/gz-pm`
 2. Copy `internal/pm` → `pkg/{domain,application,infrastructure}` (refactored)
 3. Copy tests → `test/`
 4. Copy specs → `docs/specifications/`
@@ -195,21 +195,21 @@ gzh-cli will maintain `gz pm` as thin wrapper:
 ```go
 // gzh-cli/cmd/pm/pm.go
 func Execute() {
-    // Check if pmctl is installed
-    if pmctlPath := exec.LookPath("pmctl"); pmctlPath != "" {
-        // Delegate to pmctl
-        cmd := exec.Command(pmctlPath, os.Args[2:]...)
+    // Check if gz-pm is installed
+    if gz-pmPath := exec.LookPath("gz-pm"); gz-pmPath != "" {
+        // Delegate to gz-pm
+        cmd := exec.Command(gz-pmPath, os.Args[2:]...)
         cmd.Run()
     } else {
-        // Prompt to install pmctl
-        fmt.Println("PM functionality moved to pmctl")
-        fmt.Println("Install: brew install pmctl")
+        // Prompt to install gz-pm
+        fmt.Println("PM functionality moved to gz-pm")
+        fmt.Println("Install: brew install gz-pm")
     }
 }
 ```
 
 **Deprecation Timeline**:
-- Month 1-3: Both tools coexist, `gz pm` delegates to `pmctl`
+- Month 1-3: Both tools coexist, `gz pm` delegates to `gz-pm`
 - Month 4-6: Warning message when using `gz pm`
 - Month 7+: `gz pm` removed from gzh-cli
 
@@ -219,7 +219,7 @@ func Execute() {
 
 ### Success Criteria
 
-- [ ] pmctl works standalone (no gzh-cli dependency)
+- [ ] gz-pm works standalone (no gzh-cli dependency)
 - [ ] All 120+ test scenarios pass
 - [ ] 90%+ code coverage maintained
 - [ ] Binary size < 20MB
@@ -239,7 +239,7 @@ func Execute() {
 
 **Risk 3: Ecosystem Fragmentation**
 - **Impact**: Low
-- **Mitigation**: pmctl can still be used as library by gzh-cli if needed
+- **Mitigation**: gz-pm can still be used as library by gzh-cli if needed
 
 ---
 

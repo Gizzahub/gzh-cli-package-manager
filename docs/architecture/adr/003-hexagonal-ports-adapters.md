@@ -222,7 +222,7 @@ type ManagerRepository interface {
 
 **Primary Adapter** (CLI → Application):
 ```go
-// cmd/pmctl/command/update.go
+// cmd/gz-pm/command/update.go
 package command
 
 func NewUpdateCommand(updateUC port.UpdateUseCase) *cobra.Command {
@@ -263,10 +263,10 @@ func (a *HomebrewAdapter) Update(ctx context.Context, opts UpdateOptions) (*Upda
 ### Dependency Injection (Wire Adapters to Ports)
 
 ```go
-// cmd/pmctl/main.go
+// cmd/gz-pm/main.go
 func main() {
     // Create adapters (infrastructure)
-    logger := logger.NewStructuredLogger("pmctl")
+    logger := logger.NewStructuredLogger("gz-pm")
     executor := executor.NewShellExecutor(logger)  // CommandExecutor adapter
     homebrewAdapter := homebrew.NewAdapter(executor, logger)  // ManagerAdapter
     managerRepo := repository.NewManagerRepository(executor, logger)  // Repository adapter

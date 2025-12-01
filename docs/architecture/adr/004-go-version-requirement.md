@@ -195,7 +195,7 @@ check-go-version:
 	fi
 
 build: check-go-version
-	go build -o bin/pmctl cmd/pmctl/main.go
+	go build -o bin/gz-pm cmd/gz-pm/main.go
 ```
 
 ### CI/CD Configuration

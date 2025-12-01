@@ -90,7 +90,7 @@ type YAMLConfigRepository struct {
   ```
 
 **3. Future Flexibility**
-- v1.0: YAML files in `~/.pmctl/`
+- v1.0: YAML files in `~/.gz-pm/`
 - v1.1: SQLite for better querying
 - v1.2: Cloud sync (Dropbox, Google Drive)
 - v2.0: Team shared configs (etcd, consul)
@@ -149,7 +149,7 @@ type YAMLConfigRepository struct {
   ```go
   // BAD - Use case directly reads files
   func (uc *UpdateAllUseCase) Execute() {
-      data, _ := os.ReadFile("~/.pmctl/config.yaml")  // Tight coupling
+      data, _ := os.ReadFile("~/.gz-pm/config.yaml")  // Tight coupling
       // Can't test without filesystem, can't change storage
   }
   ```
@@ -243,8 +243,8 @@ type YAMLConfigRepository struct {
    - Format choice independent of repository pattern
 
 2. **File Location**
-   - v1.0: `~/.pmctl/config.yaml`
-   - v1.1+: Could be `~/.config/pmctl/` (XDG)
+   - v1.0: `~/.gz-pm/config.yaml`
+   - v1.1+: Could be `~/.config/gz-pm/` (XDG)
    - Repository hides location from application
 
 ---
@@ -523,13 +523,13 @@ func (uc *BootstrapAllUseCase) Execute(ctx context.Context, req *dto.BootstrapRe
 ### Dependency Injection
 
 ```go
-// cmd/pmctl/main.go
+// cmd/gz-pm/main.go
 func main() {
     // Determine config path
     configPath := os.Getenv("PMCTL_CONFIG_PATH")
     if configPath == "" {
         home, _ := os.UserHomeDir()
-        configPath = filepath.Join(home, ".pmctl", "config.yaml")
+        configPath = filepath.Join(home, ".gz-pm", "config.yaml")
     }
 
     // Create repository
@@ -553,7 +553,7 @@ func main() {
 ### v1.0 YAML Structure
 
 ```yaml
-# ~/.pmctl/config.yaml
+# ~/.gz-pm/config.yaml
 version: "1.0"
 
 # Global settings

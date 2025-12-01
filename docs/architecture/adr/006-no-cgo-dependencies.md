@@ -33,7 +33,7 @@ We need to decide whether to allow CGO (C Go) dependencies in gzh-cli-package-ma
 **Build Configuration**:
 ```bash
 # Makefile
-CGO_ENABLED=0 go build -o bin/pmctl cmd/pmctl/main.go
+CGO_ENABLED=0 go build -o bin/gz-pm cmd/gz-pm/main.go
 ```
 
 **Dependency Policy**:
@@ -52,9 +52,9 @@ CGO_ENABLED=0 go build -o bin/pmctl cmd/pmctl/main.go
 Without CGO:
 ```bash
 # Build for all platforms from any OS
-GOOS=linux GOARCH=amd64 go build -o pmctl-linux-amd64
-GOOS=darwin GOARCH=arm64 go build -o pmctl-darwin-arm64
-GOOS=windows GOARCH=amd64 go build -o pmctl-windows-amd64.exe
+GOOS=linux GOARCH=amd64 go build -o gz-pm-linux-amd64
+GOOS=darwin GOARCH=arm64 go build -o gz-pm-darwin-arm64
+GOOS=windows GOARCH=amd64 go build -o gz-pm-windows-amd64.exe
 ```
 
 With CGO:
@@ -70,22 +70,22 @@ With CGO:
 Without CGO:
 ```bash
 # Truly static binary
-$ ldd pmctl
+$ ldd gz-pm
     not a dynamic executable
 
 # Works anywhere (no libc dependencies)
-$ ./pmctl --version  # Just works
+$ ./gz-pm --version  # Just works
 ```
 
 With CGO:
 ```bash
 # Dynamic linking issues
-$ ldd pmctl
+$ ldd gz-pm
     libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6
     libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0
 
 # Can fail on different distros
-$ ./pmctl
+$ ./gz-pm
     error while loading shared libraries: libc.so.6: version GLIBC_2.34 not found
 ```
 
@@ -125,11 +125,11 @@ With CGO:
 Without CGO:
 ```bash
 # Homebrew formula
-url "https://github.com/gizzahub/gzh-cli-package-manager/releases/download/v1.0.0/pmctl-darwin-arm64.tar.gz"
+url "https://github.com/gizzahub/gzh-cli-package-manager/releases/download/v1.0.0/gz-pm-darwin-arm64.tar.gz"
 # No dependencies needed
 
 # Go install works immediately
-go install github.com/gizzahub/gzh-cli-package-manager/cmd/pmctl@latest
+go install github.com/gizzahub/gzh-cli-package-manager/cmd/gz-pm@latest
 ```
 
 With CGO:
@@ -160,12 +160,12 @@ Without CGO:
 ```bash
 # Same Go version → identical binary
 $ go build
-$ sha256sum pmctl
+$ sha256sum gz-pm
 abc123...
 
 # Months later, same hash
 $ go build
-$ sha256sum pmctl
+$ sha256sum gz-pm
 abc123...  # Identical
 ```
 
@@ -221,11 +221,11 @@ Pure Go crypto/compression adds < 10ms overhead (negligible).
    ```bash
    make build-all
    # Produces:
-   # - pmctl-darwin-amd64
-   # - pmctl-darwin-arm64
-   # - pmctl-linux-amd64
-   # - pmctl-linux-arm64
-   # - pmctl-windows-amd64.exe
+   # - gz-pm-darwin-amd64
+   # - gz-pm-darwin-arm64
+   # - gz-pm-linux-amd64
+   # - gz-pm-linux-arm64
+   # - gz-pm-windows-amd64.exe
    # In ~30 seconds
    ```
 
@@ -237,8 +237,8 @@ Pure Go crypto/compression adds < 10ms overhead (negligible).
      ```bash
      # Works on minimal container
      FROM scratch
-     COPY pmctl /pmctl
-     ENTRYPOINT ["/pmctl"]
+     COPY gz-pm /gz-pm
+     ENTRYPOINT ["/gz-pm"]
      # No base image needed!
      ```
 
@@ -312,21 +312,21 @@ Pure Go crypto/compression adds < 10ms overhead (negligible).
 build:
 	CGO_ENABLED=0 go build \
 		-ldflags="-s -w" \
-		-o bin/pmctl \
-		cmd/pmctl/main.go
+		-o bin/gz-pm \
+		cmd/gz-pm/main.go
 
 .PHONY: build-all
 build-all:
 	# macOS
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o dist/pmctl-darwin-amd64 cmd/pmctl/main.go
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o dist/pmctl-darwin-arm64 cmd/pmctl/main.go
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o dist/gz-pm-darwin-amd64 cmd/gz-pm/main.go
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o dist/gz-pm-darwin-arm64 cmd/gz-pm/main.go
 
 	# Linux
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dist/pmctl-linux-amd64 cmd/pmctl/main.go
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o dist/pmctl-linux-arm64 cmd/pmctl/main.go
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dist/gz-pm-linux-amd64 cmd/gz-pm/main.go
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o dist/gz-pm-linux-arm64 cmd/gz-pm/main.go
 
 	# Windows
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o dist/pmctl-windows-amd64.exe cmd/pmctl/main.go
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o dist/gz-pm-windows-amd64.exe cmd/gz-pm/main.go
 
 .PHONY: test
 test:
@@ -413,7 +413,7 @@ echo "✅ No CGO dependencies found"
 import _ "modernc.org/sqlite"  // Pure Go
 
 // Usage is identical (both use database/sql)
-db, err := sql.Open("sqlite", "pmctl.db")
+db, err := sql.Open("sqlite", "gz-pm.db")
 ```
 
 **Performance**: modernc.org/sqlite is 5-10% slower, but still > 10,000 ops/sec (more than enough).
@@ -480,11 +480,11 @@ If a future requirement **absolutely needs** CGO:
 
 ```bash
 # Verify binary has no dynamic dependencies
-ldd bin/pmctl
+ldd bin/gz-pm
 # Expected: "not a dynamic executable"
 
 # Verify CGO is disabled
-go version -m bin/pmctl | grep CGO
+go version -m bin/gz-pm | grep CGO
 # Expected: CGO_ENABLED=0
 ```
 
@@ -497,11 +497,11 @@ make build-all
 # Verify all binaries exist
 ls -lh dist/
 # Should show:
-# pmctl-darwin-amd64
-# pmctl-darwin-arm64
-# pmctl-linux-amd64
-# pmctl-linux-arm64
-# pmctl-windows-amd64.exe
+# gz-pm-darwin-amd64
+# gz-pm-darwin-arm64
+# gz-pm-linux-amd64
+# gz-pm-linux-arm64
+# gz-pm-windows-amd64.exe
 ```
 
 ### Dependency Check
@@ -598,8 +598,8 @@ func getPlatform() Platform {
 ### Alternative 2: Provide Two Builds
 
 **Proposal**:
-- `pmctl` (pure Go, default)
-- `pmctl-cgo` (with CGO, optional)
+- `gz-pm` (pure Go, default)
+- `gz-pm-cgo` (with CGO, optional)
 
 **Rejected because**:
 - User confusion ("which version?")
