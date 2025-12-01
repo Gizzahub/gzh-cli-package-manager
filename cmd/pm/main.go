@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gizzahub/gzh-cli-package-manager/cmd/pm/command"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/usecase/bootstrap"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/usecase/status"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/usecase/update"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
@@ -39,10 +40,12 @@ func main() {
 	// Initialize use cases (application layer)
 	statusUC := status.NewUseCase(managerRepo, log)
 	updateUC := update.NewUseCase(managerRepo, log, adapters)
+	bootstrapUC := bootstrap.NewUseCase(managerRepo, log)
 
 	// Inject dependencies into commands (presentation layer)
 	command.SetStatusUseCase(statusUC)
 	command.SetUpdateUseCase(updateUC)
+	command.SetBootstrapUseCase(bootstrapUC)
 
 	// Execute CLI
 	command.Execute()

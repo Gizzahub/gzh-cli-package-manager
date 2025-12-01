@@ -19,3 +19,10 @@ type UpdateUseCase interface {
 	// Update performs update operations on package managers.
 	Update(ctx context.Context, req *dto.UpdateRequest) (*dto.UpdateResponse, error)
 }
+
+// BootstrapUseCase defines the interface for bootstrap-related operations.
+// This is an input port implemented by the application layer.
+type BootstrapUseCase interface {
+	// Bootstrap performs bootstrap operations to install and configure package managers.
+	Bootstrap(ctx context.Context, req *dto.BootstrapRequest) (*dto.BootstrapResponse, error)
+}
