@@ -46,7 +46,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "asdf installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 && args[0] == "asdf" {
+				if command == "which" && len(args) == 1 && args[0] == asdfCommand {
 					return &output.ExecutionResult{
 						Stdout:   "/usr/local/bin/asdf\n",
 						ExitCode: 0,
@@ -59,7 +59,7 @@ func TestAdapter_Detect(t *testing.T) {
 		},
 		{
 			name: "asdf not installed",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return &output.ExecutionResult{ExitCode: 1}, nil
 			},
 			want:    false,
@@ -93,7 +93,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "valid version output",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "asdf" && len(args) == 1 && args[0] == "version" {
+				if command == asdfCommand && len(args) == 1 && args[0] == "version" {
 					return &output.ExecutionResult{
 						Stdout:   "v0.13.1\n",
 						ExitCode: 0,
@@ -106,7 +106,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		},
 		{
 			name: "version with git hash",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return &output.ExecutionResult{
 					Stdout:   "v0.13.1-abc1234\n",
 					ExitCode: 0,
@@ -143,7 +143,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 		{
 			name: "binary found",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && args[0] == "asdf" {
+				if command == "which" && args[0] == asdfCommand {
 					return &output.ExecutionResult{
 						Stdout:   "/home/user/.asdf/bin/asdf\n",
 						ExitCode: 0,
@@ -183,7 +183,7 @@ func TestAdapter_ListPackages(t *testing.T) {
 			name: "multiple plugins with versions",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				// asdf plugin list
-				if command == "asdf" && len(args) == 2 && args[0] == "plugin" && args[1] == "list" {
+				if command == asdfCommand && len(args) == 2 && args[0] == "plugin" && args[1] == listArg {
 					return &output.ExecutionResult{
 						Stdout: `nodejs
 python
@@ -193,7 +193,7 @@ ruby
 					}, nil
 				}
 				// asdf list nodejs
-				if command == "asdf" && args[0] == "list" && args[1] == "nodejs" {
+				if command == asdfCommand && args[0] == "list" && args[1] == "nodejs" {
 					return &output.ExecutionResult{
 						Stdout: ` 18.0.0
 *20.11.0
@@ -203,7 +203,7 @@ ruby
 					}, nil
 				}
 				// asdf list python
-				if command == "asdf" && args[0] == "list" && args[1] == "python" {
+				if command == asdfCommand && args[0] == "list" && args[1] == "python" {
 					return &output.ExecutionResult{
 						Stdout: `*3.11.7
  3.12.0
@@ -212,7 +212,7 @@ ruby
 					}, nil
 				}
 				// asdf list ruby
-				if command == "asdf" && args[0] == "list" && args[1] == "ruby" {
+				if command == asdfCommand && args[0] == "list" && args[1] == "ruby" {
 					return &output.ExecutionResult{
 						Stdout: `*3.2.2
 `,
@@ -227,7 +227,7 @@ ruby
 		{
 			name: "no plugins installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "asdf" && args[0] == "plugin" && args[1] == "list" {
+				if command == asdfCommand && args[0] == "plugin" && args[1] == listArg {
 					return &output.ExecutionResult{
 						Stdout:   "",
 						ExitCode: 0,
@@ -288,7 +288,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "healthy system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "asdf" && len(args) == 1 && args[0] == "version" {
+				if command == asdfCommand && len(args) == 1 && args[0] == "version" {
 					return &output.ExecutionResult{
 						Stdout:   "v0.13.1\n",
 						ExitCode: 0,
@@ -302,7 +302,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "degraded system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "asdf" && args[0] == "version" {
+				if command == asdfCommand && args[0] == "version" {
 					return &output.ExecutionResult{
 						Stderr:   "error: asdf not properly installed\n",
 						ExitCode: 1,

@@ -54,7 +54,7 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 	}{
 		{
 			name: "no managers detected",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				// All 'which' commands fail
 				return &output.ExecutionResult{ExitCode: 1}, nil
 			},
@@ -145,7 +145,7 @@ func TestDetectingManagerRepository_FindInstalled(t *testing.T) {
 	}{
 		{
 			name: "no managers installed",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return &output.ExecutionResult{ExitCode: 1}, nil
 			},
 			wantInstalled: 0,
@@ -220,7 +220,7 @@ func TestDetectingManagerRepository_FindByID(t *testing.T) {
 		{
 			name:      "npm not installed",
 			managerID: manager.ManagerNPM,
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return &output.ExecutionResult{ExitCode: 1}, nil
 			},
 			wantInstalled: false,
@@ -274,7 +274,7 @@ func TestDetectingManagerRepository_FindByID(t *testing.T) {
 		{
 			name:      "invalid manager ID",
 			managerID: "invalid-manager",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return &output.ExecutionResult{ExitCode: 1}, nil
 			},
 			wantInstalled: false,

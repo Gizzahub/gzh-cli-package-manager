@@ -46,7 +46,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "cargo installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 && args[0] == "cargo" {
+				if command == "which" && len(args) == 1 && args[0] == cargoCommand {
 					return &output.ExecutionResult{
 						Stdout:   "/usr/bin/cargo\n",
 						ExitCode: 0,
@@ -59,7 +59,7 @@ func TestAdapter_Detect(t *testing.T) {
 		},
 		{
 			name: "cargo not installed",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return &output.ExecutionResult{ExitCode: 1}, nil
 			},
 			want:    false,
@@ -93,7 +93,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "valid version output",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "cargo" && len(args) == 1 && args[0] == "--version" {
+				if command == cargoCommand && len(args) == 1 && args[0] == "--version" {
 					return &output.ExecutionResult{
 						Stdout:   "cargo 1.75.0 (1d8b05cdd 2023-11-20)\n",
 						ExitCode: 0,
@@ -106,7 +106,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		},
 		{
 			name: "older cargo version",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return &output.ExecutionResult{
 					Stdout:   "cargo 1.70.0 (38c6b0c90 2023-08-01)\n",
 					ExitCode: 0,
@@ -143,7 +143,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 		{
 			name: "binary found",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && args[0] == "cargo" {
+				if command == "which" && args[0] == cargoCommand {
 					return &output.ExecutionResult{
 						Stdout:   "/home/user/.cargo/bin/cargo\n",
 						ExitCode: 0,
@@ -182,7 +182,7 @@ func TestAdapter_ListPackages(t *testing.T) {
 		{
 			name: "multiple installed packages",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "cargo" && len(args) == 2 && args[0] == "install" && args[1] == "--list" {
+				if command == cargoCommand && len(args) == 2 && args[0] == installFlag && args[1] == listFlag {
 					return &output.ExecutionResult{
 						Stdout: `ripgrep v14.0.3:
     rg
@@ -202,7 +202,7 @@ bat v0.24.0:
 		{
 			name: "package with local path",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "cargo" && args[0] == "install" && args[1] == "--list" {
+				if command == cargoCommand && args[0] == installFlag && args[1] == listFlag {
 					return &output.ExecutionResult{
 						Stdout: `ripgrep v14.0.3:
     rg
@@ -220,7 +220,7 @@ my-tool v0.1.0 (/home/user/projects/my-tool):
 		{
 			name: "no packages installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "cargo" && args[0] == "install" && args[1] == "--list" {
+				if command == cargoCommand && args[0] == installFlag && args[1] == listFlag {
 					return &output.ExecutionResult{
 						Stdout:   "",
 						ExitCode: 0,
@@ -280,7 +280,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "healthy system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "cargo" && len(args) == 1 && args[0] == "--version" {
+				if command == cargoCommand && len(args) == 1 && args[0] == "--version" {
 					return &output.ExecutionResult{
 						Stdout:   "cargo 1.75.0 (1d8b05cdd 2023-11-20)\n",
 						ExitCode: 0,
@@ -294,7 +294,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "degraded system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "cargo" && args[0] == "--version" {
+				if command == cargoCommand && args[0] == "--version" {
 					return &output.ExecutionResult{
 						Stderr:   "error: failed to run cargo\n",
 						ExitCode: 1,

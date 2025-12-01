@@ -46,7 +46,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "pip3 installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 && args[0] == "pip3" {
+				if command == whichCommand && len(args) == 1 && args[0] == pip3Command {
 					return &output.ExecutionResult{
 						Stdout:   "/usr/bin/pip3\n",
 						ExitCode: 0,
@@ -60,8 +60,8 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "pip installed (fallback)",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 {
-					if args[0] == "pip3" {
+				if command == whichCommand && len(args) == 1 {
+					if args[0] == pip3Command {
 						return &output.ExecutionResult{ExitCode: 1}, nil
 					}
 					if args[0] == "pip" {
@@ -78,7 +78,7 @@ func TestAdapter_Detect(t *testing.T) {
 		},
 		{
 			name: "pip not installed",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return &output.ExecutionResult{ExitCode: 1}, nil
 			},
 			want:    false,
@@ -112,10 +112,10 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "valid version output",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && args[0] == "pip3" {
+				if command == whichCommand && args[0] == pip3Command {
 					return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
 				}
-				if command == "pip3" && args[0] == "--version" {
+				if command == pip3Command && args[0] == "--version" {
 					return &output.ExecutionResult{
 						Stdout:   "pip 23.0.1 from /usr/lib/python3.11/site-packages/pip (python 3.11)\n",
 						ExitCode: 0,
@@ -129,7 +129,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "pip version (not pip3)",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && args[0] == "pip3" {
+				if command == whichCommand && args[0] == pip3Command {
 					return &output.ExecutionResult{ExitCode: 1}, nil
 				}
 				if command == "pip" && args[0] == "--version" {
@@ -171,8 +171,8 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 		{
 			name: "pip3 binary found",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" {
-					if args[0] == "pip3" {
+				if command == whichCommand {
+					if args[0] == pip3Command {
 						return &output.ExecutionResult{
 							Stdout:   "/usr/bin/pip3\n",
 							ExitCode: 0,
@@ -225,11 +225,11 @@ func TestAdapter_ListPackages(t *testing.T) {
 		{
 			name: "packages with updates",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && args[0] == "pip3" {
+				if command == whichCommand && args[0] == pip3Command {
 					return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
 				}
 				// pip3 list --format=json
-				if command == "pip3" && len(args) == 2 && args[0] == "list" && args[1] == "--format=json" {
+				if command == pip3Command && len(args) == 2 && args[0] == listArg && args[1] == "--format=json" {
 					return &output.ExecutionResult{
 						Stdout: `[
 							{"name": "pip", "version": "23.0.1"},
@@ -240,7 +240,7 @@ func TestAdapter_ListPackages(t *testing.T) {
 					}, nil
 				}
 				// pip3 list --outdated --format=json
-				if command == "pip3" && len(args) == 3 && args[0] == "list" && args[1] == "--outdated" {
+				if command == pip3Command && len(args) == 3 && args[0] == listArg && args[1] == "--outdated" {
 					return &output.ExecutionResult{
 						Stdout: `[
 							{"name": "requests", "version": "2.28.0", "latest_version": "2.31.0", "latest_filetype": "wheel"},
@@ -258,16 +258,16 @@ func TestAdapter_ListPackages(t *testing.T) {
 		{
 			name: "no updates available",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && args[0] == "pip3" {
+				if command == whichCommand && args[0] == pip3Command {
 					return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
 				}
-				if command == "pip3" && args[0] == "list" && args[1] == "--format=json" {
+				if command == pip3Command && args[0] == listArg && args[1] == "--format=json" {
 					return &output.ExecutionResult{
 						Stdout:   `[{"name": "pip", "version": "23.0.1"}]`,
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "pip3" && args[0] == "list" && args[1] == "--outdated" {
+				if command == pip3Command && args[0] == listArg && args[1] == "--outdated" {
 					return &output.ExecutionResult{
 						Stdout:   "[]",
 						ExitCode: 0,
@@ -334,10 +334,10 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "healthy system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && args[0] == "pip3" {
+				if command == whichCommand && args[0] == pip3Command {
 					return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
 				}
-				if command == "pip3" && len(args) == 1 && args[0] == "check" {
+				if command == pip3Command && len(args) == 1 && args[0] == "check" {
 					return &output.ExecutionResult{
 						Stdout:   "No broken requirements found.\n",
 						ExitCode: 0,
@@ -351,10 +351,10 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "degraded with dependency issues",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && args[0] == "pip3" {
+				if command == whichCommand && args[0] == pip3Command {
 					return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
 				}
-				if command == "pip3" && args[0] == "check" {
+				if command == pip3Command && args[0] == "check" {
 					return &output.ExecutionResult{
 						Stderr:   "package-a 1.0 has requirement package-b>=2.0, but you have package-b 1.5.\n",
 						ExitCode: 1,
