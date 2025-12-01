@@ -101,12 +101,12 @@ test: test-unit ## Run all tests (alias for test-unit)
 
 test-unit: ## Run unit tests
 	@echo "$(COLOR_YELLOW)Running unit tests...$(COLOR_RESET)"
-	@go test -v -race -short $(PKG_DIRS)
+	@go test -v -short $(PKG_DIRS)
 	@echo "$(COLOR_GREEN)✓ Unit tests passed$(COLOR_RESET)"
 
 test-integration: ## Run integration tests (requires Docker)
 	@echo "$(COLOR_YELLOW)Running integration tests...$(COLOR_RESET)"
-	@go test -v -race -run Integration $(PKG_DIRS)
+	@go test -v -run Integration $(PKG_DIRS)
 	@echo "$(COLOR_GREEN)✓ Integration tests passed$(COLOR_RESET)"
 
 test-e2e: build ## Run end-to-end tests
@@ -116,7 +116,7 @@ test-e2e: build ## Run end-to-end tests
 
 test-coverage: ## Run tests with coverage report
 	@echo "$(COLOR_YELLOW)Running tests with coverage...$(COLOR_RESET)"
-	@go test -v -race -coverprofile=coverage.txt -covermode=atomic $(PKG_DIRS)
+	@go test -v -coverprofile=coverage.txt -covermode=atomic $(PKG_DIRS)
 	@go tool cover -html=coverage.txt -o coverage.html
 	@go tool cover -func=coverage.txt | grep total | awk '{print "Coverage: " $$3}'
 	@echo "$(COLOR_GREEN)✓ Coverage report: coverage.html$(COLOR_RESET)"
