@@ -1,4 +1,4 @@
-.PHONY: help build build-all install clean test test-unit test-integration test-e2e test-coverage lint lint-fix fmt vet check-go-version deps
+.PHONY: help build build-all install clean test test-unit test-integration test-integration-fast test-e2e test-coverage lint lint-fix fmt vet check-go-version deps
 
 # Variables
 BINARY_NAME=gz-pm
@@ -112,10 +112,15 @@ test-unit: ## Run unit tests
 	@go test -v -short $(PKG_DIRS)
 	@echo "$(COLOR_GREEN)✓ Unit tests passed$(COLOR_RESET)"
 
-test-integration: ## Run integration tests (requires Docker)
+test-integration: build ## Run integration tests (requires built binary)
 	@echo "$(COLOR_YELLOW)Running integration tests...$(COLOR_RESET)"
-	@go test -v -run Integration $(PKG_DIRS)
+	@go test -v -tags=integration ./test/integration/...
 	@echo "$(COLOR_GREEN)✓ Integration tests passed$(COLOR_RESET)"
+
+test-integration-fast: build ## Run fast integration tests (CLI help/version only)
+	@echo "$(COLOR_YELLOW)Running fast integration tests...$(COLOR_RESET)"
+	@go test -v -tags=integration ./test/integration/... -run "TestCLI_(Version|Help|InvalidCommand|InvalidFlag|.*_Exists)"
+	@echo "$(COLOR_GREEN)✓ Fast integration tests passed$(COLOR_RESET)"
 
 test-e2e: build ## Run end-to-end tests
 	@echo "$(COLOR_YELLOW)Running E2E tests...$(COLOR_RESET)"
