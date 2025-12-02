@@ -703,3 +703,128 @@ func TestUseCase_Update_NoManagersSpecified(t *testing.T) {
 		t.Errorf("Expected specific error message, got: %v", err)
 	}
 }
+
+// mockEnvDetector implements environment detection for testing.
+type mockEnvDetector struct {
+	envType   string
+	envName   string
+	pipSafe   bool
+	warnings  []string
+}
+
+func (m *mockEnvDetector) Detect(_ context.Context) *struct {
+	Type      string
+	Name      string
+	Path      string
+	IsPipSafe bool
+	Warnings  []string
+} {
+	return &struct {
+		Type      string
+		Name      string
+		Path      string
+		IsPipSafe bool
+		Warnings  []string
+	}{
+		Type:      m.envType,
+		Name:      m.envName,
+		IsPipSafe: m.pipSafe,
+		Warnings:  m.warnings,
+	}
+}
+
+func TestUseCase_Update_WithNilEnvDetector(t *testing.T) {
+	now := time.Now()
+
+	repo := &mockRepository{
+		findInstalledFunc: func(_ context.Context) ([]*manager.Manager, error) {
+			return []*manager.Manager{
+				{
+					ID:          manager.ManagerPip,
+					Name:        "Pip",
+					Installed:   true,
+					LastChecked: now,
+				},
+			}, nil
+		},
+	}
+	logger := &mockLogger{}
+	adapter := &mockAdapter{
+		updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
+			return &adapterm.UpdateResult{Success: true}, nil
+		},
+	}
+	adapters := map[manager.ManagerID]adapterm.Adapter{
+		manager.ManagerPip: adapter,
+	}
+
+	// With nil detector, pip updates should proceed normally
+	uc := NewUseCase(repo, logger, adapters, nil)
+
+	req := &dto.UpdateRequest{
+		All:      true,
+		Strategy: dto.StrategyStable,
+	}
+
+	resp, err := uc.Update(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Update() unexpected error: %v", err)
+	}
+
+	if resp.Summary.SuccessfulManagers != 1 {
+		t.Errorf("Expected 1 successful manager, got %d", resp.Summary.SuccessfulManagers)
+	}
+
+	if resp.Summary.SkippedManagers != 0 {
+		t.Errorf("Expected 0 skipped managers, got %d", resp.Summary.SkippedManagers)
+	}
+}
+
+func TestUseCase_Update_UnknownStrategy(t *testing.T) {
+	now := time.Now()
+
+	repo := &mockRepository{
+		findInstalledFunc: func(_ context.Context) ([]*manager.Manager, error) {
+			return []*manager.Manager{
+				{
+					ID:          manager.ManagerHomebrew,
+					Name:        "Homebrew",
+					Installed:   true,
+					LastChecked: now,
+				},
+			}, nil
+		},
+	}
+	logger := &mockLogger{}
+	adapter := &mockAdapter{
+		updateFunc: func(_ context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
+			// Verify that unknown strategy falls back to stable
+			if opts.Strategy != adapterm.StrategyStable {
+				return &adapterm.UpdateResult{
+					Success: false,
+					Message: "Expected stable strategy for unknown input",
+				}, nil
+			}
+			return &adapterm.UpdateResult{Success: true}, nil
+		},
+	}
+	adapters := map[manager.ManagerID]adapterm.Adapter{
+		manager.ManagerHomebrew: adapter,
+	}
+
+	uc := NewUseCase(repo, logger, adapters, nil)
+
+	req := &dto.UpdateRequest{
+		All:      true,
+		Strategy: dto.UpdateStrategy("unknown"), // Unknown strategy
+	}
+
+	resp, err := uc.Update(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Update() unexpected error: %v", err)
+	}
+
+	if !resp.Results[0].Success {
+		t.Error("Expected success with unknown strategy falling back to stable")
+	}
+}

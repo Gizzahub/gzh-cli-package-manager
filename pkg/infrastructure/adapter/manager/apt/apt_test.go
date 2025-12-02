@@ -2,10 +2,12 @@ package apt
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 )
 
 // Test-specific constants
@@ -370,5 +372,127 @@ func TestAdapter_CheckHealth(t *testing.T) {
 				t.Errorf("CheckHealth() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestAdapter_GetVersion_Error(t *testing.T) {
+	tests := []struct {
+		name     string
+		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		wantErr  bool
+	}{
+		{
+			name: "executor error",
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+				return nil, errors.New("execution failed")
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty version output",
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+				return &output.ExecutionResult{
+					Stdout:   "",
+					ExitCode: 0,
+				}, nil
+			},
+			wantErr: true,
+		},
+		{
+			name: "unexpected version format",
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+				return &output.ExecutionResult{
+					Stdout:   "apt",
+					ExitCode: 0,
+				}, nil
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			_, err := adapter.GetVersion(context.Background())
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetVersion() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestAdapter_GetBinaryPath_Error(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	_, err := adapter.GetBinaryPath(context.Background())
+	if err == nil {
+		t.Error("Expected error for executor failure")
+	}
+}
+
+func TestAdapter_ListPackages_Error(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	_, err := adapter.ListPackages(context.Background())
+	if err == nil {
+		t.Error("Expected error for executor failure")
+	}
+}
+
+func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	status, err := adapter.CheckHealth(context.Background())
+
+	if err != nil {
+		t.Errorf("CheckHealth() should not return error, got %v", err)
+	}
+
+	if status != manager.StatusDegraded {
+		t.Errorf("CheckHealth() = %v, want StatusDegraded", status)
+	}
+}
+
+func TestAdapter_Update(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{}, &mockLogger{})
+	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{})
+
+	if err == nil {
+		t.Error("Expected error from Update (not implemented)")
+	}
+
+	if result.Success {
+		t.Error("Expected Success to be false")
+	}
+}
+
+func TestAdapter_Detect_ExecutorError(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	detected, err := adapter.Detect(context.Background())
+
+	if err != nil {
+		t.Errorf("Detect() should not return error, got %v", err)
+	}
+
+	if detected {
+		t.Error("Detect() should return false when executor fails")
 	}
 }

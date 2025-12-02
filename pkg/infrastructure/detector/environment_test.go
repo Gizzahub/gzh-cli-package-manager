@@ -316,3 +316,168 @@ func findSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+func TestDetector_DetectConda_WithCondaExeButNoPrefix(t *testing.T) {
+	// Test detectConda when CONDA_PREFIX is not set but CONDA_EXE is
+	originalCondaEnv := os.Getenv("CONDA_DEFAULT_ENV")
+	originalCondaPrefix := os.Getenv("CONDA_PREFIX")
+	originalCondaExe := os.Getenv("CONDA_EXE")
+	defer func() {
+		os.Setenv("CONDA_DEFAULT_ENV", originalCondaEnv)
+		os.Setenv("CONDA_PREFIX", originalCondaPrefix)
+		os.Setenv("CONDA_EXE", originalCondaExe)
+	}()
+
+	os.Setenv("CONDA_DEFAULT_ENV", "testenv")
+	os.Unsetenv("CONDA_PREFIX")
+	os.Setenv("CONDA_EXE", "/opt/conda/bin/conda")
+
+	detector := NewDetector(nil, &mockLogger{})
+	env := detector.Detect(context.Background())
+
+	if env.Type != EnvConda {
+		t.Errorf("Expected EnvConda, got %s", env.Type)
+	}
+
+	if env.Name != "testenv" {
+		t.Errorf("Expected name 'testenv', got %s", env.Name)
+	}
+
+	// Path should be derived from CONDA_EXE
+	expectedPath := "/opt/conda/envs/testenv"
+	if env.Path != expectedPath {
+		t.Errorf("Expected path '%s', got %s", expectedPath, env.Path)
+	}
+}
+
+func TestDetector_DetectConda_NoConda(t *testing.T) {
+	// Test when no conda environment is active
+	originalCondaEnv := os.Getenv("CONDA_DEFAULT_ENV")
+	defer os.Setenv("CONDA_DEFAULT_ENV", originalCondaEnv)
+
+	os.Unsetenv("CONDA_DEFAULT_ENV")
+
+	detector := NewDetector(nil, &mockLogger{})
+	result := detector.detectConda()
+
+	if result != nil {
+		t.Errorf("Expected nil for no conda, got %+v", result)
+	}
+}
+
+func TestDetector_IsDocker_WithContainerEnvVar(t *testing.T) {
+	// Test Docker detection with container environment variable
+	originalContainer := os.Getenv("container")
+	defer os.Setenv("container", originalContainer)
+
+	os.Setenv("container", "podman")
+
+	detector := NewDetector(nil, &mockLogger{})
+	result := detector.isDocker()
+
+	if !result {
+		t.Error("Expected isDocker to return true when container env var is set")
+	}
+}
+
+func TestDetector_IsDocker_NoDocker(t *testing.T) {
+	// Test when not in Docker
+	originalContainer := os.Getenv("container")
+	defer os.Setenv("container", originalContainer)
+
+	os.Unsetenv("container")
+
+	detector := NewDetector(nil, &mockLogger{})
+	result := detector.isDocker()
+
+	// This may return true if running in actual Docker container
+	// For pure unit test, we just verify the function runs without error
+	_ = result
+}
+
+func TestDetector_Detect_DockerEnvironment(t *testing.T) {
+	// Set container env var to simulate Docker
+	originalContainer := os.Getenv("container")
+	originalCondaEnv := os.Getenv("CONDA_DEFAULT_ENV")
+	originalVirtualEnv := os.Getenv("VIRTUAL_ENV")
+	originalWSLDistro := os.Getenv("WSL_DISTRO_NAME")
+	defer func() {
+		os.Setenv("container", originalContainer)
+		os.Setenv("CONDA_DEFAULT_ENV", originalCondaEnv)
+		os.Setenv("VIRTUAL_ENV", originalVirtualEnv)
+		os.Setenv("WSL_DISTRO_NAME", originalWSLDistro)
+	}()
+
+	os.Setenv("container", "docker")
+	os.Unsetenv("CONDA_DEFAULT_ENV")
+	os.Unsetenv("VIRTUAL_ENV")
+	os.Unsetenv("WSL_DISTRO_NAME")
+
+	detector := NewDetector(nil, &mockLogger{})
+	env := detector.Detect(context.Background())
+
+	if env.Type != EnvDocker {
+		t.Errorf("Expected EnvDocker, got %s", env.Type)
+	}
+}
+
+func TestDetector_CondaOverridesDocker(t *testing.T) {
+	// When both conda and Docker are detected, conda takes precedence for pip safety
+	originalContainer := os.Getenv("container")
+	originalCondaEnv := os.Getenv("CONDA_DEFAULT_ENV")
+	originalCondaPrefix := os.Getenv("CONDA_PREFIX")
+	defer func() {
+		os.Setenv("container", originalContainer)
+		os.Setenv("CONDA_DEFAULT_ENV", originalCondaEnv)
+		os.Setenv("CONDA_PREFIX", originalCondaPrefix)
+	}()
+
+	os.Setenv("container", "docker")
+	os.Setenv("CONDA_DEFAULT_ENV", "test")
+	os.Setenv("CONDA_PREFIX", "/opt/conda/envs/test")
+
+	detector := NewDetector(nil, &mockLogger{})
+	env := detector.Detect(context.Background())
+
+	// Conda should override Docker detection for type
+	if env.Type != EnvConda {
+		t.Errorf("Expected EnvConda (takes precedence), got %s", env.Type)
+	}
+
+	if env.IsPipSafe {
+		t.Error("Expected IsPipSafe to be false for conda environment")
+	}
+}
+
+func TestNewDetector(t *testing.T) {
+	detector := NewDetector(nil, &mockLogger{})
+	if detector == nil {
+		t.Error("Expected non-nil detector")
+	}
+}
+
+func TestEnvironment_Struct(t *testing.T) {
+	env := &Environment{
+		Type:      EnvConda,
+		Name:      "test",
+		Path:      "/path/to/env",
+		IsPipSafe: false,
+		Warnings:  []string{"warning1", "warning2"},
+	}
+
+	if env.Type != EnvConda {
+		t.Error("Type mismatch")
+	}
+	if env.Name != "test" {
+		t.Error("Name mismatch")
+	}
+	if env.Path != "/path/to/env" {
+		t.Error("Path mismatch")
+	}
+	if env.IsPipSafe {
+		t.Error("IsPipSafe mismatch")
+	}
+	if len(env.Warnings) != 2 {
+		t.Error("Warnings count mismatch")
+	}
+}

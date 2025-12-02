@@ -7,6 +7,7 @@ import (
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 )
 
 const (
@@ -396,6 +397,129 @@ func TestDetermineUpdateType(t *testing.T) {
 			name:      "complex version",
 			current:   "142.0.7444.162-1",
 			available: "142.0.7444.175-1",
+			want:      manager.UpdatePatch,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := determineUpdateType(tt.current, tt.available)
+			if got != tt.want {
+				t.Errorf("determineUpdateType(%q, %q) = %v, want %v", tt.current, tt.available, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAdapter_GetVersion_Error(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	_, err := adapter.GetVersion(context.Background())
+	if err == nil {
+		t.Error("Expected error for executor failure")
+	}
+}
+
+func TestAdapter_GetVersion_NoVersionFound(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return &output.ExecutionResult{
+				Stdout:   "some output without version pattern",
+				ExitCode: 0,
+			}, nil
+		},
+	}, &mockLogger{})
+
+	_, err := adapter.GetVersion(context.Background())
+	if err == nil {
+		t.Error("Expected error when no version pattern found")
+	}
+}
+
+func TestAdapter_GetBinaryPath_Error(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	_, err := adapter.GetBinaryPath(context.Background())
+	if err == nil {
+		t.Error("Expected error for executor failure")
+	}
+}
+
+func TestAdapter_ListPackages_Error(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	_, err := adapter.ListPackages(context.Background())
+	if err == nil {
+		t.Error("Expected error for executor failure")
+	}
+}
+
+func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	status, err := adapter.CheckHealth(context.Background())
+
+	if err != nil {
+		t.Errorf("CheckHealth() should not return error, got %v", err)
+	}
+
+	if status != manager.StatusDegraded {
+		t.Errorf("CheckHealth() = %v, want StatusDegraded", status)
+	}
+}
+
+func TestAdapter_Update(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{}, &mockLogger{})
+	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{})
+
+	if err == nil {
+		t.Error("Expected error from Update (not implemented)")
+	}
+
+	if result.Success {
+		t.Error("Expected Success to be false")
+	}
+}
+
+func TestDetermineUpdateType_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name      string
+		current   string
+		available string
+		want      manager.UpdateType
+	}{
+		{
+			name:      "empty current - splits to one element so major version differs",
+			current:   "",
+			available: "1.0.0-1",
+			want:      manager.UpdateMajor, // "" vs "1" is different
+		},
+		{
+			name:      "empty available - splits to one element so major version differs",
+			current:   "1.0.0-1",
+			available: "",
+			want:      manager.UpdateMajor, // "1" vs "" is different
+		},
+		{
+			name:      "same version",
+			current:   "1.0.0-1",
+			available: "1.0.0-1",
 			want:      manager.UpdatePatch,
 		},
 	}

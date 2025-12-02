@@ -2,10 +2,12 @@ package pip
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 )
 
 // Test-specific constants
@@ -385,5 +387,149 @@ func TestAdapter_CheckHealth(t *testing.T) {
 				t.Errorf("CheckHealth() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestAdapter_GetVersion_Error(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	_, err := adapter.GetVersion(context.Background())
+	if err == nil {
+		t.Error("Expected error for executor failure")
+	}
+}
+
+func TestAdapter_GetVersion_ParseError(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			if command == whichCommand {
+				return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+			}
+			// Return output with less than 2 fields (only one word)
+			return &output.ExecutionResult{
+				Stdout:   "pip",
+				ExitCode: 0,
+			}, nil
+		},
+	}, &mockLogger{})
+
+	_, err := adapter.GetVersion(context.Background())
+	if err == nil {
+		t.Error("Expected error for parse failure")
+	}
+}
+
+func TestAdapter_GetBinaryPath_Error(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	_, err := adapter.GetBinaryPath(context.Background())
+	if err == nil {
+		t.Error("Expected error for executor failure")
+	}
+}
+
+func TestAdapter_ListPackages_Error(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			if command == whichCommand {
+				return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+			}
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	_, err := adapter.ListPackages(context.Background())
+	if err == nil {
+		t.Error("Expected error for executor failure")
+	}
+}
+
+func TestAdapter_ListPackages_InvalidJSON(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			if command == whichCommand {
+				return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+			}
+			if command == pip3Command && args[0] == "list" {
+				return &output.ExecutionResult{
+					Stdout:   "not valid json",
+					ExitCode: 0,
+				}, nil
+			}
+			return &output.ExecutionResult{ExitCode: 0}, nil
+		},
+	}, &mockLogger{})
+
+	_, err := adapter.ListPackages(context.Background())
+	if err == nil {
+		t.Error("Expected error for invalid JSON")
+	}
+}
+
+func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			if command == whichCommand {
+				return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+			}
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	status, err := adapter.CheckHealth(context.Background())
+
+	if err != nil {
+		t.Errorf("CheckHealth() should not return error, got %v", err)
+	}
+
+	if status != manager.StatusDegraded {
+		t.Errorf("CheckHealth() = %v, want StatusDegraded", status)
+	}
+}
+
+func TestAdapter_Update(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, command string, _ ...string) (*output.ExecutionResult, error) {
+			if command == whichCommand {
+				return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+			}
+			return &output.ExecutionResult{ExitCode: 0}, nil
+		},
+	}, &mockLogger{})
+
+	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{})
+
+	if err == nil {
+		t.Error("Expected error from Update (not implemented)")
+	}
+
+	if result.Success {
+		t.Error("Expected Success to be false")
+	}
+}
+
+func TestAdapter_Detect_ExecutorError(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("execution failed")
+		},
+	}, &mockLogger{})
+
+	detected, err := adapter.Detect(context.Background())
+
+	if err != nil {
+		t.Errorf("Detect() should not return error, got %v", err)
+	}
+
+	if detected {
+		t.Error("Detect() should return false when executor fails")
 	}
 }

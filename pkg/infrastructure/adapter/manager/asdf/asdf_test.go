@@ -6,6 +6,7 @@ import (
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 )
 
 // Test-specific constants
@@ -334,4 +335,230 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAdapter_GetVersion_Error(t *testing.T) {
+	tests := []struct {
+		name     string
+		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		want     string
+		wantErr  bool
+	}{
+		{
+			name: "execute error",
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+				return nil, errMockExecution
+			},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "version without v prefix",
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+				return &output.ExecutionResult{
+					Stdout:   "0.14.0\n",
+					ExitCode: 0,
+				}, nil
+			},
+			want:    "0.14.0",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			got, err := adapter.GetVersion(context.Background())
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetVersion() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("GetVersion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAdapter_GetBinaryPath_Error(t *testing.T) {
+	tests := []struct {
+		name     string
+		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		want     string
+		wantErr  bool
+	}{
+		{
+			name: "execute error",
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+				return nil, errMockExecution
+			},
+			want:    "",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			got, err := adapter.GetBinaryPath(context.Background())
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetBinaryPath() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("GetBinaryPath() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAdapter_GetConfigPath(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{}, &mockLogger{})
+	got, err := adapter.GetConfigPath(context.Background())
+
+	if err != nil {
+		t.Errorf("GetConfigPath() error = %v", err)
+	}
+
+	// Should contain .asdfrc
+	if got == "" {
+		t.Error("GetConfigPath() should not return empty string")
+	}
+}
+
+func TestAdapter_ListPackages_Error(t *testing.T) {
+	tests := []struct {
+		name      string
+		execFunc  func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		wantCount int
+		wantErr   bool
+	}{
+		{
+			name: "plugin list error",
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+				return nil, errMockExecution
+			},
+			wantCount: 0,
+			wantErr:   true,
+		},
+		{
+			name: "version list error for one plugin",
+			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+				if command == asdfCommand && len(args) == 2 && args[0] == pluginArg && args[1] == listArg {
+					return &output.ExecutionResult{
+						Stdout:   "nodejs\npython\n",
+						ExitCode: 0,
+					}, nil
+				}
+				// Version list fails
+				if command == asdfCommand && args[0] == "list" {
+					return nil, errMockExecution
+				}
+				return &output.ExecutionResult{ExitCode: 0}, nil
+			},
+			wantCount: 0, // No packages because version listing failed
+			wantErr:   false,
+		},
+		{
+			name: "empty version output",
+			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+				if command == asdfCommand && len(args) == 2 && args[0] == pluginArg && args[1] == listArg {
+					return &output.ExecutionResult{
+						Stdout:   "nodejs\n",
+						ExitCode: 0,
+					}, nil
+				}
+				if command == asdfCommand && args[0] == "list" {
+					return &output.ExecutionResult{
+						Stdout:   "",
+						ExitCode: 0,
+					}, nil
+				}
+				return &output.ExecutionResult{ExitCode: 0}, nil
+			},
+			wantCount: 0,
+			wantErr:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			packages, err := adapter.ListPackages(context.Background())
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ListPackages() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if len(packages) != tt.wantCount {
+				t.Errorf("ListPackages() package count = %d, want %d", len(packages), tt.wantCount)
+			}
+		})
+	}
+}
+
+func TestAdapter_Update(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{}, &mockLogger{})
+	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{})
+
+	// Update is not implemented, should return error
+	if err == nil {
+		t.Error("Expected error from Update")
+	}
+
+	if result.Success {
+		t.Error("Expected Success to be false")
+	}
+}
+
+func TestAdapter_Detect_ExecutorError(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errMockExecution
+		},
+	}, &mockLogger{})
+
+	detected, err := adapter.Detect(context.Background())
+
+	// Should not return error, just return false
+	if err != nil {
+		t.Errorf("Detect() should not return error, got %v", err)
+	}
+
+	if detected {
+		t.Error("Detect() should return false when executor fails")
+	}
+}
+
+func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
+	adapter := NewAdapter(&mockExecutor{
+		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errMockExecution
+		},
+	}, &mockLogger{})
+
+	status, err := adapter.CheckHealth(context.Background())
+
+	// Should not return error, just return degraded
+	if err != nil {
+		t.Errorf("CheckHealth() should not return error, got %v", err)
+	}
+
+	if status != manager.StatusDegraded {
+		t.Errorf("CheckHealth() should return StatusDegraded, got %v", status)
+	}
+}
+
+// errMockExecution is a sentinel error for testing executor failures.
+var errMockExecution = &mockError{msg: "mock execution error"}
+
+type mockError struct {
+	msg string
+}
+
+func (e *mockError) Error() string {
+	return e.msg
 }
