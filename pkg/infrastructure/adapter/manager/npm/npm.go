@@ -12,6 +12,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/version"
 )
 
 // Adapter implements the manager.Adapter interface for NPM.
@@ -131,7 +132,7 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 		// Check if update is available
 		if outdated, hasUpdate := outdatedMap[name]; hasUpdate {
 			pkg.AvailableVersion = outdated.Latest
-			pkg.UpdateType = determineUpdateType(dep.Version, outdated.Latest)
+			pkg.UpdateType = version.DetermineUpdateType(dep.Version, outdated.Latest)
 		}
 
 		packages = append(packages, pkg)
@@ -169,37 +170,6 @@ type outdatedPackage struct {
 	Wanted   string `json:"wanted"`
 	Latest   string `json:"latest"`
 	Location string `json:"location"`
-}
-
-// determineUpdateType analyzes version strings to determine update type.
-// This is a simplified implementation using semantic versioning.
-func determineUpdateType(current, latest string) manager.UpdateType {
-	// Remove 'v' prefix if present
-	current = strings.TrimPrefix(current, "v")
-	latest = strings.TrimPrefix(latest, "v")
-
-	currentParts := strings.Split(current, ".")
-	latestParts := strings.Split(latest, ".")
-
-	if len(currentParts) == 0 || len(latestParts) == 0 {
-		return manager.UpdateMinor
-	}
-
-	// Compare major version
-	if len(currentParts) > 0 && len(latestParts) > 0 {
-		if currentParts[0] != latestParts[0] {
-			return manager.UpdateMajor
-		}
-	}
-
-	// Compare minor version
-	if len(currentParts) > 1 && len(latestParts) > 1 {
-		if currentParts[1] != latestParts[1] {
-			return manager.UpdateMinor
-		}
-	}
-
-	return manager.UpdatePatch
 }
 
 // Update performs update operations (stub implementation).

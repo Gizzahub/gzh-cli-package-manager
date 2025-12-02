@@ -8,6 +8,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/testutil"
 )
 
 // Test-specific constants
@@ -15,38 +16,10 @@ const (
 	testCommand = "test"
 )
 
-// mockExecutor implements output.CommandExecutor for testing.
-type mockExecutor struct {
-	execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-}
-
-func (m *mockExecutor) Execute(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-	if m.execFunc != nil {
-		return m.execFunc(ctx, command, args...)
-	}
-	return &output.ExecutionResult{
-		Stdout:   "",
-		Stderr:   "",
-		ExitCode: 0,
-	}, nil
-}
-
-func (m *mockExecutor) ExecuteWithInput(_ context.Context, _ string, _ string, _ ...string) (*output.ExecutionResult, error) {
-	return &output.ExecutionResult{ExitCode: 0}, nil
-}
-
-// mockLogger implements output.Logger for testing.
-type mockLogger struct{}
-
-func (m *mockLogger) Debug(_ context.Context, _ string, _ ...output.Field)          {}
-func (m *mockLogger) Info(_ context.Context, _ string, _ ...output.Field)           {}
-func (m *mockLogger) Warn(_ context.Context, _ string, _ ...output.Field)           {}
-func (m *mockLogger) Error(_ context.Context, _ string, _ error, _ ...output.Field) {}
-
 func TestAdapter_Detect(t *testing.T) {
 	tests := []struct {
 		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc testutil.ExecutorFunc
 		want     bool
 		wantErr  bool
 	}{
@@ -54,12 +27,9 @@ func TestAdapter_Detect(t *testing.T) {
 			name: "apt installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == "which" && len(args) == 1 && args[0] == aptCommand {
-					return &output.ExecutionResult{
-						Stdout:   "/usr/bin/apt\n",
-						ExitCode: 0,
-					}, nil
+					return testutil.SuccessResult("/usr/bin/apt\n"), nil
 				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			want:    true,
 			wantErr: false,
@@ -67,9 +37,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "apt not installed",
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return &output.ExecutionResult{
-					ExitCode: 1,
-				}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			want:    false,
 			wantErr: false,
@@ -78,7 +46,7 @@ func TestAdapter_Detect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			got, err := adapter.Detect(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -95,7 +63,7 @@ func TestAdapter_Detect(t *testing.T) {
 func TestAdapter_GetVersion(t *testing.T) {
 	tests := []struct {
 		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc testutil.ExecutorFunc
 		want     string
 		wantErr  bool
 	}{
@@ -103,12 +71,9 @@ func TestAdapter_GetVersion(t *testing.T) {
 			name: "valid version output",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == aptCommand && len(args) == 1 && args[0] == "--version" {
-					return &output.ExecutionResult{
-						Stdout:   "apt 2.4.11 (amd64)\n",
-						ExitCode: 0,
-					}, nil
+					return testutil.SuccessResult("apt 2.4.11 (amd64)\n"), nil
 				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			want:    "2.4.11",
 			wantErr: false,
@@ -116,10 +81,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "version with extra info",
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return &output.ExecutionResult{
-					Stdout:   "apt 2.0.6 (arm64)\nCompiled on Jul 15 2023\n",
-					ExitCode: 0,
-				}, nil
+				return testutil.SuccessResult("apt 2.0.6 (arm64)\nCompiled on Jul 15 2023\n"), nil
 			},
 			want:    "2.0.6",
 			wantErr: false,
@@ -128,7 +90,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			got, err := adapter.GetVersion(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -145,7 +107,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 func TestAdapter_GetBinaryPath(t *testing.T) {
 	tests := []struct {
 		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc testutil.ExecutorFunc
 		want     string
 		wantErr  bool
 	}{
@@ -153,12 +115,9 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 			name: "binary found",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == "which" && args[0] == aptCommand {
-					return &output.ExecutionResult{
-						Stdout:   "/usr/bin/apt\n",
-						ExitCode: 0,
-					}, nil
+					return testutil.SuccessResult("/usr/bin/apt\n"), nil
 				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			want:    "/usr/bin/apt",
 			wantErr: false,
@@ -167,7 +126,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			got, err := adapter.GetBinaryPath(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -182,7 +141,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 }
 
 func TestAdapter_GetConfigPath(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{}, &mockLogger{})
+	adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
 	got, err := adapter.GetConfigPath(context.Background())
 
 	if err != nil {
@@ -196,7 +155,7 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 func TestAdapter_ListPackages(t *testing.T) {
 	tests := []struct {
 		name         string
-		execFunc     func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc     testutil.ExecutorFunc
 		wantCount    int
 		wantUpgrades int
 		wantErr      bool
@@ -206,26 +165,20 @@ func TestAdapter_ListPackages(t *testing.T) {
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				// apt list --installed
 				if command == aptCommand && len(args) == 2 && args[0] == listArg && args[1] == "--installed" {
-					return &output.ExecutionResult{
-						Stdout: `Listing...
+					return testutil.SuccessResult(`Listing...
 vim/jammy-updates,now 2:8.2.3995-1ubuntu2.12 amd64 [installed]
 curl/jammy-security,now 7.81.0-1ubuntu1.15 amd64 [installed,automatic]
 git/jammy-updates,now 1:2.34.1-1ubuntu1.10 amd64 [installed]
-`,
-						ExitCode: 0,
-					}, nil
+`), nil
 				}
 				// apt list --upgradable
 				if command == aptCommand && len(args) == 2 && args[0] == listArg && args[1] == "--upgradable" {
-					return &output.ExecutionResult{
-						Stdout: `Listing...
+					return testutil.SuccessResult(`Listing...
 curl/jammy-security 7.81.0-1ubuntu1.16 amd64 [upgradable from: 7.81.0-1ubuntu1.15]
 git/jammy-updates 1:2.34.1-1ubuntu1.11 amd64 [upgradable from: 1:2.34.1-1ubuntu1.10]
-`,
-						ExitCode: 0,
-					}, nil
+`), nil
 				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			wantCount:    3,
 			wantUpgrades: 2,
@@ -235,20 +188,14 @@ git/jammy-updates 1:2.34.1-1ubuntu1.11 amd64 [upgradable from: 1:2.34.1-1ubuntu1
 			name: "no updates available",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == aptCommand && args[0] == listArg && args[1] == "--installed" {
-					return &output.ExecutionResult{
-						Stdout: `Listing...
+					return testutil.SuccessResult(`Listing...
 vim/jammy-updates,now 2:8.2.3995-1ubuntu2.12 amd64 [installed]
-`,
-						ExitCode: 0,
-					}, nil
+`), nil
 				}
 				if command == aptCommand && args[0] == listArg && args[1] == "--upgradable" {
-					return &output.ExecutionResult{
-						Stdout:   "Listing...\n",
-						ExitCode: 0,
-					}, nil
+					return testutil.SuccessResult("Listing...\n"), nil
 				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			wantCount:    1,
 			wantUpgrades: 0,
@@ -258,7 +205,7 @@ vim/jammy-updates,now 2:8.2.3995-1ubuntu2.12 amd64 [installed]
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			packages, err := adapter.ListPackages(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -302,7 +249,7 @@ vim/jammy-updates,now 2:8.2.3995-1ubuntu2.12 amd64 [installed]
 func TestAdapter_CheckHealth(t *testing.T) {
 	tests := []struct {
 		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc testutil.ExecutorFunc
 		want     manager.Status
 		wantErr  bool
 	}{
@@ -310,15 +257,12 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			name: "healthy system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == aptGetCommand && len(args) == 1 && args[0] == checkCommand {
-					return &output.ExecutionResult{
-						Stdout:   "Reading package lists... Done\nBuilding dependency tree... Done\n",
-						ExitCode: 0,
-					}, nil
+					return testutil.SuccessResult("Reading package lists... Done\nBuilding dependency tree... Done\n"), nil
 				}
 				if command == testCommand {
-					return &output.ExecutionResult{ExitCode: 1}, nil // Lock file doesn't exist
+					return testutil.FailureResult(1, ""), nil // Lock file doesn't exist
 				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			want:    manager.StatusHealthy,
 			wantErr: false,
@@ -327,15 +271,12 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			name: "degraded with lock file",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == aptGetCommand && args[0] == checkCommand {
-					return &output.ExecutionResult{
-						Stdout:   "Reading package lists... Done\n",
-						ExitCode: 0,
-					}, nil
+					return testutil.SuccessResult("Reading package lists... Done\n"), nil
 				}
 				if command == testCommand {
-					return &output.ExecutionResult{ExitCode: 0}, nil // Lock file exists
+					return testutil.SuccessResult(""), nil // Lock file exists
 				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			want:    manager.StatusDegraded,
 			wantErr: false,
@@ -344,15 +285,12 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			name: "degraded with broken packages",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == aptGetCommand && args[0] == checkCommand {
-					return &output.ExecutionResult{
-						Stderr:   "E: Broken packages\n",
-						ExitCode: 100,
-					}, nil
+					return testutil.FailureResult(100, "E: Broken packages\n"), nil
 				}
 				if command == testCommand {
-					return &output.ExecutionResult{ExitCode: 1}, nil
+					return testutil.FailureResult(1, ""), nil
 				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			want:    manager.StatusDegraded,
 			wantErr: false,
@@ -361,7 +299,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			got, err := adapter.CheckHealth(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -378,7 +316,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 func TestAdapter_GetVersion_Error(t *testing.T) {
 	tests := []struct {
 		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc testutil.ExecutorFunc
 		wantErr  bool
 	}{
 		{
@@ -391,20 +329,14 @@ func TestAdapter_GetVersion_Error(t *testing.T) {
 		{
 			name: "empty version output",
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return &output.ExecutionResult{
-					Stdout:   "",
-					ExitCode: 0,
-				}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			wantErr: true,
 		},
 		{
 			name: "unexpected version format",
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return &output.ExecutionResult{
-					Stdout:   "apt",
-					ExitCode: 0,
-				}, nil
+				return testutil.SuccessResult("apt"), nil
 			},
 			wantErr: true,
 		},
@@ -412,7 +344,7 @@ func TestAdapter_GetVersion_Error(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			_, err := adapter.GetVersion(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -423,11 +355,9 @@ func TestAdapter_GetVersion_Error(t *testing.T) {
 }
 
 func TestAdapter_GetBinaryPath_Error(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{
-		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-			return nil, errors.New("execution failed")
-		},
-	}, &mockLogger{})
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+		return nil, errors.New("execution failed")
+	}), testutil.NewMockLogger())
 
 	_, err := adapter.GetBinaryPath(context.Background())
 	if err == nil {
@@ -436,11 +366,9 @@ func TestAdapter_GetBinaryPath_Error(t *testing.T) {
 }
 
 func TestAdapter_ListPackages_Error(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{
-		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-			return nil, errors.New("execution failed")
-		},
-	}, &mockLogger{})
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+		return nil, errors.New("execution failed")
+	}), testutil.NewMockLogger())
 
 	_, err := adapter.ListPackages(context.Background())
 	if err == nil {
@@ -449,11 +377,9 @@ func TestAdapter_ListPackages_Error(t *testing.T) {
 }
 
 func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{
-		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-			return nil, errors.New("execution failed")
-		},
-	}, &mockLogger{})
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+		return nil, errors.New("execution failed")
+	}), testutil.NewMockLogger())
 
 	status, err := adapter.CheckHealth(context.Background())
 
@@ -467,7 +393,7 @@ func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
 }
 
 func TestAdapter_Update(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{}, &mockLogger{})
+	adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
 	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{})
 
 	if err == nil {
@@ -480,11 +406,9 @@ func TestAdapter_Update(t *testing.T) {
 }
 
 func TestAdapter_Detect_ExecutorError(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{
-		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-			return nil, errors.New("execution failed")
-		},
-	}, &mockLogger{})
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+		return nil, errors.New("execution failed")
+	}), testutil.NewMockLogger())
 
 	detected, err := adapter.Detect(context.Background())
 

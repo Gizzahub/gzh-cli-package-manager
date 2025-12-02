@@ -8,6 +8,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/testutil"
 )
 
 // Test-specific constants
@@ -15,38 +16,10 @@ const (
 	versionFlag = "--version"
 )
 
-// mockExecutor implements output.CommandExecutor for testing.
-type mockExecutor struct {
-	execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-}
-
-func (m *mockExecutor) Execute(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-	if m.execFunc != nil {
-		return m.execFunc(ctx, command, args...)
-	}
-	return &output.ExecutionResult{
-		Stdout:   "",
-		Stderr:   "",
-		ExitCode: 0,
-	}, nil
-}
-
-func (m *mockExecutor) ExecuteWithInput(_ context.Context, _ string, _ string, _ ...string) (*output.ExecutionResult, error) {
-	return &output.ExecutionResult{ExitCode: 0}, nil
-}
-
-// mockLogger implements output.Logger for testing.
-type mockLogger struct{}
-
-func (m *mockLogger) Debug(_ context.Context, _ string, _ ...output.Field)          {}
-func (m *mockLogger) Info(_ context.Context, _ string, _ ...output.Field)           {}
-func (m *mockLogger) Warn(_ context.Context, _ string, _ ...output.Field)           {}
-func (m *mockLogger) Error(_ context.Context, _ string, _ error, _ ...output.Field) {}
-
 func TestAdapter_Detect(t *testing.T) {
 	tests := []struct {
 		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc testutil.ExecutorFunc
 		want     bool
 		wantErr  bool
 	}{
@@ -54,12 +27,9 @@ func TestAdapter_Detect(t *testing.T) {
 			name: "cargo installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == "which" && len(args) == 1 && args[0] == cargoCommand {
-					return &output.ExecutionResult{
-						Stdout:   "/usr/bin/cargo\n",
-						ExitCode: 0,
-					}, nil
+					return testutil.SuccessResult("/usr/bin/cargo\n"), nil
 				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			want:    true,
 			wantErr: false,
@@ -67,7 +37,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "cargo not installed",
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			want:    false,
 			wantErr: false,
@@ -76,7 +46,7 @@ func TestAdapter_Detect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			got, err := adapter.Detect(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -93,7 +63,7 @@ func TestAdapter_Detect(t *testing.T) {
 func TestAdapter_GetVersion(t *testing.T) {
 	tests := []struct {
 		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc testutil.ExecutorFunc
 		want     string
 		wantErr  bool
 	}{
@@ -101,12 +71,9 @@ func TestAdapter_GetVersion(t *testing.T) {
 			name: "valid version output",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == cargoCommand && len(args) == 1 && args[0] == versionFlag {
-					return &output.ExecutionResult{
-						Stdout:   "cargo 1.75.0 (1d8b05cdd 2023-11-20)\n",
-						ExitCode: 0,
-					}, nil
+					return testutil.SuccessResult("cargo 1.75.0 (1d8b05cdd 2023-11-20)\n"), nil
 				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			want:    "1.75.0",
 			wantErr: false,
@@ -114,10 +81,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "older cargo version",
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return &output.ExecutionResult{
-					Stdout:   "cargo 1.70.0 (38c6b0c90 2023-08-01)\n",
-					ExitCode: 0,
-				}, nil
+				return testutil.SuccessResult("cargo 1.70.0 (38c6b0c90 2023-08-01)\n"), nil
 			},
 			want:    "1.70.0",
 			wantErr: false,
@@ -126,7 +90,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			got, err := adapter.GetVersion(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -143,7 +107,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 func TestAdapter_GetBinaryPath(t *testing.T) {
 	tests := []struct {
 		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc testutil.ExecutorFunc
 		want     string
 		wantErr  bool
 	}{
@@ -151,12 +115,9 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 			name: "binary found",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == "which" && args[0] == cargoCommand {
-					return &output.ExecutionResult{
-						Stdout:   "/home/user/.cargo/bin/cargo\n",
-						ExitCode: 0,
-					}, nil
+					return testutil.SuccessResult("/home/user/.cargo/bin/cargo\n"), nil
 				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			want:    "/home/user/.cargo/bin/cargo",
 			wantErr: false,
@@ -165,7 +126,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			got, err := adapter.GetBinaryPath(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -182,7 +143,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 func TestAdapter_ListPackages(t *testing.T) {
 	tests := []struct {
 		name      string
-		execFunc  func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc  testutil.ExecutorFunc
 		wantCount int
 		wantErr   bool
 	}{
@@ -190,18 +151,15 @@ func TestAdapter_ListPackages(t *testing.T) {
 			name: "multiple installed packages",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == cargoCommand && len(args) == 2 && args[0] == installFlag && args[1] == listFlag {
-					return &output.ExecutionResult{
-						Stdout: `ripgrep v14.0.3:
+					return testutil.SuccessResult(`ripgrep v14.0.3:
     rg
 cargo-watch v8.4.1:
     cargo-watch
 bat v0.24.0:
     bat
-`,
-						ExitCode: 0,
-					}, nil
+`), nil
 				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			wantCount: 3,
 			wantErr:   false,
@@ -210,16 +168,13 @@ bat v0.24.0:
 			name: "package with local path",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == cargoCommand && args[0] == installFlag && args[1] == listFlag {
-					return &output.ExecutionResult{
-						Stdout: `ripgrep v14.0.3:
+					return testutil.SuccessResult(`ripgrep v14.0.3:
     rg
 my-tool v0.1.0 (/home/user/projects/my-tool):
     my-tool
-`,
-						ExitCode: 0,
-					}, nil
+`), nil
 				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			wantCount: 2,
 			wantErr:   false,
@@ -228,12 +183,9 @@ my-tool v0.1.0 (/home/user/projects/my-tool):
 			name: "no packages installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == cargoCommand && args[0] == installFlag && args[1] == listFlag {
-					return &output.ExecutionResult{
-						Stdout:   "",
-						ExitCode: 0,
-					}, nil
+					return testutil.SuccessResult(""), nil
 				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				return testutil.FailureResult(1, ""), nil
 			},
 			wantCount: 0,
 			wantErr:   false,
@@ -242,7 +194,7 @@ my-tool v0.1.0 (/home/user/projects/my-tool):
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			packages, err := adapter.ListPackages(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -280,7 +232,7 @@ my-tool v0.1.0 (/home/user/projects/my-tool):
 func TestAdapter_CheckHealth(t *testing.T) {
 	tests := []struct {
 		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc testutil.ExecutorFunc
 		want     manager.Status
 		wantErr  bool
 	}{
@@ -288,12 +240,9 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			name: "healthy system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == cargoCommand && len(args) == 1 && args[0] == versionFlag {
-					return &output.ExecutionResult{
-						Stdout:   "cargo 1.75.0 (1d8b05cdd 2023-11-20)\n",
-						ExitCode: 0,
-					}, nil
+					return testutil.SuccessResult("cargo 1.75.0 (1d8b05cdd 2023-11-20)\n"), nil
 				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			want:    manager.StatusHealthy,
 			wantErr: false,
@@ -302,12 +251,9 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			name: "degraded system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == cargoCommand && args[0] == versionFlag {
-					return &output.ExecutionResult{
-						Stderr:   "error: failed to run cargo\n",
-						ExitCode: 1,
-					}, nil
+					return testutil.FailureResult(1, "error: failed to run cargo\n"), nil
 				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			want:    manager.StatusDegraded,
 			wantErr: false,
@@ -316,7 +262,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			got, err := adapter.CheckHealth(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -332,14 +278,12 @@ func TestAdapter_CheckHealth(t *testing.T) {
 
 func TestAdapter_GetConfigPath(t *testing.T) {
 	tests := []struct {
-		name     string
-		homeDir  string
-		want     string
-		wantErr  bool
+		name    string
+		want    string
+		wantErr bool
 	}{
 		{
 			name:    "default cargo home",
-			homeDir: "",
 			want:    "", // Will use HOME environment
 			wantErr: false,
 		},
@@ -347,7 +291,7 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
 			path, err := adapter.GetConfigPath(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -365,7 +309,7 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 func TestAdapter_GetVersion_EdgeCases(t *testing.T) {
 	tests := []struct {
 		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc testutil.ExecutorFunc
 		wantErr  bool
 	}{
 		{
@@ -379,12 +323,9 @@ func TestAdapter_GetVersion_EdgeCases(t *testing.T) {
 			name: "non-zero exit code",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == cargoCommand && args[0] == versionFlag {
-					return &output.ExecutionResult{
-						ExitCode: 1,
-						Stderr:   "cargo not found",
-					}, nil
+					return testutil.FailureResult(1, "cargo not found"), nil
 				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			wantErr: true,
 		},
@@ -392,12 +333,9 @@ func TestAdapter_GetVersion_EdgeCases(t *testing.T) {
 			name: "empty output",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == cargoCommand && args[0] == versionFlag {
-					return &output.ExecutionResult{
-						ExitCode: 0,
-						Stdout:   "",
-					}, nil
+					return testutil.SuccessResult(""), nil
 				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			wantErr: true,
 		},
@@ -405,12 +343,9 @@ func TestAdapter_GetVersion_EdgeCases(t *testing.T) {
 			name: "unexpected format",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == cargoCommand && args[0] == versionFlag {
-					return &output.ExecutionResult{
-						ExitCode: 0,
-						Stdout:   "cargo\n",
-					}, nil
+					return testutil.SuccessResult("cargo\n"), nil
 				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			wantErr: true,
 		},
@@ -418,7 +353,7 @@ func TestAdapter_GetVersion_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			_, err := adapter.GetVersion(context.Background())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetVersion() error = %v, wantErr %v", err, tt.wantErr)
@@ -430,7 +365,7 @@ func TestAdapter_GetVersion_EdgeCases(t *testing.T) {
 func TestAdapter_GetBinaryPath_EdgeCases(t *testing.T) {
 	tests := []struct {
 		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc testutil.ExecutorFunc
 		wantErr  bool
 	}{
 		{
@@ -450,7 +385,7 @@ func TestAdapter_GetBinaryPath_EdgeCases(t *testing.T) {
 						Stdout:   "",
 					}, nil
 				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			wantErr: false, // Current implementation doesn't check exit code
 		},
@@ -458,7 +393,7 @@ func TestAdapter_GetBinaryPath_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			_, err := adapter.GetBinaryPath(context.Background())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBinaryPath() error = %v, wantErr %v", err, tt.wantErr)
@@ -470,7 +405,7 @@ func TestAdapter_GetBinaryPath_EdgeCases(t *testing.T) {
 func TestAdapter_ListPackages_EdgeCases(t *testing.T) {
 	tests := []struct {
 		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc testutil.ExecutorFunc
 		wantErr  bool
 	}{
 		{
@@ -490,7 +425,7 @@ func TestAdapter_ListPackages_EdgeCases(t *testing.T) {
 						Stdout:   "",
 					}, nil
 				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			wantErr: false, // Current implementation doesn't check exit code
 		},
@@ -498,7 +433,7 @@ func TestAdapter_ListPackages_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			_, err := adapter.ListPackages(context.Background())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ListPackages() error = %v, wantErr %v", err, tt.wantErr)
@@ -511,7 +446,7 @@ func TestAdapter_Update(t *testing.T) {
 	tests := []struct {
 		name        string
 		dryRun      bool
-		execFunc    func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
+		execFunc    testutil.ExecutorFunc
 		wantSuccess bool
 		wantErr     bool
 	}{
@@ -519,7 +454,7 @@ func TestAdapter_Update(t *testing.T) {
 			name:   "update not implemented returns error",
 			dryRun: false,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return &output.ExecutionResult{ExitCode: 0}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			wantSuccess: false, // Cargo Update returns false + error
 			wantErr:     true,  // It returns an error for "not implemented"
@@ -528,7 +463,7 @@ func TestAdapter_Update(t *testing.T) {
 			name:   "dry run also returns not implemented error",
 			dryRun: true,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return &output.ExecutionResult{ExitCode: 0}, nil
+				return testutil.SuccessResult(""), nil
 			},
 			wantSuccess: false,
 			wantErr:     true,
@@ -537,7 +472,7 @@ func TestAdapter_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			opts := adapterm.UpdateOptions{
 				DryRun:   tt.dryRun,
 				Strategy: adapterm.StrategyStable,

@@ -12,6 +12,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/version"
 )
 
 // Adapter implements the manager.Adapter interface for Pacman.
@@ -144,7 +145,7 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 		// Check if update is available
 		if availableVersion, hasUpdate := updateMap[pkgName]; hasUpdate {
 			pkg.AvailableVersion = availableVersion
-			pkg.UpdateType = determineUpdateType(pkgVersion, availableVersion)
+			pkg.UpdateType = version.DetermineUpdateType(pkgVersion, availableVersion)
 		}
 
 		packages = append(packages, pkg)
@@ -177,32 +178,6 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	}
 
 	return manager.StatusHealthy, nil
-}
-
-// determineUpdateType analyzes version strings to determine update type.
-// This is a simplified implementation that detects major changes.
-func determineUpdateType(current, available string) manager.UpdateType {
-	// Simple heuristic: if major version differs, it's a major update
-	currentParts := strings.Split(current, ".")
-	availableParts := strings.Split(available, ".")
-
-	if len(currentParts) == 0 || len(availableParts) == 0 {
-		return manager.UpdateMinor
-	}
-
-	// Compare first component (major version)
-	if currentParts[0] != availableParts[0] {
-		return manager.UpdateMajor
-	}
-
-	// Compare second component if available (minor version)
-	if len(currentParts) > 1 && len(availableParts) > 1 {
-		if currentParts[1] != availableParts[1] {
-			return manager.UpdateMinor
-		}
-	}
-
-	return manager.UpdatePatch
 }
 
 // Update performs update operations (stub implementation).

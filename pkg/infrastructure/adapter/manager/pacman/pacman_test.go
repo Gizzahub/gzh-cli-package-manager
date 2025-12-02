@@ -368,49 +368,6 @@ func TestAdapter_CheckHealth(t *testing.T) {
 	}
 }
 
-func TestDetermineUpdateType(t *testing.T) {
-	tests := []struct {
-		name      string
-		current   string
-		available string
-		want      manager.UpdateType
-	}{
-		{
-			name:      "major update",
-			current:   "1.0.0-1",
-			available: "2.0.0-1",
-			want:      manager.UpdateMajor,
-		},
-		{
-			name:      "minor update",
-			current:   "1.0.0-1",
-			available: "1.1.0-1",
-			want:      manager.UpdateMinor,
-		},
-		{
-			name:      "patch update",
-			current:   "1.0.0-1",
-			available: "1.0.1-1",
-			want:      manager.UpdatePatch,
-		},
-		{
-			name:      "complex version",
-			current:   "142.0.7444.162-1",
-			available: "142.0.7444.175-1",
-			want:      manager.UpdatePatch,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := determineUpdateType(tt.current, tt.available)
-			if got != tt.want {
-				t.Errorf("determineUpdateType(%q, %q) = %v, want %v", tt.current, tt.available, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestAdapter_GetVersion_Error(t *testing.T) {
 	adapter := NewAdapter(&mockExecutor{
 		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
@@ -497,39 +454,3 @@ func TestAdapter_Update(t *testing.T) {
 	}
 }
 
-func TestDetermineUpdateType_EdgeCases(t *testing.T) {
-	tests := []struct {
-		name      string
-		current   string
-		available string
-		want      manager.UpdateType
-	}{
-		{
-			name:      "empty current - splits to one element so major version differs",
-			current:   "",
-			available: "1.0.0-1",
-			want:      manager.UpdateMajor, // "" vs "1" is different
-		},
-		{
-			name:      "empty available - splits to one element so major version differs",
-			current:   "1.0.0-1",
-			available: "",
-			want:      manager.UpdateMajor, // "1" vs "" is different
-		},
-		{
-			name:      "same version",
-			current:   "1.0.0-1",
-			available: "1.0.0-1",
-			want:      manager.UpdatePatch,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := determineUpdateType(tt.current, tt.available)
-			if got != tt.want {
-				t.Errorf("determineUpdateType(%q, %q) = %v, want %v", tt.current, tt.available, got, tt.want)
-			}
-		})
-	}
-}
