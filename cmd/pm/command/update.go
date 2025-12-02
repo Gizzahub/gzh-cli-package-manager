@@ -14,12 +14,13 @@ import (
 )
 
 var (
-	updateAll      bool
-	updateDryRun   bool
-	updateManagers string
-	updateStrategy string
-	updateOutput   string
-	updateUseCase  input.UpdateUseCase
+	updateAll           bool
+	updateDryRun        bool
+	updateManagers      string
+	updateStrategy      string
+	updateOutput        string
+	updatePipAllowConda bool
+	updateUseCase       input.UpdateUseCase
 )
 
 // SetUpdateUseCase injects the update use case dependency.
@@ -80,10 +81,11 @@ Examples:
 
 		// Build request
 		req := &dto.UpdateRequest{
-			All:        updateAll,
-			ManagerIDs: managerIDs,
-			DryRun:     updateDryRun,
-			Strategy:   strategy,
+			All:           updateAll,
+			ManagerIDs:    managerIDs,
+			DryRun:        updateDryRun,
+			Strategy:      strategy,
+			PipAllowConda: updatePipAllowConda,
 		}
 
 		// Execute update
@@ -126,12 +128,16 @@ func displayUpdateText(resp *dto.UpdateResponse) {
 	// Display individual manager results
 	for _, result := range resp.Results {
 		statusIcon := "✅"
-		if !result.Success {
+		if result.Skipped {
+			statusIcon = "⚠️"
+		} else if !result.Success {
 			statusIcon = "❌"
 		}
 
 		fmt.Printf("%s %s\n", statusIcon, result.Name)
-		if result.Success {
+		if result.Skipped {
+			fmt.Printf("   Skipped: %s\n", result.SkipReason)
+		} else if result.Success {
 			fmt.Printf("   Duration: %.1fs\n", result.Duration)
 			if len(result.UpdatedPackages) > 0 {
 				fmt.Printf("   Updated: %d packages\n", len(result.UpdatedPackages))
@@ -155,6 +161,9 @@ func displayUpdateText(resp *dto.UpdateResponse) {
 	fmt.Printf("   Total Managers: %d\n", resp.Summary.TotalManagers)
 	fmt.Printf("   Successful: %d\n", resp.Summary.SuccessfulManagers)
 	fmt.Printf("   Failed: %d\n", resp.Summary.FailedManagers)
+	if resp.Summary.SkippedManagers > 0 {
+		fmt.Printf("   Skipped: %d\n", resp.Summary.SkippedManagers)
+	}
 	fmt.Printf("   Total Packages Updated: %d\n", resp.Summary.TotalPackagesUpdated)
 	if resp.Summary.TotalBytesDownloaded > 0 {
 		fmt.Printf("   Total Downloaded: %.1f MB\n", float64(resp.Summary.TotalBytesDownloaded)/(1024*1024))
@@ -182,4 +191,5 @@ func init() {
 	updateCmd.Flags().StringVarP(&updateManagers, "managers", "m", "", "Comma-separated list of managers to update")
 	updateCmd.Flags().StringVar(&updateStrategy, "strategy", "stable", "Update strategy (latest|stable|minor|fixed)")
 	updateCmd.Flags().StringVarP(&updateOutput, "output", "o", "text", "Output format (text|json|simple)")
+	updateCmd.Flags().BoolVar(&updatePipAllowConda, "pip-allow-conda", false, "Allow pip updates in conda environments")
 }

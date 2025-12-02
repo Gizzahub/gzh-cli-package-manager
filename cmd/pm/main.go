@@ -12,6 +12,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/homebrew"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/npm"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/pip"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/detector"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/executor"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/logger"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/repository/memory"
@@ -37,9 +38,12 @@ func main() {
 		// TODO: Add more adapters as needed (apt, pacman, etc.)
 	}
 
+	// Initialize environment detector
+	envDetector := detector.NewDetector(exec, log)
+
 	// Initialize use cases (application layer)
 	statusUC := status.NewUseCase(managerRepo, log)
-	updateUC := update.NewUseCase(managerRepo, log, adapters)
+	updateUC := update.NewUseCase(managerRepo, log, adapters, envDetector)
 	bootstrapUC := bootstrap.NewUseCase(managerRepo, log)
 
 	// Inject dependencies into commands (presentation layer)

@@ -11,6 +11,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/detector"
 )
 
 // UseCase implements the update use case.
@@ -18,6 +19,7 @@ type UseCase struct {
 	managerRepo manager.Repository
 	logger      output.Logger
 	adapters    map[manager.ManagerID]adapterm.Adapter
+	envDetector *detector.Detector
 }
 
 // NewUseCase creates a new update use case.
@@ -25,11 +27,13 @@ func NewUseCase(
 	managerRepo manager.Repository,
 	logger output.Logger,
 	adapters map[manager.ManagerID]adapterm.Adapter,
+	envDetector *detector.Detector,
 ) *UseCase {
 	return &UseCase{
 		managerRepo: managerRepo,
 		logger:      logger,
 		adapters:    adapters,
+		envDetector: envDetector,
 	}
 }
 
@@ -85,6 +89,17 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 	// Convert DTO strategy to adapter strategy
 	adapterStrategy := uc.convertStrategy(req.Strategy)
 
+	// Detect environment for pip safety checks
+	var env *detector.Environment
+	if uc.envDetector != nil {
+		env = uc.envDetector.Detect(ctx)
+		if len(env.Warnings) > 0 {
+			for _, warning := range env.Warnings {
+				uc.logger.Warn(ctx, warning)
+			}
+		}
+	}
+
 	// Update each manager
 	results := make([]*dto.ManagerUpdateResult, 0, len(managers))
 	summary := &dto.UpdateSummary{
@@ -92,13 +107,35 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 	}
 
 	for _, mgr := range managers {
+		// Check if pip should be skipped in conda environment
+		if mgr.ID == manager.ManagerPip && env != nil && !env.IsPipSafe && !req.PipAllowConda {
+			uc.logger.Warn(ctx, "Skipping pip update in conda environment",
+				output.Field{Key: "env_type", Value: string(env.Type)},
+				output.Field{Key: "env_name", Value: env.Name},
+			)
+			result := &dto.ManagerUpdateResult{
+				ID:              mgr.ID,
+				Name:            mgr.Name,
+				Success:         true, // Not a failure, intentional skip
+				Skipped:         true,
+				SkipReason:      fmt.Sprintf("Conda environment detected (%s). Use --pip-allow-conda to override.", env.Name),
+				UpdatedPackages: []dto.PackageUpdate{},
+				SkippedPackages: []string{},
+			}
+			results = append(results, result)
+			summary.SkippedManagers++
+			continue
+		}
+
 		uc.logger.Info(ctx, "Updating manager", output.Field{Key: "manager", Value: mgr.Name})
 
 		result := uc.updateManager(ctx, mgr, adapterStrategy, req.DryRun)
 		results = append(results, result)
 
 		// Update summary
-		if result.Success {
+		if result.Skipped {
+			summary.SkippedManagers++
+		} else if result.Success {
 			summary.SuccessfulManagers++
 		} else {
 			summary.FailedManagers++
@@ -113,6 +150,7 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 	uc.logger.Info(ctx, "Update completed",
 		output.Field{Key: "successful", Value: summary.SuccessfulManagers},
 		output.Field{Key: "failed", Value: summary.FailedManagers},
+		output.Field{Key: "skipped", Value: summary.SkippedManagers},
 		output.Field{Key: "packages_updated", Value: summary.TotalPackagesUpdated},
 		output.Field{Key: "duration_seconds", Value: summary.TotalDuration},
 	)

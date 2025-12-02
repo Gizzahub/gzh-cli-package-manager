@@ -110,7 +110,7 @@ func TestNewUseCase(t *testing.T) {
 	logger := &mockLogger{}
 	adapters := map[manager.ManagerID]adapterm.Adapter{}
 
-	uc := NewUseCase(repo, logger, adapters)
+	uc := NewUseCase(repo, logger, adapters, nil)
 
 	if uc == nil {
 		t.Fatal("NewUseCase() returned nil")
@@ -264,7 +264,7 @@ func TestUseCase_Update_AllManagers(t *testing.T) {
 				adapters[id] = adapter
 			}
 
-			uc := NewUseCase(repo, logger, adapters)
+			uc := NewUseCase(repo, logger, adapters, nil)
 
 			req := &dto.UpdateRequest{
 				All:      true,
@@ -421,7 +421,7 @@ func TestUseCase_Update_SpecificManagers(t *testing.T) {
 				adapters[id] = adapter
 			}
 
-			uc := NewUseCase(repo, logger, adapters)
+			uc := NewUseCase(repo, logger, adapters, nil)
 
 			req := &dto.UpdateRequest{
 				All:        false,
@@ -512,7 +512,7 @@ func TestUseCase_Update_DryRunMode(t *testing.T) {
 				manager.ManagerHomebrew: adapter,
 			}
 
-			uc := NewUseCase(repo, logger, adapters)
+			uc := NewUseCase(repo, logger, adapters, nil)
 
 			req := &dto.UpdateRequest{
 				All:      true,
@@ -600,7 +600,7 @@ func TestUseCase_Update_Strategies(t *testing.T) {
 				manager.ManagerHomebrew: adapter,
 			}
 
-			uc := NewUseCase(repo, logger, adapters)
+			uc := NewUseCase(repo, logger, adapters, nil)
 
 			req := &dto.UpdateRequest{
 				All:      true,
@@ -640,7 +640,7 @@ func TestUseCase_Update_NoAdapterFound(t *testing.T) {
 	// No adapters registered
 	adapters := map[manager.ManagerID]adapterm.Adapter{}
 
-	uc := NewUseCase(repo, logger, adapters)
+	uc := NewUseCase(repo, logger, adapters, nil)
 
 	req := &dto.UpdateRequest{
 		All:      true,
@@ -685,7 +685,7 @@ func TestUseCase_Update_NoManagersSpecified(t *testing.T) {
 	logger := &mockLogger{}
 	adapters := map[manager.ManagerID]adapterm.Adapter{}
 
-	uc := NewUseCase(repo, logger, adapters)
+	uc := NewUseCase(repo, logger, adapters, nil)
 
 	req := &dto.UpdateRequest{
 		All:        false,

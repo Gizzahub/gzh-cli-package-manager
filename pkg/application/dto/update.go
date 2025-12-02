@@ -19,6 +19,10 @@ type UpdateRequest struct {
 
 	// CheckDuplicates enables duplicate binary detection.
 	CheckDuplicates bool
+
+	// PipAllowConda allows pip updates even in conda environments.
+	// By default, pip updates in conda environments are skipped with a warning.
+	PipAllowConda bool
 }
 
 // UpdateStrategy defines how packages should be updated.
@@ -52,6 +56,12 @@ type ManagerUpdateResult struct {
 
 	// Success indicates if the update completed successfully.
 	Success bool
+
+	// Skipped indicates if the manager was skipped (not an error).
+	Skipped bool
+
+	// SkipReason explains why the manager was skipped.
+	SkipReason string
 
 	// Error contains the error message if update failed.
 	Error string
@@ -100,6 +110,9 @@ type UpdateSummary struct {
 
 	// FailedManagers is the number of managers that failed to update.
 	FailedManagers int
+
+	// SkippedManagers is the number of managers that were skipped.
+	SkippedManagers int
 
 	// TotalPackagesUpdated is the total number of packages updated.
 	TotalPackagesUpdated int
