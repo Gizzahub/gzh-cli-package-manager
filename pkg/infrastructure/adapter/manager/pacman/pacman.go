@@ -12,6 +12,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cmdutil"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/version"
 )
 
@@ -32,22 +33,14 @@ func NewAdapter(executor output.CommandExecutor, logger output.Logger) *Adapter 
 // Detect checks if Pacman is installed on the system.
 func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 	result, err := a.executor.Execute(ctx, "which", "pacman")
-	if err != nil {
-		return false, nil // which command failed, pacman not found
-	}
-
-	return result.ExitCode == 0 && strings.TrimSpace(result.Stdout) != "", nil
+	return cmdutil.IsCommandAvailable(result, err), nil
 }
 
 // GetVersion retrieves the version of the installed Pacman.
 func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "pacman", "--version")
-	if err != nil {
-		return "", fmt.Errorf("failed to get pacman version: %w", err)
-	}
-
-	if result.ExitCode != 0 {
-		return "", fmt.Errorf("pacman --version failed: %s", result.Stderr)
+	if err := cmdutil.CheckResult(result, err, "get pacman version"); err != nil {
+		return "", err
 	}
 
 	// Output format: " .--.                  Pacman v7.0.0 - libalpm v15.0.0"
@@ -64,15 +57,10 @@ func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 // GetBinaryPath returns the path to the Pacman binary.
 func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "which", "pacman")
-	if err != nil {
-		return "", fmt.Errorf("failed to find pacman binary: %w", err)
+	if err := cmdutil.CheckResult(result, err, "find pacman binary"); err != nil {
+		return "", err
 	}
-
-	if result.ExitCode != 0 {
-		return "", fmt.Errorf("pacman binary not found")
-	}
-
-	return strings.TrimSpace(result.Stdout), nil
+	return cmdutil.ExtractStdout(result), nil
 }
 
 // GetConfigPath returns the path to the Pacman configuration.
@@ -85,12 +73,8 @@ func (a *Adapter) GetConfigPath(_ context.Context) (string, error) {
 func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	// Get list of installed packages with versions
 	result, err := a.executor.Execute(ctx, "pacman", "-Q")
-	if err != nil {
-		return nil, fmt.Errorf("failed to list pacman packages: %w", err)
-	}
-
-	if result.ExitCode != 0 {
-		return nil, fmt.Errorf("pacman -Q failed: %s", result.Stderr)
+	if err := cmdutil.CheckResult(result, err, "list pacman packages"); err != nil {
+		return nil, err
 	}
 
 	// Get list of packages with available updates

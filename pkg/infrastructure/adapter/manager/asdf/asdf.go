@@ -13,6 +13,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cmdutil"
 )
 
 const (
@@ -40,10 +41,7 @@ func NewAdapter(executor output.CommandExecutor, logger output.Logger) *Adapter 
 // Detect checks if ASDF is installed on the system.
 func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 	result, err := a.executor.Execute(ctx, whichCommand, asdfCommand)
-	if err != nil || result.ExitCode != 0 {
-		return false, nil
-	}
-	return true, nil
+	return cmdutil.IsCommandAvailable(result, err), nil
 }
 
 // GetVersion retrieves the ASDF version.
@@ -68,11 +66,10 @@ func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 // GetBinaryPath returns the path to the asdf binary.
 func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, whichCommand, asdfCommand)
-	if err != nil {
-		return "", fmt.Errorf("failed to locate asdf binary: %w", err)
+	if err := cmdutil.CheckResult(result, err, "locate asdf binary"); err != nil {
+		return "", err
 	}
-
-	return strings.TrimSpace(result.Stdout), nil
+	return cmdutil.ExtractStdout(result), nil
 }
 
 // GetConfigPath returns the path to ASDF configuration.
