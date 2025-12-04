@@ -9,6 +9,7 @@ Welcome! We're excited that you're interested in contributing to pmctl. This gui
 - [Development Setup](#development-setup)
 - [Architecture Overview](#architecture-overview)
 - [Coding Standards](#coding-standards)
+- [Common Patterns and Best Practices](#common-patterns-and-best-practices)
 - [Testing Requirements](#testing-requirements)
 - [Pull Request Process](#pull-request-process)
 - [Documentation](#documentation)
@@ -431,6 +432,203 @@ make lint-fix
 - `misspell` - Spelling errors
 
 **Linter Configuration**: `.golangci.yml`
+
+---
+
+## Common Patterns and Best Practices
+
+This section documents common patterns used in the codebase. Following these patterns ensures consistency and maintainability.
+
+### Shared Utilities
+
+When implementing adapters or use cases, leverage existing shared utilities instead of duplicating code:
+
+#### cmdutil Package (Command Execution Helpers)
+
+Location: `pkg/infrastructure/adapter/manager/cmdutil/`
+
+The `cmdutil` package provides standardized helpers for command execution patterns used across package manager adapters.
+
+**When to use**:
+- Executing commands and validating results
+- Extracting version information from command output
+- Checking command availability (e.g., `which` results)
+- Parsing JSON output from commands
+
+**Available functions**:
+
+```go
+// Validate command execution result
+func CheckResult(result *output.ExecutionResult, err error, operation string) error
+
+// Extract trimmed stdout
+func ExtractStdout(result *output.ExecutionResult) string
+
+// Parse version field from output (e.g., "npm 9.0.0" → "9.0.0")
+func ExtractVersionField(stdout string, fieldIndex int, operation string) (string, error)
+
+// Check if command is available (interprets which/where results)
+func IsCommandAvailable(result *output.ExecutionResult, err error) bool
+
+// Unmarshal JSON output
+func UnmarshalJSON(result *output.ExecutionResult, v interface{}, operation string) error
+```
+
+**Example usage** (from `pkg/infrastructure/adapter/manager/homebrew/homebrew.go`):
+
+```go
+// Before
+func (a *Adapter) Detect(ctx context.Context) (bool, error) {
+    result, err := a.executor.Execute(ctx, "which", "brew")
+    if err != nil {
+        return false, nil
+    }
+    return result.ExitCode == 0 && strings.TrimSpace(result.Stdout) != "", nil
+}
+
+// After
+func (a *Adapter) Detect(ctx context.Context) (bool, error) {
+    result, err := a.executor.Execute(ctx, "which", "brew")
+    return cmdutil.IsCommandAvailable(result, err), nil
+}
+```
+
+**Benefits**:
+- Reduces code duplication (~20-30 lines per adapter)
+- Standardizes error messages
+- Simplifies adapter implementation
+- Centralized bug fixes and improvements
+
+#### testutil Package (Test Mocks)
+
+Location: `pkg/infrastructure/adapter/manager/testutil/`
+
+Provides shared mock implementations for testing adapters.
+
+**Available mocks**:
+- `MockExecutor`: Mock command executor
+- `MockLogger`: Mock logger
+- Helper functions: `SuccessResult()`, `FailureResult()`
+
+**Example usage**:
+
+```go
+import "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/testutil"
+
+func TestAdapter_Detect(t *testing.T) {
+    executor := testutil.NewMockExecutor(func(_ context.Context, name string, args ...string) (*output.ExecutionResult, error) {
+        return testutil.SuccessResult("/usr/bin/brew"), nil
+    })
+    logger := testutil.NewMockLogger()
+
+    adapter := NewAdapter(executor, logger)
+    // ... rest of test
+}
+```
+
+**Benefits**:
+- Consistent mock behavior across tests
+- Reduces test boilerplate (~25 lines per test file)
+- Easier test maintenance
+
+### Implementing a New Package Manager Adapter
+
+Follow these steps when adding support for a new package manager:
+
+1. **Create adapter package**: `pkg/infrastructure/adapter/manager/newmanager/`
+
+2. **Implement ManagerAdapter interface** using cmdutil helpers:
+
+```go
+package newmanager
+
+import (
+    "context"
+    "github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
+    "github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+    "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cmdutil"
+)
+
+type Adapter struct {
+    executor output.CommandExecutor
+    logger   output.Logger
+}
+
+func (a *Adapter) Detect(ctx context.Context) (bool, error) {
+    result, err := a.executor.Execute(ctx, "which", "newmanager")
+    return cmdutil.IsCommandAvailable(result, err), nil
+}
+
+func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
+    result, err := a.executor.Execute(ctx, "newmanager", "--version")
+    if err := cmdutil.CheckResult(result, err, "get version"); err != nil {
+        return "", err
+    }
+    return cmdutil.ExtractStdout(result), nil
+}
+```
+
+3. **Write comprehensive tests** using testutil:
+
+```go
+package newmanager
+
+import (
+    "testing"
+    "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/testutil"
+)
+
+func TestAdapter_Detect(t *testing.T) {
+    executor := testutil.NewMockExecutor(func(...) (*output.ExecutionResult, error) {
+        return testutil.SuccessResult("/usr/bin/newmanager"), nil
+    })
+    logger := testutil.NewMockLogger()
+
+    adapter := NewAdapter(executor, logger)
+    detected, err := adapter.Detect(context.Background())
+
+    if err != nil {
+        t.Fatalf("Detect() error = %v", err)
+    }
+    if !detected {
+        t.Error("Expected newmanager to be detected")
+    }
+}
+```
+
+4. **Target metrics**:
+   - Implementation time: < 1 day
+   - Test coverage: > 90%
+   - Code reuse: Use cmdutil for standard operations
+
+### Refactoring Guidelines
+
+When refactoring code, follow these principles:
+
+**1. Identify Duplication**
+- Look for repeated error handling patterns
+- Find similar parsing logic across files
+- Identify test mock duplication
+
+**2. Extract to Shared Utilities**
+- Create focused, single-purpose functions
+- Add comprehensive unit tests (aim for 100%)
+- Update existing code to use new utilities
+
+**3. Validate Changes**
+- All existing tests must pass
+- No decrease in code coverage
+- Run `make validate` before committing
+
+**4. Document Patterns**
+- Update this section with new patterns
+- Add examples for complex utilities
+- Reference related ADRs if applicable
+
+**Example refactoring** (Phase 2: cmdutil extraction):
+- **Before**: 5 adapters with ~92 lines of duplicated error handling
+- **After**: Single `cmdutil` package with 100% test coverage
+- **Impact**: Easier maintenance, consistent error messages, faster adapter development
 
 ---
 
