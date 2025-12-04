@@ -413,4 +413,3 @@ func TestAdapter_Update(t *testing.T) {
 		t.Error("Expected Success to be false")
 	}
 }
-

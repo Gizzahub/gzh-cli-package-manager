@@ -706,10 +706,10 @@ func TestUseCase_Update_NoManagersSpecified(t *testing.T) {
 
 // mockEnvDetector implements environment detection for testing.
 type mockEnvDetector struct {
-	envType   string
-	envName   string
-	pipSafe   bool
-	warnings  []string
+	envType  string
+	envName  string
+	pipSafe  bool
+	warnings []string
 }
 
 func (m *mockEnvDetector) Detect(_ context.Context) *struct {

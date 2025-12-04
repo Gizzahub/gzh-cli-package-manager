@@ -453,9 +453,9 @@ func TestAdapter_GetConfigPath_Error(t *testing.T) {
 
 func TestAdapter_ListPackages_Error(t *testing.T) {
 	tests := []struct {
-		name    string
+		name     string
 		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-		wantErr bool
+		wantErr  bool
 	}{
 		{
 			name: "list executor error",
