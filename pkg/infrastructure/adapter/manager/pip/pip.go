@@ -7,11 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cmdutil"
 )
 
 const (
@@ -42,16 +42,13 @@ func NewAdapter(executor output.CommandExecutor, logger output.Logger) *Adapter 
 func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 	// Try pip3 first (more common on modern systems)
 	result, err := a.executor.Execute(ctx, whichCommand, pip3Command)
-	if err == nil && result.ExitCode == 0 {
+	if cmdutil.IsCommandAvailable(result, err) {
 		return true, nil
 	}
 
 	// Fallback to pip
 	result, err = a.executor.Execute(ctx, whichCommand, pipCommand)
-	if err != nil || result.ExitCode != 0 {
-		return false, nil
-	}
-	return true, nil
+	return cmdutil.IsCommandAvailable(result, err), nil
 }
 
 // GetVersion retrieves the Pip version.
@@ -59,16 +56,11 @@ func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 	cmd := a.getPipCommand(ctx)
 	result, err := a.executor.Execute(ctx, cmd, "--version")
 	if err != nil {
-		return "", fmt.Errorf("failed to get pip version: %w", err)
+		return "", fmt.Errorf("get pip version: %w", err)
 	}
 
 	// Parse version from output like "pip 23.0.1 from /usr/lib/python3.11/site-packages/pip (python 3.11)"
-	parts := strings.Fields(strings.TrimSpace(result.Stdout))
-	if len(parts) < 2 {
-		return "", fmt.Errorf("unexpected version format: %s", result.Stdout)
-	}
-
-	return parts[1], nil
+	return cmdutil.ExtractVersionField(result.Stdout, 1, "get pip version")
 }
 
 // GetBinaryPath returns the path to the pip binary.
@@ -76,10 +68,9 @@ func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 	cmd := a.getPipCommand(ctx)
 	result, err := a.executor.Execute(ctx, whichCommand, cmd)
 	if err != nil {
-		return "", fmt.Errorf("failed to locate pip binary: %w", err)
+		return "", fmt.Errorf("locate pip binary: %w", err)
 	}
-
-	return strings.TrimSpace(result.Stdout), nil
+	return cmdutil.ExtractStdout(result), nil
 }
 
 // GetConfigPath returns the path to Pip configuration.
@@ -103,7 +94,7 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	// Get installed packages
 	result, err := a.executor.Execute(ctx, cmd, listArg, formatFlag)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list installed packages: %w", err)
+		return nil, fmt.Errorf("list pip packages: %w", err)
 	}
 
 	// Parse JSON output
@@ -113,8 +104,8 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	}
 
 	var installed []pipPackage
-	if err := json.Unmarshal([]byte(result.Stdout), &installed); err != nil {
-		return nil, fmt.Errorf("failed to parse package list: %w", err)
+	if err := cmdutil.UnmarshalJSON(result, &installed, "parse pip packages"); err != nil {
+		return nil, err
 	}
 
 	// Get outdated packages
@@ -182,7 +173,7 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 func (a *Adapter) getPipCommand(ctx context.Context) string {
 	// Try pip3 first
 	result, err := a.executor.Execute(ctx, whichCommand, pip3Command)
-	if err == nil && result.ExitCode == 0 {
+	if cmdutil.IsCommandAvailable(result, err) {
 		return pip3Command
 	}
 	return pipCommand

@@ -12,6 +12,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cmdutil"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/version"
 )
 
@@ -32,66 +33,43 @@ func NewAdapter(executor output.CommandExecutor, logger output.Logger) *Adapter 
 // Detect checks if NPM is installed on the system.
 func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 	result, err := a.executor.Execute(ctx, "which", "npm")
-	if err != nil {
-		return false, nil // which command failed, npm not found
-	}
-
-	return result.ExitCode == 0 && strings.TrimSpace(result.Stdout) != "", nil
+	return cmdutil.IsCommandAvailable(result, err), nil
 }
 
 // GetVersion retrieves the version of the installed NPM.
 func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "npm", "--version")
-	if err != nil {
-		return "", fmt.Errorf("failed to get npm version: %w", err)
+	if err := cmdutil.CheckResult(result, err, "get npm version"); err != nil {
+		return "", err
 	}
-
-	if result.ExitCode != 0 {
-		return "", fmt.Errorf("npm --version failed: %s", result.Stderr)
-	}
-
-	return strings.TrimSpace(result.Stdout), nil
+	return cmdutil.ExtractStdout(result), nil
 }
 
 // GetBinaryPath returns the path to the NPM binary.
 func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "which", "npm")
-	if err != nil {
-		return "", fmt.Errorf("failed to find npm binary: %w", err)
+	if err := cmdutil.CheckResult(result, err, "find npm binary"); err != nil {
+		return "", err
 	}
-
-	if result.ExitCode != 0 {
-		return "", fmt.Errorf("npm binary not found")
-	}
-
-	return strings.TrimSpace(result.Stdout), nil
+	return cmdutil.ExtractStdout(result), nil
 }
 
 // GetConfigPath returns the path to the NPM configuration.
 func (a *Adapter) GetConfigPath(ctx context.Context) (string, error) {
 	// Get npm config prefix (global install location)
 	result, err := a.executor.Execute(ctx, "npm", "config", "get", "prefix")
-	if err != nil {
-		return "", fmt.Errorf("failed to get npm config: %w", err)
+	if err := cmdutil.CheckResult(result, err, "get npm config prefix"); err != nil {
+		return "", err
 	}
-
-	if result.ExitCode != 0 {
-		return "", fmt.Errorf("npm config get prefix failed: %s", result.Stderr)
-	}
-
-	return strings.TrimSpace(result.Stdout), nil
+	return cmdutil.ExtractStdout(result), nil
 }
 
 // ListPackages retrieves all globally installed packages managed by NPM.
 func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	// Get list of globally installed packages
 	result, err := a.executor.Execute(ctx, "npm", "list", "-g", "--depth=0", "--json")
-	if err != nil {
-		return nil, fmt.Errorf("failed to list npm packages: %w", err)
-	}
-
-	if result.ExitCode != 0 {
-		return nil, fmt.Errorf("npm list failed: %s", result.Stderr)
+	if err := cmdutil.CheckResult(result, err, "list npm packages"); err != nil {
+		return nil, err
 	}
 
 	// Parse JSON output
@@ -101,8 +79,8 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 		} `json:"dependencies"`
 	}
 
-	if err := json.Unmarshal([]byte(result.Stdout), &npmList); err != nil {
-		return nil, fmt.Errorf("failed to parse npm list output: %w", err)
+	if err := cmdutil.UnmarshalJSON(result, &npmList, "parse npm packages"); err != nil {
+		return nil, err
 	}
 
 	// Get outdated packages
