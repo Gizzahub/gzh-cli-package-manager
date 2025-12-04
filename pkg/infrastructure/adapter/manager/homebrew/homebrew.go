@@ -5,13 +5,13 @@ package homebrew
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cmdutil"
 )
 
 // Adapter implements the manager.Adapter interface for Homebrew.
@@ -31,77 +31,49 @@ func NewAdapter(executor output.CommandExecutor, logger output.Logger) *Adapter 
 // Detect checks if Homebrew is installed on the system.
 func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 	result, err := a.executor.Execute(ctx, "which", "brew")
-	if err != nil {
-		return false, nil // which command failed, brew not found
-	}
-
-	return result.ExitCode == 0 && strings.TrimSpace(result.Stdout) != "", nil
+	return cmdutil.IsCommandAvailable(result, err), nil
 }
 
 // GetVersion retrieves the version of the installed Homebrew.
 func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "brew", "--version")
-	if err != nil {
-		return "", fmt.Errorf("failed to get brew version: %w", err)
-	}
-
-	if result.ExitCode != 0 {
-		return "", fmt.Errorf("brew --version failed: %s", result.Stderr)
+	if err := cmdutil.CheckResult(result, err, "get brew version"); err != nil {
+		return "", err
 	}
 
 	// Output format: "Homebrew 4.2.1\n..."
-	lines := strings.Split(strings.TrimSpace(result.Stdout), "\n")
+	lines := strings.Split(cmdutil.ExtractStdout(result), "\n")
 	if len(lines) == 0 {
-		return "", fmt.Errorf("unexpected brew --version output")
+		return "", fmt.Errorf("get brew version: unexpected empty output")
 	}
 
-	// Extract version from "Homebrew X.Y.Z"
-	parts := strings.Fields(lines[0])
-	if len(parts) < 2 {
-		return "", fmt.Errorf("unexpected version format: %s", lines[0])
-	}
-
-	return parts[1], nil
+	return cmdutil.ExtractVersionField(lines[0], 1, "get brew version")
 }
 
 // GetBinaryPath returns the path to the Homebrew binary.
 func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "which", "brew")
-	if err != nil {
-		return "", fmt.Errorf("failed to find brew binary: %w", err)
+	if err := cmdutil.CheckResult(result, err, "find brew binary"); err != nil {
+		return "", err
 	}
-
-	if result.ExitCode != 0 {
-		return "", fmt.Errorf("brew binary not found")
-	}
-
-	return strings.TrimSpace(result.Stdout), nil
+	return cmdutil.ExtractStdout(result), nil
 }
 
 // GetConfigPath returns the path to the Homebrew configuration.
 func (a *Adapter) GetConfigPath(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "brew", "--prefix")
-	if err != nil {
-		return "", fmt.Errorf("failed to get brew prefix: %w", err)
+	if err := cmdutil.CheckResult(result, err, "get brew prefix"); err != nil {
+		return "", err
 	}
-
-	if result.ExitCode != 0 {
-		return "", fmt.Errorf("brew --prefix failed: %s", result.Stderr)
-	}
-
-	return strings.TrimSpace(result.Stdout), nil
+	return cmdutil.ExtractStdout(result), nil
 }
 
 // ListPackages retrieves all packages managed by Homebrew.
 func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	// Use brew info --json=v2 --installed for detailed package information
 	result, err := a.executor.Execute(ctx, "brew", "info", "--json=v2", "--installed")
-	if err != nil {
-		return nil, fmt.Errorf("failed to list brew packages: %w", err)
-	}
-
-	if result.ExitCode != 0 {
-		return nil, fmt.Errorf("brew info failed: %s", result.Stderr)
+	if err := cmdutil.CheckResult(result, err, "list brew packages"); err != nil {
+		return nil, err
 	}
 
 	// Parse JSON output
@@ -124,8 +96,8 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 		} `json:"casks"`
 	}
 
-	if err := json.Unmarshal([]byte(result.Stdout), &brewInfo); err != nil {
-		return nil, fmt.Errorf("failed to parse brew info output: %w", err)
+	if err := cmdutil.UnmarshalJSON(result, &brewInfo, "parse brew packages"); err != nil {
+		return nil, err
 	}
 
 	packages := make([]manager.Package, 0, len(brewInfo.Formulae)+len(brewInfo.Casks))
