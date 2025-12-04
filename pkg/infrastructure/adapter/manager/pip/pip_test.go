@@ -8,40 +8,13 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/testutil"
 )
 
 // Test-specific constants
 const (
 	pipConfigPath = "~/.pip/pip.conf"
 )
-
-// mockExecutor implements output.CommandExecutor for testing.
-type mockExecutor struct {
-	execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-}
-
-func (m *mockExecutor) Execute(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-	if m.execFunc != nil {
-		return m.execFunc(ctx, command, args...)
-	}
-	return &output.ExecutionResult{
-		Stdout:   "",
-		Stderr:   "",
-		ExitCode: 0,
-	}, nil
-}
-
-func (m *mockExecutor) ExecuteWithInput(_ context.Context, _ string, _ string, _ ...string) (*output.ExecutionResult, error) {
-	return &output.ExecutionResult{ExitCode: 0}, nil
-}
-
-// mockLogger implements output.Logger for testing.
-type mockLogger struct{}
-
-func (m *mockLogger) Debug(_ context.Context, _ string, _ ...output.Field)          {}
-func (m *mockLogger) Info(_ context.Context, _ string, _ ...output.Field)           {}
-func (m *mockLogger) Warn(_ context.Context, _ string, _ ...output.Field)           {}
-func (m *mockLogger) Error(_ context.Context, _ string, _ error, _ ...output.Field) {}
 
 func TestAdapter_Detect(t *testing.T) {
 	tests := []struct {
@@ -95,7 +68,7 @@ func TestAdapter_Detect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			got, err := adapter.Detect(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -154,7 +127,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			got, err := adapter.GetVersion(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -195,7 +168,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			got, err := adapter.GetBinaryPath(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -210,7 +183,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 }
 
 func TestAdapter_GetConfigPath(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{}, &mockLogger{})
+	adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
 	got, err := adapter.GetConfigPath(context.Background())
 
 	if err != nil {
@@ -290,7 +263,7 @@ func TestAdapter_ListPackages(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			packages, err := adapter.ListPackages(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -376,7 +349,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(&mockExecutor{execFunc: tt.execFunc}, &mockLogger{})
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
 			got, err := adapter.CheckHealth(context.Background())
 
 			if (err != nil) != tt.wantErr {
@@ -391,11 +364,10 @@ func TestAdapter_CheckHealth(t *testing.T) {
 }
 
 func TestAdapter_GetVersion_Error(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{
-		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-			return nil, errors.New("execution failed")
-		},
-	}, &mockLogger{})
+	execFunc := func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+		return nil, errors.New("execution failed")
+	}
+	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 
 	_, err := adapter.GetVersion(context.Background())
 	if err == nil {
@@ -404,18 +376,17 @@ func TestAdapter_GetVersion_Error(t *testing.T) {
 }
 
 func TestAdapter_GetVersion_ParseError(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{
-		execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-			if command == whichCommand {
-				return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
-			}
-			// Return output with less than 2 fields (only one word)
-			return &output.ExecutionResult{
-				Stdout:   "pip",
-				ExitCode: 0,
-			}, nil
-		},
-	}, &mockLogger{})
+	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command == whichCommand {
+			return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+		}
+		// Return output with less than 2 fields (only one word)
+		return &output.ExecutionResult{
+			Stdout:   "pip",
+			ExitCode: 0,
+		}, nil
+	}
+	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 
 	_, err := adapter.GetVersion(context.Background())
 	if err == nil {
@@ -424,11 +395,10 @@ func TestAdapter_GetVersion_ParseError(t *testing.T) {
 }
 
 func TestAdapter_GetBinaryPath_Error(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{
-		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-			return nil, errors.New("execution failed")
-		},
-	}, &mockLogger{})
+	execFunc := func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+		return nil, errors.New("execution failed")
+	}
+	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 
 	_, err := adapter.GetBinaryPath(context.Background())
 	if err == nil {
@@ -437,14 +407,13 @@ func TestAdapter_GetBinaryPath_Error(t *testing.T) {
 }
 
 func TestAdapter_ListPackages_Error(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{
-		execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-			if command == whichCommand {
-				return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
-			}
-			return nil, errors.New("execution failed")
-		},
-	}, &mockLogger{})
+	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command == whichCommand {
+			return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+		}
+		return nil, errors.New("execution failed")
+	}
+	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 
 	_, err := adapter.ListPackages(context.Background())
 	if err == nil {
@@ -453,20 +422,19 @@ func TestAdapter_ListPackages_Error(t *testing.T) {
 }
 
 func TestAdapter_ListPackages_InvalidJSON(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{
-		execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-			if command == whichCommand {
-				return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
-			}
-			if command == pip3Command && args[0] == "list" {
-				return &output.ExecutionResult{
-					Stdout:   "not valid json",
-					ExitCode: 0,
-				}, nil
-			}
-			return &output.ExecutionResult{ExitCode: 0}, nil
-		},
-	}, &mockLogger{})
+	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command == whichCommand {
+			return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+		}
+		if command == pip3Command && args[0] == "list" {
+			return &output.ExecutionResult{
+				Stdout:   "not valid json",
+				ExitCode: 0,
+			}, nil
+		}
+		return &output.ExecutionResult{ExitCode: 0}, nil
+	}
+	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 
 	_, err := adapter.ListPackages(context.Background())
 	if err == nil {
@@ -475,14 +443,13 @@ func TestAdapter_ListPackages_InvalidJSON(t *testing.T) {
 }
 
 func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{
-		execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-			if command == whichCommand {
-				return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
-			}
-			return nil, errors.New("execution failed")
-		},
-	}, &mockLogger{})
+	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command == whichCommand {
+			return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+		}
+		return nil, errors.New("execution failed")
+	}
+	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 
 	status, err := adapter.CheckHealth(context.Background())
 
@@ -496,14 +463,13 @@ func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
 }
 
 func TestAdapter_Update(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{
-		execFunc: func(_ context.Context, command string, _ ...string) (*output.ExecutionResult, error) {
-			if command == whichCommand {
-				return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
-			}
-			return &output.ExecutionResult{ExitCode: 0}, nil
-		},
-	}, &mockLogger{})
+	execFunc := func(_ context.Context, command string, _ ...string) (*output.ExecutionResult, error) {
+		if command == whichCommand {
+			return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+		}
+		return &output.ExecutionResult{ExitCode: 0}, nil
+	}
+	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 
 	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{})
 
@@ -517,11 +483,10 @@ func TestAdapter_Update(t *testing.T) {
 }
 
 func TestAdapter_Detect_ExecutorError(t *testing.T) {
-	adapter := NewAdapter(&mockExecutor{
-		execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-			return nil, errors.New("execution failed")
-		},
-	}, &mockLogger{})
+	execFunc := func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+		return nil, errors.New("execution failed")
+	}
+	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 
 	detected, err := adapter.Detect(context.Background())
 
