@@ -7,21 +7,62 @@ run:
 
 linters:
   enable:
+    # Core linters (error detection)
     - errcheck      # Check for unchecked errors
     - govet         # Examine Go source code and reports suspicious constructs
     - ineffassign   # Detect ineffectual assignments
     - staticcheck   # Static analysis (includes gosimple)
     - unused        # Check for unused constants, variables, functions and types
-    - misspell      # Finds commonly misspelled English words
+
+    # Code quality
     - revive        # Fast, configurable, extensible, flexible linter
-    - gosec         # Inspect source code for security problems
-    - unconvert     # Remove unnecessary type conversions
-    - prealloc      # Find slice declarations that could potentially be pre-allocated
-    - nolintlint    # Reports ill-formed or insufficient nolint directives
     - gocyclo       # Check cyclomatic complexity (ADR-002 requirement)
     - goconst       # Find repeated strings that could be constants
-    - godot         # Check comments end in period
+    - gofmt         # Check whether code was gofmt-ed
+    - goimports     # Check import statements are formatted according to goimports
+    - misspell      # Finds commonly misspelled English words
+    - unconvert     # Remove unnecessary type conversions
     - unparam       # Find unused function parameters
+    - nakedret      # Find naked returns in functions greater than a specified function length
+    - prealloc      # Find slice declarations that could potentially be pre-allocated
+    - godot         # Check comments end in period
+    - whitespace    # Check for unnecessary whitespace
+    - nolintlint    # Reports ill-formed or insufficient nolint directives
+
+    # Security
+    - gosec         # Inspect source code for security problems
+
+    # Bugs
+    - bodyclose     # Check whether HTTP response body is closed successfully
+    - nilerr        # Find code that returns nil even if it checks that error is not nil
+    - rowserrcheck  # Check whether Err of rows is checked successfully
+    - sqlclosecheck # Check that sql.Rows and sql.Stmt are closed
+    - exportloopref # Check for pointers to enclosing loop variables
+
+    # Complexity
+    - gocognit      # Compute and check the cognitive complexity of functions
+    - nestif        # Report deeply nested if statements
+    - cyclop        # Check function and package cyclomatic complexity
+
+    # Performance
+    - gocritic      # Meta-linter with various checks
+    - gosimple      # Linter that specializes in simplifying code (part of staticcheck)
+
+    # Style
+    - stylecheck    # Replacement for golint
+    - goheader      # Check Go header comments
+    - gomodguard    # Check that module dependencies are allowed
+    - depguard      # Check if package imports are in allowlist/denylist
+
+    # Format
+    - gofumpt       # Stricter gofmt
+    - gci           # Control golang import order
+
+    # Code smell
+    - dupl          # Code clone detection
+    - goerr113      # Check error wrapping in Go 1.13+
+    - errorlint     # Find code that will cause problems with error wrapping
+    - wrapcheck     # Check that errors from external packages are wrapped
 
 linters-settings:
   errcheck:
@@ -63,6 +104,72 @@ linters-settings:
   gosec:
     excludes:
       - G104 # Audit errors not checked - we use errcheck for this
+
+  gocognit:
+    min-complexity: 20
+
+  nestif:
+    min-complexity: 4
+
+  cyclop:
+    max-complexity: 15
+
+  nakedret:
+    max-func-lines: 30
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - performance
+      - style
+    disabled-checks:
+      - paramTypeCombine # conflicts with other linters
+
+  depguard:
+    rules:
+      main:
+        deny:
+          - pkg: "io/ioutil"
+            desc: "Use io or os instead of deprecated io/ioutil"
+
+  gomodguard:
+    blocked:
+      modules:
+        - github.com/pkg/errors:
+            recommendations:
+              - fmt
+              - errors
+            reason: "Use standard library errors package"
+
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/gizzahub)
+
+  dupl:
+    threshold: 100
+
+  goerr113:
+    check-error-free-funcs:
+      - errors.New
+      - errors.Unwrap
+
+  errorlint:
+    errorf: true
+    asserts: true
+    comparison: true
+
+  wrapcheck:
+    ignoreSigs:
+      - .Errorf(
+      - errors.New(
+      - errors.Unwrap(
+      - .Wrap(
+      - .Wrapf(
+      - .WithMessage(
+      - .WithMessagef(
+      - .WithStack(
 
 issues:
   exclude-rules:
