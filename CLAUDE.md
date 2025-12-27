@@ -11,7 +11,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Architecture**: Clean Architecture + Hexagonal (Ports & Adapters)
 **Go Version**: 1.24+
 
-Think of it as a "package manager for package managers" - unified interface for Homebrew, asdf, npm, pip, etc.
+Think of it as a "package manager for package managers" - unified interface for:
+- **System**: Homebrew, apt, pacman, winget (Windows)
+- **Version**: asdf
+- **Language**: npm, pip, cargo
 
 ---
 
@@ -134,7 +137,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - **Current Phase**: Week 2 - Documentation (Pre-implementation)
 - **Next Milestone**: v1.0 MVP (Week 9)
 - **Test Coverage**: Target 90%+ (setup phase)
-- **Platforms**: macOS, Linux, Windows (WSL2)
+- **Platforms**: macOS, Linux, Windows (native winget + WSL2)
 
 ---
 
@@ -149,5 +152,5 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-**Last Updated**: 2025-12-06
+**Last Updated**: 2025-12-27
 **Previous**: 528 lines → **Current**: 138 lines (74% reduction)
