@@ -193,6 +193,51 @@ func (r *ManagerRepository) initializeDefaultManagers() {
 		}...)
 	}
 
+	// Add Windows-specific managers
+	if platform == manager.PlatformWindows {
+		managers = append(managers, []*manager.Manager{
+			{
+				ID:          manager.ManagerWinget,
+				Name:        "Windows Package Manager",
+				Type:        manager.TypeSystem,
+				Platform:    platform,
+				Installed:   false,
+				Version:     "",
+				Status:      manager.StatusUnavailable,
+				ConfigPath:  "",
+				BinaryPath:  "",
+				Packages:    []manager.Package{},
+				LastChecked: now,
+			},
+			{
+				ID:          manager.ManagerScoop,
+				Name:        "Scoop",
+				Type:        manager.TypeSystem,
+				Platform:    platform,
+				Installed:   false,
+				Version:     "",
+				Status:      manager.StatusUnavailable,
+				ConfigPath:  "",
+				BinaryPath:  "",
+				Packages:    []manager.Package{},
+				LastChecked: now,
+			},
+			{
+				ID:          manager.ManagerChocolatey,
+				Name:        "Chocolatey",
+				Type:        manager.TypeSystem,
+				Platform:    platform,
+				Installed:   false,
+				Version:     "",
+				Status:      manager.StatusUnavailable,
+				ConfigPath:  "",
+				BinaryPath:  "",
+				Packages:    []manager.Package{},
+				LastChecked: now,
+			},
+		}...)
+	}
+
 	for _, mgr := range managers {
 		r.managers[mgr.ID] = mgr
 	}

@@ -391,7 +391,6 @@ func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
 	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 
 	status, err := adapter.CheckHealth(context.Background())
-
 	if err != nil {
 		t.Errorf("CheckHealth() should not return error, got %v", err)
 	}

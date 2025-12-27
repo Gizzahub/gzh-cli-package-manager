@@ -403,7 +403,6 @@ func TestUseCase_GetStatus_DTOMapping(t *testing.T) {
 
 	req := &dto.StatusRequest{Verbose: false}
 	resp, err := uc.GetStatus(context.Background(), req)
-
 	if err != nil {
 		t.Fatalf("GetStatus() unexpected error: %v", err)
 	}
@@ -446,6 +445,7 @@ func TestUseCase_GetStatus_DTOMapping(t *testing.T) {
 		t.Errorf("UpdatableCount = %v, want 1", status.UpdatableCount)
 	}
 }
+
 func TestUseCase_GetStatus_VerboseMode(t *testing.T) {
 	now := time.Now()
 
@@ -614,7 +614,6 @@ func TestUseCase_GetStatus_VerbosePackageMapping(t *testing.T) {
 
 	req := &dto.StatusRequest{Verbose: true}
 	resp, err := uc.GetStatus(context.Background(), req)
-
 	if err != nil {
 		t.Fatalf("GetStatus() unexpected error: %v", err)
 	}
@@ -696,7 +695,6 @@ func TestUseCase_GetStatus_VerboseWithMultipleManagers(t *testing.T) {
 
 	req := &dto.StatusRequest{Verbose: true}
 	resp, err := uc.GetStatus(context.Background(), req)
-
 	if err != nil {
 		t.Fatalf("GetStatus() unexpected error: %v", err)
 	}

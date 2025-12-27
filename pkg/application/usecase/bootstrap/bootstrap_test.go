@@ -104,7 +104,7 @@ preferences:
 `
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "bootstrap.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
+	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0o644))
 
 	// Execute
 	req := &dto.BootstrapRequest{
@@ -151,7 +151,7 @@ preferences:
 `
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "bootstrap.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
+	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0o644))
 
 	// Execute
 	req := &dto.BootstrapRequest{
@@ -189,7 +189,7 @@ preferences:
 `
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "bootstrap.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
+	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0o644))
 
 	// Execute
 	req := &dto.BootstrapRequest{
@@ -228,7 +228,7 @@ preferences:
 `
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "bootstrap.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
+	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0o644))
 
 	// Execute (not dry-run, so should fail with "not implemented")
 	req := &dto.BootstrapRequest{
@@ -297,7 +297,7 @@ func TestBootstrap_InvalidYAML(t *testing.T) {
 `
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "bootstrap.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
+	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0o644))
 
 	// Execute
 	req := &dto.BootstrapRequest{
@@ -353,7 +353,7 @@ preferences:
 `
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "bootstrap.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
+	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0o644))
 
 	// Execute
 	req := &dto.BootstrapRequest{
@@ -392,7 +392,7 @@ preferences:
 `
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "bootstrap.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
+	require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0o644))
 
 	// Execute (not dry-run, so should fail)
 	req := &dto.BootstrapRequest{

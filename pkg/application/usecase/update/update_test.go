@@ -521,7 +521,6 @@ func TestUseCase_Update_DryRunMode(t *testing.T) {
 			}
 
 			resp, err := uc.Update(context.Background(), req)
-
 			if err != nil {
 				t.Fatalf("Update() unexpected error: %v", err)
 			}
@@ -608,7 +607,6 @@ func TestUseCase_Update_Strategies(t *testing.T) {
 			}
 
 			_, err := uc.Update(context.Background(), req)
-
 			if err != nil {
 				t.Fatalf("Update() unexpected error: %v", err)
 			}
@@ -648,7 +646,6 @@ func TestUseCase_Update_NoAdapterFound(t *testing.T) {
 	}
 
 	resp, err := uc.Update(context.Background(), req)
-
 	if err != nil {
 		t.Fatalf("Update() unexpected error: %v", err)
 	}

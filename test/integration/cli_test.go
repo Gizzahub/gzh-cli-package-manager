@@ -57,7 +57,6 @@ func runCommand(t *testing.T, args ...string) (string, string, error) {
 
 func TestCLI_Version(t *testing.T) {
 	stdout, _, err := runCommand(t, "version")
-
 	if err != nil {
 		t.Fatalf("version command failed: %v", err)
 	}
@@ -70,7 +69,6 @@ func TestCLI_Version(t *testing.T) {
 
 func TestCLI_Help(t *testing.T) {
 	stdout, _, err := runCommand(t, "--help")
-
 	if err != nil {
 		t.Fatalf("help command failed: %v", err)
 	}
@@ -91,7 +89,6 @@ func TestCLI_Help(t *testing.T) {
 
 func TestCLI_Status_JSON(t *testing.T) {
 	stdout, _, err := runCommand(t, "status", "--output", "json")
-
 	if err != nil {
 		t.Fatalf("status --output json failed: %v", err)
 	}
@@ -119,7 +116,6 @@ func TestCLI_Status_JSON(t *testing.T) {
 
 func TestCLI_Status_Text(t *testing.T) {
 	stdout, _, err := runCommand(t, "status")
-
 	if err != nil {
 		t.Fatalf("status command failed: %v", err)
 	}
@@ -137,7 +133,6 @@ func TestCLI_Status_Text(t *testing.T) {
 
 func TestCLI_Status_Verbose(t *testing.T) {
 	stdout, _, err := runCommand(t, "status", "--verbose")
-
 	if err != nil {
 		t.Fatalf("status --verbose failed: %v", err)
 	}
@@ -150,7 +145,6 @@ func TestCLI_Status_Verbose(t *testing.T) {
 
 func TestCLI_Update_DryRun(t *testing.T) {
 	stdout, _, err := runCommand(t, "update", "--all", "--dry-run")
-
 	if err != nil {
 		// update may return error if no managers are healthy
 		t.Logf("update --all --dry-run returned error (may be expected): %v", err)
@@ -183,7 +177,6 @@ func TestCLI_Update_DryRun_JSON(t *testing.T) {
 
 func TestCLI_Bootstrap_DryRun(t *testing.T) {
 	stdout, _, err := runCommand(t, "bootstrap", "--dry-run")
-
 	if err != nil {
 		// bootstrap may return error without config
 		t.Logf("bootstrap --dry-run returned error (may be expected): %v", err)
@@ -223,7 +216,6 @@ func TestCLI_InvalidFlag(t *testing.T) {
 
 func TestCLI_StatusSubcommand_Exists(t *testing.T) {
 	stdout, _, err := runCommand(t, "status", "--help")
-
 	if err != nil {
 		t.Fatalf("status --help failed: %v", err)
 	}
@@ -236,7 +228,6 @@ func TestCLI_StatusSubcommand_Exists(t *testing.T) {
 
 func TestCLI_UpdateSubcommand_Exists(t *testing.T) {
 	stdout, _, err := runCommand(t, "update", "--help")
-
 	if err != nil {
 		t.Fatalf("update --help failed: %v", err)
 	}
@@ -252,7 +243,6 @@ func TestCLI_UpdateSubcommand_Exists(t *testing.T) {
 
 func TestCLI_BootstrapSubcommand_Exists(t *testing.T) {
 	stdout, _, err := runCommand(t, "bootstrap", "--help")
-
 	if err != nil {
 		t.Fatalf("bootstrap --help failed: %v", err)
 	}

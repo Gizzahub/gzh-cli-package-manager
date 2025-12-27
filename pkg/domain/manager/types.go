@@ -5,15 +5,18 @@ type ManagerID string
 
 // Common package manager identifiers.
 const (
-	ManagerHomebrew ManagerID = "brew"
-	ManagerASDF     ManagerID = "asdf"
-	ManagerNPM      ManagerID = "npm"
-	ManagerPip      ManagerID = "pip"
-	ManagerCargo    ManagerID = "cargo"
-	ManagerSDKMan   ManagerID = "sdkman"
-	ManagerApt      ManagerID = "apt"
-	ManagerPacman   ManagerID = "pacman"
-	ManagerYay      ManagerID = "yay"
+	ManagerHomebrew   ManagerID = "brew"
+	ManagerASDF       ManagerID = "asdf"
+	ManagerNPM        ManagerID = "npm"
+	ManagerPip        ManagerID = "pip"
+	ManagerCargo      ManagerID = "cargo"
+	ManagerSDKMan     ManagerID = "sdkman"
+	ManagerApt        ManagerID = "apt"
+	ManagerPacman     ManagerID = "pacman"
+	ManagerYay        ManagerID = "yay"
+	ManagerWinget     ManagerID = "winget"
+	ManagerScoop      ManagerID = "scoop"
+	ManagerChocolatey ManagerID = "choco"
 )
 
 // ManagerType represents the category of package manager.

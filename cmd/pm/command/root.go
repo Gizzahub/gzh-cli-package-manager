@@ -7,21 +7,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	// rootCmd represents the base command when called without any subcommands.
-	rootCmd = &cobra.Command{
-		Use:   "gz-pm",
-		Short: "Package Manager Control - Unified package manager orchestration",
-		Long: `gz-pm (Package Manager Control) is a CLI tool that orchestrates multiple
+// rootCmd represents the base command when called without any subcommands.
+var rootCmd = &cobra.Command{
+	Use:   "gz-pm",
+	Short: "Package Manager Control - Unified package manager orchestration",
+	Long: `gz-pm (Package Manager Control) is a CLI tool that orchestrates multiple
 package managers (Homebrew, asdf, npm, pip, etc.) through a unified interface.
 
 It provides a single, consistent interface to manage all your package managers,
 making it easy to update, configure, and maintain your development environment.`,
-		// Uncomment the following line if your bare application
-		// has an action associated with it:
-		// Run: func(cmd *cobra.Command, args []string) { },
-	}
-)
+	// Uncomment the following line if your bare application
+	// has an action associated with it:
+	// Run: func(cmd *cobra.Command, args []string) { },
+}
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.

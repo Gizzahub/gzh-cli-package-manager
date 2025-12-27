@@ -12,10 +12,13 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/apt"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/asdf"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cargo"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/chocolatey"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/homebrew"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/npm"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/pacman"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/pip"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/scoop"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/winget"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
@@ -60,6 +63,11 @@ func (r *DetectingManagerRepository) registerAdapters() {
 
 	// Register version managers
 	r.adapters[manager.ManagerASDF] = asdf.NewAdapter(r.executor, r.logger)
+
+	// Register Windows package managers
+	r.adapters[manager.ManagerWinget] = winget.NewAdapter(r.executor, r.logger)
+	r.adapters[manager.ManagerScoop] = scoop.NewAdapter(r.executor, r.logger)
+	r.adapters[manager.ManagerChocolatey] = chocolatey.NewAdapter(r.executor, r.logger)
 }
 
 // FindAll returns all managers with detection performed.

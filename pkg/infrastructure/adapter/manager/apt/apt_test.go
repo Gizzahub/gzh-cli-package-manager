@@ -143,7 +143,6 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 func TestAdapter_GetConfigPath(t *testing.T) {
 	adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
 	got, err := adapter.GetConfigPath(context.Background())
-
 	if err != nil {
 		t.Errorf("GetConfigPath() error = %v", err)
 	}
@@ -382,7 +381,6 @@ func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
 	}), testutil.NewMockLogger())
 
 	status, err := adapter.CheckHealth(context.Background())
-
 	if err != nil {
 		t.Errorf("CheckHealth() should not return error, got %v", err)
 	}
@@ -411,7 +409,6 @@ func TestAdapter_Detect_ExecutorError(t *testing.T) {
 	}), testutil.NewMockLogger())
 
 	detected, err := adapter.Detect(context.Background())
-
 	if err != nil {
 		t.Errorf("Detect() should not return error, got %v", err)
 	}

@@ -26,7 +26,6 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 
 	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 	path, err := adapter.GetConfigPath(context.Background())
-
 	if err != nil {
 		t.Errorf("GetConfigPath() unexpected error: %v", err)
 	}
@@ -708,7 +707,6 @@ func TestAdapter_Detect_EmptyOutput(t *testing.T) {
 
 	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 	got, err := adapter.Detect(context.Background())
-
 	if err != nil {
 		t.Errorf("Detect() unexpected error: %v", err)
 	}

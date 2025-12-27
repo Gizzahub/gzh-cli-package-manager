@@ -18,8 +18,9 @@ linters:
     - revive        # Fast, configurable, extensible, flexible linter
     - gocyclo       # Check cyclomatic complexity (ADR-002 requirement)
     - goconst       # Find repeated strings that could be constants
-    - gofmt         # Check whether code was gofmt-ed
-    - goimports     # Check import statements are formatted according to goimports
+    # gofmt and goimports are now formatters in golangci-lint v2
+    # - gofmt         # Check whether code was gofmt-ed
+    # - goimports     # Check import statements are formatted according to goimports
     - misspell      # Finds commonly misspelled English words
     - unconvert     # Remove unnecessary type conversions
     - unparam       # Find unused function parameters
@@ -37,7 +38,7 @@ linters:
     - nilerr        # Find code that returns nil even if it checks that error is not nil
     - rowserrcheck  # Check whether Err of rows is checked successfully
     - sqlclosecheck # Check that sql.Rows and sql.Stmt are closed
-    - exportloopref # Check for pointers to enclosing loop variables
+    # - exportloopref # Removed in golangci-lint v2 (now in Go compiler)
 
     # Complexity
     - gocognit      # Compute and check the cognitive complexity of functions
@@ -46,21 +47,21 @@ linters:
 
     # Performance
     - gocritic      # Meta-linter with various checks
-    - gosimple      # Linter that specializes in simplifying code (part of staticcheck)
+    # - gosimple      # Now part of staticcheck in v2
 
     # Style
-    - stylecheck    # Replacement for golint
+    # - stylecheck    # Now part of staticcheck in v2
     - goheader      # Check Go header comments
     - gomodguard    # Check that module dependencies are allowed
     - depguard      # Check if package imports are in allowlist/denylist
 
-    # Format
-    - gofumpt       # Stricter gofmt
-    - gci           # Control golang import order
+    # Format (now formatters in golangci-lint v2)
+    # - gofumpt       # Stricter gofmt
+    # - gci           # Control golang import order
 
     # Code smell
     - dupl          # Code clone detection
-    - goerr113      # Check error wrapping in Go 1.13+
+    # - goerr113      # Renamed to err113 in v2
     - errorlint     # Find code that will cause problems with error wrapping
     - wrapcheck     # Check that errors from external packages are wrapped
 

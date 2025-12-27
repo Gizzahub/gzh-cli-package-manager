@@ -328,6 +328,9 @@ func TestDetectingManagerRepository_AdapterRegistration(t *testing.T) {
 		manager.ManagerPip,
 		manager.ManagerCargo,
 		manager.ManagerASDF,
+		manager.ManagerWinget,
+		manager.ManagerScoop,
+		manager.ManagerChocolatey,
 	}
 
 	for _, id := range expectedAdapters {
