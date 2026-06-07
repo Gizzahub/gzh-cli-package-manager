@@ -104,9 +104,9 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	//     binary3
 
 	packages := make([]manager.Package, 0)
-	lines := strings.Split(strings.TrimSpace(result.Stdout), "\n")
+	lines := strings.SplitSeq(strings.TrimSpace(result.Stdout), "\n")
 
-	for _, line := range lines {
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, " ") {
 			// Skip binary names (indented lines)

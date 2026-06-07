@@ -238,8 +238,8 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 	}
 
 	// Parse upgraded packages from output
-	lines := strings.Split(upgradeResult.Stdout, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(upgradeResult.Stdout, "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.Contains(line, "Successfully installed") {
 			parts := strings.Fields(line)

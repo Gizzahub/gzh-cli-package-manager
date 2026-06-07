@@ -242,8 +242,8 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 
 	// Parse updated packages from output
 	// Scoop shows "Updating 'package' (version -> version)"
-	lines := strings.Split(upgradeResult.Stdout, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(upgradeResult.Stdout, "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "Updating '") {
 			// Extract package name between quotes

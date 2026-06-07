@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 )
@@ -50,13 +51,13 @@ func (l *StructuredLogger) log(level, msg string, fields []output.Field) {
 		return
 	}
 
-	fieldStr := ""
+	var fieldStr strings.Builder
 	for i, field := range fields {
 		if i > 0 {
-			fieldStr += " "
+			fieldStr.WriteString(" ")
 		}
-		fieldStr += fmt.Sprintf("%s=%v", field.Key, field.Value)
+		fieldStr.WriteString(fmt.Sprintf("%s=%v", field.Key, field.Value))
 	}
 
-	l.logger.Printf("[%s] %s | %s", level, msg, fieldStr)
+	l.logger.Printf("[%s] %s | %s", level, msg, fieldStr.String())
 }

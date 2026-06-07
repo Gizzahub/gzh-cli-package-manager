@@ -91,12 +91,9 @@ func displayText(resp *dto.StatusResponse) {
 			if statusVerbose && len(mgr.Packages) > 0 {
 				fmt.Println("   ")
 				// Show up to 10 packages
-				limit := len(mgr.Packages)
-				if limit > 10 {
-					limit = 10
-				}
+				limit := min(len(mgr.Packages), 10)
 
-				for i := 0; i < limit; i++ {
+				for i := range limit {
 					pkg := mgr.Packages[i]
 					updateIcon := "  "
 					if pkg.UpdateType != "" && pkg.UpdateType != "none" {

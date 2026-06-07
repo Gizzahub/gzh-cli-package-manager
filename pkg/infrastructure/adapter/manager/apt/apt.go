@@ -94,8 +94,8 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 
 	// Parse installed packages
 	installedMap := make(map[string]string)
-	lines := strings.Split(strings.TrimSpace(result.Stdout), "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(strings.TrimSpace(result.Stdout), "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "Listing...") {
 			continue
@@ -126,8 +126,8 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	upgradeResult, err := a.executor.Execute(ctx, aptCommand, listArg, upgradableFlag)
 	upgradableMap := make(map[string]string)
 	if err == nil && upgradeResult.ExitCode == 0 {
-		upgradeLines := strings.Split(strings.TrimSpace(upgradeResult.Stdout), "\n")
-		for _, line := range upgradeLines {
+		upgradeLines := strings.SplitSeq(strings.TrimSpace(upgradeResult.Stdout), "\n")
+		for line := range upgradeLines {
 			line = strings.TrimSpace(line)
 			if line == "" || strings.HasPrefix(line, "Listing...") {
 				continue

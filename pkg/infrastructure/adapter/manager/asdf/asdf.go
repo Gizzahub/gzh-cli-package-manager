@@ -110,8 +110,8 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 		}
 
 		// Parse versions (output format: " 1.2.3" or "*1.2.3" for current)
-		lines := strings.Split(strings.TrimSpace(versionResult.Stdout), "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(strings.TrimSpace(versionResult.Stdout), "\n")
+		for line := range lines {
 			line = strings.TrimSpace(line)
 			if line == "" {
 				continue

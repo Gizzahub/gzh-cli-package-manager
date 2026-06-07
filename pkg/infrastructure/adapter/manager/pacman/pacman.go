@@ -87,8 +87,8 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	// Parse update information into a map
 	updateMap := make(map[string]string)
 	if updatesResult.ExitCode == 0 {
-		updateLines := strings.Split(strings.TrimSpace(updatesResult.Stdout), "\n")
-		for _, line := range updateLines {
+		updateLines := strings.SplitSeq(strings.TrimSpace(updatesResult.Stdout), "\n")
+		for line := range updateLines {
 			if line == "" {
 				continue
 			}

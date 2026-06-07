@@ -31,7 +31,7 @@ func ExtractStdout(result *output.ExecutionResult) string {
 }
 
 // UnmarshalJSON parses JSON output from command result into the given value.
-func UnmarshalJSON(result *output.ExecutionResult, v interface{}, operation string) error {
+func UnmarshalJSON(result *output.ExecutionResult, v any, operation string) error {
 	if err := json.Unmarshal([]byte(result.Stdout), v); err != nil {
 		return fmt.Errorf("%s: failed to parse output: %w", operation, err)
 	}

@@ -35,7 +35,7 @@ type ManagerConfig struct {
 	Version string `yaml:"version,omitempty"`
 
 	// ConfigOptions contains manager-specific configuration.
-	ConfigOptions map[string]interface{} `yaml:"config,omitempty"`
+	ConfigOptions map[string]any `yaml:"config,omitempty"`
 }
 
 // PreferencesConfig contains global bootstrap preferences.

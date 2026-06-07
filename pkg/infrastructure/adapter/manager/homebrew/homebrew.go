@@ -224,8 +224,8 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 
 	// Parse upgraded packages from output
 	// Homebrew upgrade output typically shows "Upgrading <package> ..." lines
-	lines := strings.Split(upgradeResult.Stdout, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(upgradeResult.Stdout, "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "Upgrading ") {
 			parts := strings.Fields(line)

@@ -305,7 +305,7 @@ func TestManagerRepository_ConcurrentAccess(t *testing.T) {
 
 	// Reader goroutine
 	go func() {
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			_, _ = repo.FindAll(ctx)
 			_, _ = repo.FindByID(ctx, manager.ManagerHomebrew)
 		}
@@ -314,7 +314,7 @@ func TestManagerRepository_ConcurrentAccess(t *testing.T) {
 
 	// Writer goroutine
 	go func() {
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			mgr := &manager.Manager{
 				ID:   manager.ManagerID("test-concurrent"),
 				Name: "Test Concurrent",
