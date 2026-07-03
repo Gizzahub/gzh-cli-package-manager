@@ -14,8 +14,8 @@ lint: ## Run golangci-lint
 	@if command -v golangci-lint >/dev/null 2>&1; then \
 		golangci-lint run ./...; \
 	else \
-		echo "⚠️  golangci-lint not installed. Run: make install-tools"; \
-		$(GOVET) ./...; \
+		echo "⚠️  golangci-lint not installed. Run: make install-tools" >&2; \
+		exit 1; \
 	fi
 
 fmt: ## Format code with gofmt and gofumpt
