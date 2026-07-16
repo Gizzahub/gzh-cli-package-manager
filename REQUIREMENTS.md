@@ -21,7 +21,7 @@ This document specifies all functional and non-functional requirements for the `
 #### REQ-UC001-001: Multi-Manager Update Support
 **Priority**: P0 (Critical)
 **Phase**: MVP
-**Source**: [UC-001-update-enhanced.md](docs/specifications/UC-001-update-enhanced.md)
+**Source**: [UC-001-update-enhanced.md](docs/specifications/use-cases/UC-001-update-enhanced.md)
 
 **Description**: Support updating multiple package managers in a single command execution.
 
@@ -41,7 +41,7 @@ This document specifies all functional and non-functional requirements for the `
 #### REQ-UC001-002: Update Strategies
 **Priority**: P0 (Critical)
 **Phase**: MVP
-**Source**: [UC-001-update-enhanced.md](docs/specifications/UC-001-update-enhanced.md#L
+**Source**: [UC-001-update-enhanced.md](docs/specifications/use-cases/UC-001-update-enhanced.md#L
 
 18)
 
@@ -91,7 +91,7 @@ update:
 #### REQ-UC001-004: Enhanced Output Formatting
 **Priority**: P1 (High)
 **Phase**: MVP
-**Source**: [UC-001-update-enhanced.md](docs/specifications/UC-001-update-enhanced.md#L36)
+**Source**: [UC-001-update-enhanced.md](docs/specifications/use-cases/UC-001-update-enhanced.md#L36)
 
 **Description**: Provide rich, human-readable output with progress indication.
 
@@ -161,7 +161,7 @@ update:
 #### REQ-UC001-006: Duplicate Binary Detection
 **Priority**: P2 (Medium)
 **Phase**: v1.1
-**Source**: [UC-001-update-enhanced.md](docs/specifications/UC-001-update-enhanced.md#L50)
+**Source**: [UC-001-update-enhanced.md](docs/specifications/use-cases/UC-001-update-enhanced.md#L50)
 
 **Description**: Detect and report duplicate binary installations across managers.
 
@@ -190,7 +190,7 @@ Found 2 potential conflicts:
 #### REQ-UC001-007: Environment Awareness
 **Priority**: P1 (High)
 **Phase**: MVP
-**Source**: [UC-001-update-enhanced.md](docs/specifications/UC-001-update-enhanced.md#L159)
+**Source**: [UC-001-update-enhanced.md](docs/specifications/use-cases/UC-001-update-enhanced.md#L159)
 
 **Description**: Detect and handle special environments (conda, virtualenv, Docker).
 

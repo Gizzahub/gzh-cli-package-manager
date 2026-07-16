@@ -175,7 +175,7 @@ gz-pm export --managers brew,asdf --output brew-asdf.yaml
 
 ## 📖 Documentation
 
-- **[Getting Started](docs/getting-started.md)** - Installation and first steps
+- **[Getting Started](#-installation)** - Installation and first steps
 - **[Architecture](ARCHITECTURE.md)** - Technical design and structure
 - **[Contributing](CONTRIBUTING.md)** - Development guide
 - **[Product Requirements](PRD.md)** - Product vision and roadmap
