@@ -1,6 +1,6 @@
 module github.com/gizzahub/gzh-cli-package-manager
 
-go 1.25.7
+go 1.26
 
 require (
 	github.com/gizzahub/gzh-cli-core v0.0.0-20251230045225-725b628c716a
