@@ -162,10 +162,47 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 }
 
 // Update performs update operations (stub implementation).
+// Update refreshes asdf plugins and optionally updates installed tools.
 func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-	a.logger.Warn(ctx, "Update method not yet implemented for this adapter")
-	return &adapterm.UpdateResult{
-		Success: false,
-		Message: "Update not yet implemented for this package manager",
-	}, fmt.Errorf("update not yet implemented")
+	a.logger.Info(ctx, "Starting asdf update",
+		output.Field{Key: "dry_run", Value: opts.DryRun},
+		output.Field{Key: "strategy", Value: string(opts.Strategy)})
+
+	result := &adapterm.UpdateResult{
+		Success:         true,
+		UpdatedPackages: []string{},
+		FailedPackages:  []string{},
+	}
+
+	if opts.DryRun {
+		result.Message = "Dry-run: would run asdf plugin update --all"
+		return result, nil
+	}
+
+	pluginRes, err := a.executor.Execute(ctx, "asdf", "plugin", "update", "--all")
+	if err != nil {
+		result.Success = false
+		result.Message = fmt.Sprintf("asdf plugin update failed: %v", err)
+		return result, fmt.Errorf("asdf plugin update failed: %w", err)
+	}
+	if pluginRes.ExitCode != 0 {
+		result.Success = false
+		result.Message = fmt.Sprintf("asdf plugin update failed: %s", pluginRes.Stderr)
+		return result, nil
+	}
+
+	if opts.Strategy == adapterm.StrategyFixed {
+		result.Message = "asdf plugins updated; tool upgrades skipped (strategy fixed)"
+		return result, nil
+	}
+
+	// Update installed tools to latest when possible
+	updateRes, err := a.executor.Execute(ctx, "asdf", "update")
+	if err == nil && updateRes.ExitCode == 0 {
+		result.Message = "asdf plugins and runtime updated"
+		return result, nil
+	}
+	result.Message = "asdf plugins updated"
+	return result, nil
 }
+

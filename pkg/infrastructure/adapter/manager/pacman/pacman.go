@@ -165,10 +165,39 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 }
 
 // Update performs update operations (stub implementation).
+// Update runs pacman -Syu without sudo (fails clearly if privileges needed).
 func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-	a.logger.Warn(ctx, "Update method not yet implemented for this adapter")
-	return &adapterm.UpdateResult{
-		Success: false,
-		Message: "Update not yet implemented for this package manager",
-	}, fmt.Errorf("update not yet implemented")
+	a.logger.Info(ctx, "Starting pacman update",
+		output.Field{Key: "dry_run", Value: opts.DryRun},
+		output.Field{Key: "strategy", Value: string(opts.Strategy)})
+
+	result := &adapterm.UpdateResult{
+		Success:         true,
+		UpdatedPackages: []string{},
+		FailedPackages:  []string{},
+	}
+
+	if opts.DryRun {
+		result.Message = "Dry-run: would run pacman -Syu --noconfirm"
+		return result, nil
+	}
+	if opts.Strategy == adapterm.StrategyFixed {
+		result.Message = "Strategy 'fixed': pacman upgrade skipped"
+		return result, nil
+	}
+
+	execResult, err := a.executor.Execute(ctx, "pacman", "-Syu", "--noconfirm")
+	if err != nil {
+		result.Success = false
+		result.Message = fmt.Sprintf("pacman -Syu failed (root may be required): %v", err)
+		return result, fmt.Errorf("pacman update failed: %w", err)
+	}
+	if execResult.ExitCode != 0 {
+		result.Success = false
+		result.Message = fmt.Sprintf("pacman -Syu failed: %s", execResult.Stderr)
+		return result, nil
+	}
+	result.Message = "pacman packages upgraded"
+	return result, nil
 }
+

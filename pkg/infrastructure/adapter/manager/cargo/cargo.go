@@ -162,10 +162,42 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 }
 
 // Update performs update operations (stub implementation).
+// Update runs cargo install-update -a when cargo-update is available,
+// otherwise cargo install --list based self-update is not attempted.
 func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-	a.logger.Warn(ctx, "Update method not yet implemented for this adapter")
-	return &adapterm.UpdateResult{
-		Success: false,
-		Message: "Update not yet implemented for this package manager",
-	}, fmt.Errorf("update not yet implemented")
+	a.logger.Info(ctx, "Starting cargo update",
+		output.Field{Key: "dry_run", Value: opts.DryRun},
+		output.Field{Key: "strategy", Value: string(opts.Strategy)})
+
+	result := &adapterm.UpdateResult{
+		Success:         true,
+		UpdatedPackages: []string{},
+		FailedPackages:  []string{},
+	}
+
+	if opts.DryRun {
+		result.Message = "Dry-run: would run cargo install-update -a"
+		return result, nil
+	}
+	if opts.Strategy == adapterm.StrategyFixed {
+		result.Message = "Strategy 'fixed': cargo update skipped"
+		return result, nil
+	}
+
+	// cargo-update plugin: cargo install-update -a
+	execResult, err := a.executor.Execute(ctx, "cargo", "install-update", "-a")
+	if err != nil {
+		// Fallback: cargo update in workspace is not global; report clear error
+		result.Success = false
+		result.Message = "cargo install-update not available; install cargo-update crate for global binary updates"
+		return result, fmt.Errorf("cargo update failed: %w", err)
+	}
+	if execResult.ExitCode != 0 {
+		result.Success = false
+		result.Message = fmt.Sprintf("cargo install-update failed: %s", execResult.Stderr)
+		return result, nil
+	}
+	result.Message = "cargo global packages updated via install-update"
+	return result, nil
 }
+

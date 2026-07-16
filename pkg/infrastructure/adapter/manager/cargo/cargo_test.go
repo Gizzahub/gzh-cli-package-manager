@@ -451,22 +451,22 @@ func TestAdapter_Update(t *testing.T) {
 		wantErr     bool
 	}{
 		{
-			name:   "update not implemented returns error",
+			name:   "update success",
 			dryRun: false,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return testutil.SuccessResult(""), nil
 			},
-			wantSuccess: false, // Cargo Update returns false + error
-			wantErr:     true,  // It returns an error for "not implemented"
+			wantSuccess: true,
+			wantErr:     false,
 		},
 		{
-			name:   "dry run also returns not implemented error",
+			name:   "dry run success",
 			dryRun: true,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return testutil.SuccessResult(""), nil
 			},
-			wantSuccess: false,
-			wantErr:     true,
+			wantSuccess: true,
+			wantErr:     false,
 		},
 	}
 

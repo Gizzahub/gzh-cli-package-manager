@@ -39,9 +39,8 @@ G1. **Detection breadth**
 G2. **Update parity (감지 = 실동작)**
 
 - Target: 감지되는 매니저는 모두 `update`가 실제 동작해야 한다 (10/10)
-- 현재 **4/10** — brew·scoop·winget·choco만 실구현. npm·pip·cargo·asdf는
-  `"update not yet implemented"` 스텁, apt·pacman은 어댑터 미연결
-  ("no adapter found"). **이 격차가 본 리포 최우선 과제다.**
+- 현재 **10/10** — brew·scoop·winget·choco·npm·pip·cargo·asdf·apt·pacman 모두
+  `Update` 실구현 (dry-run 분기 포함; apt/pacman은 root 권한 없으면 명시적 실패).
 
 G3. **Safe by default**
 
@@ -112,7 +111,7 @@ ______________________________________________________________________
 
 **Correctness**
 
-- 감지되는 매니저의 `update`가 스텁을 반환하지 않는다 (G2 — 현재 미충족)
+- 감지되는 매니저의 `update`가 스텁을 반환하지 않는다 (G2 — 현재 충족 10/10)
 
 **Docs**
 

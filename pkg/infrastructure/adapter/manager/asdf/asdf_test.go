@@ -477,16 +477,15 @@ func TestAdapter_ListPackages_Error(t *testing.T) {
 }
 
 func TestAdapter_Update(t *testing.T) {
-	adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
-	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{})
-
-	// Update is not implemented, should return error
-	if err == nil {
-		t.Error("Expected error from Update")
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+		return testutil.SuccessResult(""), nil
+	}), testutil.NewMockLogger())
+	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{DryRun: true})
+	if err != nil {
+		t.Fatalf("Update dry-run unexpected error: %v", err)
 	}
-
-	if result.Success {
-		t.Error("Expected Success to be false")
+	if result == nil || !result.Success {
+		t.Fatalf("Update dry-run expected success result, got %#v", result)
 	}
 }
 

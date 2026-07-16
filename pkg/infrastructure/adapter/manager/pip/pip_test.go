@@ -461,22 +461,15 @@ func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
 }
 
 func TestAdapter_Update(t *testing.T) {
-	execFunc := func(_ context.Context, command string, _ ...string) (*output.ExecutionResult, error) {
-		if command == whichCommand {
-			return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
-		}
-		return &output.ExecutionResult{ExitCode: 0}, nil
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+		return testutil.SuccessResult(""), nil
+	}), testutil.NewMockLogger())
+	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{DryRun: true})
+	if err != nil {
+		t.Fatalf("Update dry-run unexpected error: %v", err)
 	}
-	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
-
-	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{})
-
-	if err == nil {
-		t.Error("Expected error from Update (not implemented)")
-	}
-
-	if result.Success {
-		t.Error("Expected Success to be false")
+	if result == nil || !result.Success {
+		t.Fatalf("Update dry-run expected success result, got %#v", result)
 	}
 }
 

@@ -521,15 +521,15 @@ func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
 }
 
 func TestAdapter_Update(t *testing.T) {
-	adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
-	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{})
-
-	if err == nil {
-		t.Error("Expected error from Update (not implemented)")
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+		return testutil.SuccessResult(""), nil
+	}), testutil.NewMockLogger())
+	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{DryRun: true})
+	if err != nil {
+		t.Fatalf("Update dry-run unexpected error: %v", err)
 	}
-
-	if result.Success {
-		t.Error("Expected Success to be false")
+	if result == nil || !result.Success {
+		t.Fatalf("Update dry-run expected success result, got %#v", result)
 	}
 }
 

@@ -151,10 +151,43 @@ type outdatedPackage struct {
 }
 
 // Update performs update operations (stub implementation).
+// Update updates global npm packages (npm update -g).
 func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-	a.logger.Warn(ctx, "Update method not yet implemented for npm adapter")
-	return &adapterm.UpdateResult{
-		Success: false,
-		Message: "Update not yet implemented for npm package manager",
-	}, fmt.Errorf("update not yet implemented")
+	a.logger.Info(ctx, "Starting npm update",
+		output.Field{Key: "dry_run", Value: opts.DryRun},
+		output.Field{Key: "strategy", Value: string(opts.Strategy)})
+
+	result := &adapterm.UpdateResult{
+		Success:         true,
+		UpdatedPackages: []string{},
+		FailedPackages:  []string{},
+	}
+
+	if opts.DryRun {
+		result.Message = "Dry-run: would run npm update -g"
+		return result, nil
+	}
+	if opts.Strategy == adapterm.StrategyFixed {
+		result.Message = "Strategy 'fixed': npm update skipped"
+		return result, nil
+	}
+
+	args := []string{"update", "-g"}
+	if len(opts.Packages) > 0 {
+		args = append(args, opts.Packages...)
+	}
+	execResult, err := a.executor.Execute(ctx, "npm", args...)
+	if err != nil {
+		result.Success = false
+		result.Message = fmt.Sprintf("npm update failed: %v", err)
+		return result, fmt.Errorf("npm update failed: %w", err)
+	}
+	if execResult.ExitCode != 0 {
+		result.Success = false
+		result.Message = fmt.Sprintf("npm update failed: %s", execResult.Stderr)
+		return result, nil
+	}
+	result.Message = "npm global packages updated"
+	return result, nil
 }
+

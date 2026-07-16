@@ -197,10 +197,51 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 }
 
 // Update performs update operations (stub implementation).
+// Update runs apt-get update && apt-get upgrade -y without sudo (fails clearly if root needed).
 func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-	a.logger.Warn(ctx, "Update method not yet implemented for this adapter")
-	return &adapterm.UpdateResult{
-		Success: false,
-		Message: "Update not yet implemented for this package manager",
-	}, fmt.Errorf("update not yet implemented")
+	a.logger.Info(ctx, "Starting apt update",
+		output.Field{Key: "dry_run", Value: opts.DryRun},
+		output.Field{Key: "strategy", Value: string(opts.Strategy)})
+
+	result := &adapterm.UpdateResult{
+		Success:         true,
+		UpdatedPackages: []string{},
+		FailedPackages:  []string{},
+	}
+
+	if opts.DryRun {
+		result.Message = "Dry-run: would run apt-get update && apt-get upgrade -y"
+		return result, nil
+	}
+	if opts.Strategy == adapterm.StrategyFixed {
+		result.Message = "Strategy 'fixed': apt upgrade skipped"
+		return result, nil
+	}
+
+	updateRes, err := a.executor.Execute(ctx, "apt-get", "update")
+	if err != nil {
+		result.Success = false
+		result.Message = fmt.Sprintf("apt-get update failed (root may be required): %v", err)
+		return result, fmt.Errorf("apt-get update failed: %w", err)
+	}
+	if updateRes.ExitCode != 0 {
+		result.Success = false
+		result.Message = fmt.Sprintf("apt-get update failed: %s", updateRes.Stderr)
+		return result, nil
+	}
+
+	upgradeRes, err := a.executor.Execute(ctx, "apt-get", "upgrade", "-y")
+	if err != nil {
+		result.Success = false
+		result.Message = fmt.Sprintf("apt-get upgrade failed: %v", err)
+		return result, fmt.Errorf("apt-get upgrade failed: %w", err)
+	}
+	if upgradeRes.ExitCode != 0 {
+		result.Success = false
+		result.Message = fmt.Sprintf("apt-get upgrade failed: %s", upgradeRes.Stderr)
+		return result, nil
+	}
+	result.Message = "apt packages upgraded"
+	return result, nil
 }
+

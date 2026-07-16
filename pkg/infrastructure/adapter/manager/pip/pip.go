@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
@@ -179,11 +180,62 @@ func (a *Adapter) getPipCommand(ctx context.Context) string {
 	return pipCommand
 }
 
-// Update performs update operations (stub implementation).
+// Update upgrades outdated pip packages (pip list --outdated then pip install -U).
 func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-	a.logger.Warn(ctx, "Update method not yet implemented for this adapter")
-	return &adapterm.UpdateResult{
-		Success: false,
-		Message: "Update not yet implemented for this package manager",
-	}, fmt.Errorf("update not yet implemented")
+	a.logger.Info(ctx, "Starting pip update",
+		output.Field{Key: "dry_run", Value: opts.DryRun},
+		output.Field{Key: "strategy", Value: string(opts.Strategy)})
+
+	result := &adapterm.UpdateResult{
+		Success:         true,
+		UpdatedPackages: []string{},
+		FailedPackages:  []string{},
+	}
+
+	if opts.DryRun {
+		result.Message = "Dry-run: would upgrade outdated pip packages"
+		return result, nil
+	}
+	if opts.Strategy == adapterm.StrategyFixed {
+		result.Message = "Strategy 'fixed': pip upgrade skipped"
+		return result, nil
+	}
+
+	packages := opts.Packages
+	if len(packages) == 0 {
+		listRes, err := a.executor.Execute(ctx, "pip", "list", "--outdated", "--format=freeze")
+		if err == nil && listRes.ExitCode == 0 && strings.TrimSpace(listRes.Stdout) != "" {
+			for _, line := range strings.Split(listRes.Stdout, "\n") {
+				line = strings.TrimSpace(line)
+				if line == "" {
+					continue
+				}
+				name := strings.Split(line, "==")[0]
+				if name != "" {
+					packages = append(packages, name)
+				}
+			}
+		}
+	}
+	if len(packages) == 0 {
+		result.Message = "No outdated pip packages found"
+		return result, nil
+	}
+
+	args := append([]string{"install", "--upgrade"}, packages...)
+	execResult, err := a.executor.Execute(ctx, "pip", args...)
+	if err != nil {
+		result.Success = false
+		result.Message = fmt.Sprintf("pip install --upgrade failed: %v", err)
+		return result, fmt.Errorf("pip update failed: %w", err)
+	}
+	if execResult.ExitCode != 0 {
+		result.Success = false
+		result.Message = fmt.Sprintf("pip upgrade failed: %s", execResult.Stderr)
+		return result, nil
+	}
+	result.UpdatedPackages = packages
+	result.Message = "pip packages upgraded"
+	return result, nil
 }
+
