@@ -366,7 +366,7 @@ A specification is considered complete when:
 - **REQUIREMENTS.md** - High-level requirements traceability
 - **PRD.md** - Product vision and roadmap
 - **ARCHITECTURE.md** - Technical architecture design
-- **docs/architecture/adr/** - Architecture decision records
+- **docs/10-architecture/adr/** - Architecture decision records
 - **CONTRIBUTING.md** - Development guidelines
 
 ---

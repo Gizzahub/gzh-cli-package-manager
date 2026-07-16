@@ -181,7 +181,7 @@ gz-pm export --managers brew,asdf --output brew-asdf.yaml
 - **[Product Requirements](PRD.md)** - Product vision and roadmap
 - **[Requirements](REQUIREMENTS.md)** - Functional and non-functional requirements
 - **[Specifications](docs/specifications/)** - Detailed use case specifications
-- **[ADRs](docs/architecture/adr/)** - Architecture decision records
+- **[ADRs](docs/10-architecture/adr/)** - Architecture decision records
 
 ## 🏗️ Architecture
 

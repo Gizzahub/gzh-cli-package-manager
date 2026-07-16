@@ -1098,7 +1098,7 @@ We follow [Semantic Versioning](https://semver.org/):
 
 - **Documentation**: `/docs` directory
 - **Architecture**: `/ARCHITECTURE.md`
-- **ADRs**: `/docs/architecture/adr/`
+- **ADRs**: `/docs/10-architecture/adr/`
 - **Specifications**: `/docs/specifications/`
 - **Issues**: GitHub Issues
 
@@ -1156,7 +1156,7 @@ Thank you for contributing to pmctl! Your efforts help make package management b
 - [Product Requirements](PRD.md)
 - [Requirements Specification](REQUIREMENTS.md)
 - [Specifications](docs/specifications/)
-- [ADRs](docs/architecture/adr/)
+- [ADRs](docs/10-architecture/adr/)
 
 ---
 

@@ -48,7 +48,7 @@ adapterFactory.Register("newmanager", adapter)
 
 ### 1. Read architecture docs
 - `ARCHITECTURE.md`
-- Relevant ADRs in `docs/architecture/adr/`
+- Relevant ADRs in `docs/10-architecture/adr/`
 
 ### 2. Understand layer boundaries
 - Where does this change belong?
@@ -121,6 +121,6 @@ if err != nil {
 - `CONTRIBUTING.md` - Development guidelines
 - `PRD.md` - Product vision and roadmap
 - `REQUIREMENTS.md` - Functional/non-functional requirements
-- `docs/architecture/adr/` - Architecture Decision Records
+- `docs/10-architecture/adr/` - Architecture Decision Records
 - `docs/specifications/` - Use case specifications
 - `Makefile` - Build automation (authoritative command reference)

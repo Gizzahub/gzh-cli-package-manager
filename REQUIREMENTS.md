@@ -643,7 +643,7 @@ Before v1.0 release:
 - **Specifications**: `/docs/specifications/`
 - **Test Scenarios**: `/docs/specifications/test-scenarios.md`
 - **Architecture**: `/ARCHITECTURE.md`
-- **ADRs**: `/docs/architecture/adr/`
+- **ADRs**: `/docs/10-architecture/adr/`
 - **Original gzh-cli specs**: `/home/archmagece/myopen/gizzahub/gzh-cli/specs/cli/pm/`
 
 ---

@@ -65,7 +65,7 @@ Think of it as a "package manager for package managers" - unified interface for:
 ├── internal/            # Private utilities
 ├── docs/
 │   ├── .claude-context/ # Context docs (see below)
-│   └── architecture/    # Full docs
+│   └── 10-architecture/ # Full docs (layers, ADRs)
 └── Makefile             # Authoritative commands
 ```
 
@@ -143,11 +143,12 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## Important Files
 
-- `ARCHITECTURE.md` - Full architecture documentation
+- `ARCHITECTURE.md` - Architecture overview + index
+- `docs/10-architecture/` - Full architecture documentation (split by topic)
 - `CONTRIBUTING.md` - Development guidelines
 - `PRD.md` - Product vision and roadmap
 - `REQUIREMENTS.md` - Functional/non-functional requirements
-- `docs/architecture/adr/` - Architecture Decision Records
+- `docs/10-architecture/adr/` - Architecture Decision Records
 - `Makefile` - Build automation
 
 ---
