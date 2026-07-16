@@ -256,7 +256,7 @@ gzh-cli-package-manager/
 │   └── infrastructure/    # Adapters, repositories, external integrations
 ├── docs/
 │   ├── specifications/    # Use case specifications
-│   └── architecture/      # Architecture docs and ADRs
+│   └── 10-architecture/   # Architecture docs and ADRs
 ├── ARCHITECTURE.md        # Architecture overview
 ├── CONTRIBUTING.md        # Development guide
 └── README.md             # This file
