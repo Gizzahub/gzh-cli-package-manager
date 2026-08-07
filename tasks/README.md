@@ -1,16 +1,7 @@
-# Tasks — gzh-cli-package-manager
+# Tasks — pointer only
 
-| Zone | Purpose |
-|------|---------|
-| `todo/` | Ready work |
-| `done/` | Completed |
+Task queue is owned by the **devbox root**:
 
-## Open
+→ `gzh-cli-devbox/tasks/`
 
-_(empty)_
-
-## Done
-
-| Task | Notes |
-|------|-------|
-| [01-cleanup-orphan-version-real-remove](done/01-cleanup-orphan-version-real-remove.md) | orphans/versions remove (dry-run default) |
+Do not create new work items under this sub-repo.
