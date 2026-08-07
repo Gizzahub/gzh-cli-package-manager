@@ -88,3 +88,13 @@ Missing paths are skipped (not errors). Unreadable nodes inside a tree are skipp
 - Dependency-graph orphan accuracy / actual orphan removal
 - Multi-version uninstall orchestration
 - Actual package uninstall + file backup for quarantine
+
+## Orphans / versions remove (2026-08-07)
+
+| Command | Default | Behavior |
+|---------|---------|----------|
+| `cleanup orphans remove` | `--dry-run=true` | Detect heuristic orphans → `Installer.Uninstall` per manager |
+| `cleanup versions remove` | `--dry-run=true` | Non-current multi-version rows → uninstall (name@version, fallback name) |
+
+Live delete: pass `--dry-run=false`. Managers without `Installer` are reported as errors/skips.
+Uninstallable names (`(unnamed)`, `unknown`) are skipped with reason.

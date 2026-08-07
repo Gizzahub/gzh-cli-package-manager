@@ -1,6 +1,6 @@
 # cleanup orphans/versions — real remove (safety-first)
 
-- status: todo
+- status: done
 - priority: P3
 - effort: M
 - source: gzh-cli issue 25 residual (transferred 2026-08-07)
@@ -36,13 +36,21 @@ gzh-cli git provider workstream.
 
 ## Acceptance
 
-- [ ] dry-run is default for remove paths
-- [ ] at least one manager has real remove wired through adapter/executor
-- [ ] unit tests for dry-run vs live path
-- [ ] clear error when manager not detected / not supported
+- [x] dry-run is default for remove paths
+- [x] at least one manager has real remove wired through adapter/executor
+- [x] unit tests for dry-run vs live path
+- [x] clear error when manager not detected / not supported
 
 ## References
 
 - `cmd/pm/command/cleanup.go`
 - `pkg/domain/cleanup/interfaces.go` (`OrphanDetector`, `VersionScanner`, `Executor`)
 - Parent history: gzh-cli `tasks/issue/25-advanced-cleanup-strategies-implementation.md`
+
+
+## Resolution (2026-08-07)
+
+- `AdapterCleanupExecutor` + `orphans remove` / `versions remove`
+- dry-run defaults **true**; live with `--dry-run=false`
+- Uses `adapterm.Installer` (winget/scoop/chocolatey, …)
+- Heuristic candidates only (not full dependency graphs) — documented

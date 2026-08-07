@@ -7,8 +7,10 @@
 
 ## Open
 
-| Task | Priority | Notes |
-|------|----------|-------|
-| [01-cleanup-orphan-version-real-remove](todo/01-cleanup-orphan-version-real-remove.md) | P3 | Residual from gzh-cli issue 25 (real orphan/version remove) |
+_(empty)_
 
-Transferred from gzh-cli-devbox drain 2026-08-07.
+## Done
+
+| Task | Notes |
+|------|-------|
+| [01-cleanup-orphan-version-real-remove](done/01-cleanup-orphan-version-real-remove.md) | orphans/versions remove (dry-run default) |

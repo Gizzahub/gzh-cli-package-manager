@@ -224,9 +224,10 @@ func TestCleanupVersionsList(t *testing.T) {
 	}
 }
 
-// stubListAdapter implements adapterm.Adapter with fixed ListPackages results.
+// stubListAdapter implements adapterm.Adapter (+Installer) with fixed ListPackages.
 type stubListAdapter struct {
-	packages []manager.Package
+	packages    []manager.Package
+	uninstalled []string
 }
 
 func (s *stubListAdapter) Detect(context.Context) (bool, error) { return true, nil }
@@ -243,4 +244,117 @@ func (s *stubListAdapter) CheckHealth(context.Context) (manager.Status, error) {
 }
 func (s *stubListAdapter) Update(context.Context, adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
 	return &adapterm.UpdateResult{Success: true}, nil
+}
+
+// Install/Uninstall satisfy adapterm.Installer for remove-path tests.
+func (s *stubListAdapter) Install(context.Context, string, bool) error { return nil }
+func (s *stubListAdapter) Uninstall(_ context.Context, pkgID string, dryRun bool) error {
+	if s.uninstalled == nil {
+		s.uninstalled = []string{}
+	}
+	if dryRun {
+		s.uninstalled = append(s.uninstalled, "dry:"+pkgID)
+	} else {
+		s.uninstalled = append(s.uninstalled, pkgID)
+	}
+	return nil
+}
+
+func TestCleanupOrphansRemove_DryRunDefault(t *testing.T) {
+	stub := &stubListAdapter{packages: []manager.Package{
+		{Name: "ghost", CurrentVersion: ""},
+		{Name: "git", CurrentVersion: "2.0"},
+	}}
+	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{
+		manager.ManagerScoop: stub,
+	})
+	t.Cleanup(func() { SetManagerAdapters(nil) })
+
+	cleanupManagerID = "scoop"
+	removeDryRun = true
+	t.Cleanup(func() {
+		cleanupManagerID = ""
+		removeDryRun = true
+	})
+
+	out, err := captureStdout(t, func() error {
+		return orphansRemoveCmd.RunE(orphansRemoveCmd, nil)
+	})
+	if err != nil {
+		t.Fatalf("orphans remove: %v", err)
+	}
+	if !strings.Contains(out, "DRY-RUN") {
+		t.Fatalf("expected DRY-RUN mode: %q", out)
+	}
+	if len(stub.uninstalled) == 0 || !strings.HasPrefix(stub.uninstalled[0], "dry:") {
+		t.Fatalf("expected dry uninstall call: %v", stub.uninstalled)
+	}
+}
+
+func TestCleanupOrphansRemove_Live(t *testing.T) {
+	stub := &stubListAdapter{packages: []manager.Package{
+		{Name: "ghost", CurrentVersion: ""},
+	}}
+	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{
+		manager.ManagerScoop: stub,
+	})
+	t.Cleanup(func() { SetManagerAdapters(nil) })
+
+	cleanupManagerID = "scoop"
+	removeDryRun = false
+	t.Cleanup(func() {
+		cleanupManagerID = ""
+		removeDryRun = true
+	})
+
+	out, err := captureStdout(t, func() error {
+		return orphansRemoveCmd.RunE(orphansRemoveCmd, nil)
+	})
+	if err != nil {
+		t.Fatalf("orphans remove live: %v", err)
+	}
+	if !strings.Contains(out, "LIVE") {
+		t.Fatalf("expected LIVE mode: %q", out)
+	}
+	if len(stub.uninstalled) != 1 || stub.uninstalled[0] != "ghost" {
+		t.Fatalf("expected live uninstall of ghost: %v", stub.uninstalled)
+	}
+}
+
+func TestCleanupVersionsRemove_DryRun(t *testing.T) {
+	stub := &stubListAdapter{packages: []manager.Package{
+		{Name: "python", CurrentVersion: "3.11.0"},
+		{Name: "python", CurrentVersion: "3.12.0"},
+	}}
+	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{
+		manager.ManagerWinget: stub,
+	})
+	t.Cleanup(func() { SetManagerAdapters(nil) })
+
+	cleanupManagerID = "winget"
+	removeDryRun = true
+	t.Cleanup(func() {
+		cleanupManagerID = ""
+		removeDryRun = true
+	})
+
+	out, err := captureStdout(t, func() error {
+		return versionsRemoveCmd.RunE(versionsRemoveCmd, nil)
+	})
+	if err != nil {
+		t.Fatalf("versions remove: %v", err)
+	}
+	if !strings.Contains(out, "DRY-RUN") {
+		t.Fatalf("expected DRY-RUN: %q", out)
+	}
+	// old version 3.11.0 should be targeted (lexicographic last 3.12.0 is current)
+	found := false
+	for _, c := range stub.uninstalled {
+		if strings.Contains(c, "3.11.0") || strings.Contains(c, "python") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected uninstall call for old python: %v", stub.uninstalled)
+	}
 }

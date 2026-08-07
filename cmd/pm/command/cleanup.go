@@ -74,8 +74,8 @@ var cleanupCmd = &cobra.Command{
 	Long: `Cleanup operations for package managers including:
 - Quarantine: Safely remove packages with recovery option
 - Cache: Scan and clear package manager caches
-- Orphans: List heuristic orphan package candidates
-- Versions: List packages with multiple installed versions (best-effort)
+- Orphans: List/remove heuristic candidates (remove defaults to --dry-run=true)
+- Versions: List/remove multi-version rows (keep current; remove defaults dry-run)
 
 Examples:
   gz-pm cleanup quarantine list
@@ -84,7 +84,10 @@ Examples:
   gz-pm cleanup cache scan
   gz-pm cleanup cache clean --manager npm --dry-run
   gz-pm cleanup orphans list --manager scoop --dry-run
-  gz-pm cleanup versions list --manager asdf`,
+  gz-pm cleanup orphans remove --manager scoop
+  gz-pm cleanup orphans remove --manager scoop --dry-run=false
+  gz-pm cleanup versions list --manager asdf
+  gz-pm cleanup versions remove --manager asdf`,
 }
 
 // quarantineCmd is the parent for quarantine subcommands.
@@ -477,6 +480,152 @@ func emptyDash(s string) string {
 	return s
 }
 
+// removeDryRun is the dry-run flag for orphans/versions remove (default true).
+var removeDryRun bool
+
+// adapterUninstaller routes uninstall to the registered manager adapter.
+type adapterUninstaller struct{}
+
+func (adapterUninstaller) Uninstall(ctx context.Context, managerID, pkgID string, dryRun bool) error {
+	if managerAdapters == nil {
+		return fmt.Errorf("no package managers registered (adapters not initialized)")
+	}
+	adapter, ok := managerAdapters[manager.ManagerID(managerID)]
+	if !ok || adapter == nil {
+		return fmt.Errorf("manager %q is not registered", managerID)
+	}
+	installer, ok := adapter.(adapterm.Installer)
+	if !ok {
+		return fmt.Errorf("manager %q does not support uninstall", managerID)
+	}
+	okDetected, err := adapter.Detect(ctx)
+	if err != nil {
+		return fmt.Errorf("detect %s: %w", managerID, err)
+	}
+	if !okDetected {
+		return fmt.Errorf("%s is not available on this system", managerID)
+	}
+	return installer.Uninstall(ctx, pkgID, dryRun)
+}
+
+// orphansRemoveCmd removes orphan candidates (default --dry-run=true).
+var orphansRemoveCmd = &cobra.Command{
+	Use:   "remove",
+	Short: "Uninstall orphan package candidates",
+	Long: `Uninstall packages flagged as orphan candidates (same heuristics as list).
+
+Safety: --dry-run defaults to true. Pass --dry-run=false to perform live uninstall
+via managers that implement Installer (winget/scoop/chocolatey, …).
+
+Packages with empty or placeholder names are skipped.`,
+	RunE: func(_ *cobra.Command, _ []string) error {
+		ctx := context.Background()
+		listers := packageListersFromAdapters()
+		if len(listers) == 0 {
+			return fmt.Errorf("orphans remove: no package managers registered (adapters not initialized)")
+		}
+		detector := repo.NewHeuristicOrphanDetector(listers)
+
+		var packages []*cleanup.OrphanPackage
+		var err error
+		if cleanupManagerID != "" {
+			packages, err = detector.Detect(ctx, cleanupManagerID)
+		} else {
+			packages, err = detector.DetectAll(ctx)
+		}
+		if err != nil {
+			return err
+		}
+		if len(packages) == 0 {
+			fmt.Println("📦 No orphan candidates to remove")
+			return nil
+		}
+
+		ex := repo.NewAdapterCleanupExecutor(adapterUninstaller{})
+		summary, err := ex.RemoveOrphans(ctx, packages, removeDryRun)
+		if err != nil {
+			return err
+		}
+		printRemoveSummary("Orphan remove", summary, removeDryRun)
+		return nil
+	},
+}
+
+// versionsRemoveCmd removes non-current multi-version rows (default --dry-run=true).
+var versionsRemoveCmd = &cobra.Command{
+	Use:   "remove",
+	Short: "Uninstall old package versions (keep current)",
+	Long: `Uninstall non-current versions reported by the multi-version scanner.
+
+Safety: --dry-run defaults to true. Pass --dry-run=false for live uninstall.
+Current versions are never removed.`,
+	RunE: func(_ *cobra.Command, _ []string) error {
+		ctx := context.Background()
+		listers := packageListersFromAdapters()
+		if len(listers) == 0 {
+			return fmt.Errorf("versions remove: no package managers registered (adapters not initialized)")
+		}
+		scanner := repo.NewHeuristicVersionScanner(listers)
+
+		var all []*cleanup.OldVersion
+		if cleanupManagerID != "" {
+			versions, err := scanner.ScanAll(ctx, cleanupManagerID)
+			if err != nil {
+				return err
+			}
+			all = versions
+		} else {
+			for id := range listers {
+				versions, err := scanner.ScanAll(ctx, id)
+				if err != nil {
+					return err
+				}
+				all = append(all, versions...)
+			}
+		}
+
+		// Only non-current
+		var old []*cleanup.OldVersion
+		for _, v := range all {
+			if v != nil && !v.IsCurrent {
+				old = append(old, v)
+			}
+		}
+		if len(old) == 0 {
+			fmt.Println("📦 No old versions to remove")
+			return nil
+		}
+
+		ex := repo.NewAdapterCleanupExecutor(adapterUninstaller{})
+		summary, err := ex.RemoveOldVersions(ctx, old, removeDryRun)
+		if err != nil {
+			return err
+		}
+		printRemoveSummary("Version remove", summary, removeDryRun)
+		return nil
+	},
+}
+
+func printRemoveSummary(title string, summary *cleanup.Summary, dryRun bool) {
+	mode := "LIVE"
+	if dryRun {
+		mode = "DRY-RUN"
+	}
+	fmt.Printf("🗑️  %s complete [%s]\n", title, mode)
+	fmt.Printf("  Packages: %d\n", summary.PackagesRemoved)
+	fmt.Printf("  Space:    %.2f MB\n", summary.SpaceFreedMB)
+	fmt.Printf("  Duration: %s\n", summary.Duration)
+	if dryRun {
+		fmt.Println("  No packages were uninstalled (dry-run). Re-run with --dry-run=false to execute.")
+	}
+	if len(summary.Errors) > 0 {
+		fmt.Fprintln(os.Stderr, "  Errors/skips:")
+		for _, e := range summary.Errors {
+			fmt.Fprintf(os.Stderr, "    - %s\n", e)
+		}
+	}
+}
+
 func init() {
 	rootCmd.AddCommand(cleanupCmd)
 
@@ -495,8 +644,14 @@ func init() {
 	// Orphans / versions
 	cleanupCmd.AddCommand(orphansCmd)
 	orphansCmd.AddCommand(orphansListCmd)
+	orphansCmd.AddCommand(orphansRemoveCmd)
 	cleanupCmd.AddCommand(versionsCmd)
 	versionsCmd.AddCommand(versionsListCmd)
+	versionsCmd.AddCommand(versionsRemoveCmd)
+
+	// remove subcommands: dry-run defaults to true (destructive safety)
+	orphansRemoveCmd.Flags().BoolVar(&removeDryRun, "dry-run", true, "Preview uninstalls without executing (default true)")
+	versionsRemoveCmd.Flags().BoolVar(&removeDryRun, "dry-run", true, "Preview uninstalls without executing (default true)")
 
 	// Global flags for cleanup
 	cleanupCmd.PersistentFlags().IntVar(&cleanupRetentionDays, "retention", 30, "Retention period in days")
