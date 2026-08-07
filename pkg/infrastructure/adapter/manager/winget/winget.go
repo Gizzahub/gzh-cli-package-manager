@@ -192,6 +192,75 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	return manager.StatusError, nil
 }
 
+// Search finds packages matching query via `winget search`.
+func (a *Adapter) Search(ctx context.Context, query string) ([]manager.Package, error) {
+	if strings.TrimSpace(query) == "" {
+		return nil, fmt.Errorf("search winget packages: query is required")
+	}
+
+	result, err := a.executor.Execute(ctx, wingetCommand, "search", query, "--disable-interactivity")
+	if err := cmdutil.CheckResult(result, err, "search winget packages"); err != nil {
+		return nil, err
+	}
+
+	// Prefer JSON when available; fall back to text table parsing.
+	packages, err := a.parseSearchJSON(result)
+	if err != nil {
+		a.logger.Warn(ctx, "Failed to parse winget search JSON, falling back to text parsing",
+			output.Field{Key: "error", Value: err.Error()})
+		return a.parseSearchText(result), nil
+	}
+	return packages, nil
+}
+
+// parseSearchJSON parses winget search JSON output (same shape as list export).
+func (a *Adapter) parseSearchJSON(result *output.ExecutionResult) ([]manager.Package, error) {
+	return a.parseListOutput(result)
+}
+
+// parseSearchText parses winget search table output.
+// Columns: Name, Id, Version, Match, Source (variable width).
+func (a *Adapter) parseSearchText(result *output.ExecutionResult) []manager.Package {
+	lines := strings.Split(result.Stdout, "\n")
+	var packages []manager.Package
+
+	startIdx := 0
+	for i, line := range lines {
+		if strings.Contains(line, "---") {
+			startIdx = i + 1
+			break
+		}
+	}
+
+	for i := startIdx; i < len(lines); i++ {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		// Need at least Name + Id + Version
+		if len(fields) < 3 {
+			continue
+		}
+
+		pkg := manager.Package{
+			Name:           fields[0],
+			CurrentVersion: fields[2],
+			IsGlobal:       true,
+			UpdateType:     manager.UpdateNone,
+			Manager:        manager.ManagerWinget,
+		}
+		// Last field is typically Source when present
+		if len(fields) >= 4 {
+			pkg.Description = fields[1] // Id as description context
+		}
+		packages = append(packages, pkg)
+	}
+
+	return packages
+}
+
 // Update performs update operations on winget packages.
 func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
 	a.logger.Info(ctx, "Starting winget update",

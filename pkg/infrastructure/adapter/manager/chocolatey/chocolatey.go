@@ -123,6 +123,25 @@ func (a *Adapter) parseListOutput(result *output.ExecutionResult) []manager.Pack
 	return packages
 }
 
+// Search finds packages matching query via `choco search -r`.
+func (a *Adapter) Search(ctx context.Context, query string) ([]manager.Package, error) {
+	if strings.TrimSpace(query) == "" {
+		return nil, fmt.Errorf("search chocolatey packages: query is required")
+	}
+
+	// Machine-readable: package|version per line
+	result, err := a.executor.Execute(ctx, chocoCommand, "search", query, "-r")
+	if err := cmdutil.CheckResult(result, err, "search chocolatey packages"); err != nil {
+		return nil, err
+	}
+
+	packages := a.parseListOutput(result)
+	for i := range packages {
+		packages[i].Manager = manager.ManagerChocolatey
+	}
+	return packages, nil
+}
+
 // CheckHealth performs health checks on Chocolatey.
 func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	// Run 'choco outdated -r' to check for outdated packages

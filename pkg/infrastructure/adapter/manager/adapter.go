@@ -31,6 +31,13 @@ type Adapter interface {
 	Update(ctx context.Context, opts UpdateOptions) (*UpdateResult, error)
 }
 
+// Searcher is an optional capability for managers that support package search.
+// Winget, Scoop, and Chocolatey implement this interface for per-manager CLI.
+type Searcher interface {
+	// Search finds packages matching query in the manager's sources/catalog.
+	Search(ctx context.Context, query string) ([]manager.Package, error)
+}
+
 // UpdateOptions contains options for updating packages.
 type UpdateOptions struct {
 	// DryRun performs a dry run without actually updating.

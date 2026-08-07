@@ -156,6 +156,125 @@ func (a *Adapter) parseListOutput(result *output.ExecutionResult) []manager.Pack
 	return packages
 }
 
+// Search finds packages matching query via `scoop search`.
+func (a *Adapter) Search(ctx context.Context, query string) ([]manager.Package, error) {
+	if strings.TrimSpace(query) == "" {
+		return nil, fmt.Errorf("search scoop packages: query is required")
+	}
+
+	result, err := a.executor.Execute(ctx, scoopCommand, "search", query)
+	if err := cmdutil.CheckResult(result, err, "search scoop packages"); err != nil {
+		return nil, err
+	}
+
+	return a.parseSearchOutput(result), nil
+}
+
+// parseSearchOutput parses `scoop search` text output.
+// Common shapes:
+//
+//	Name   Version Source
+//	----   ------- ------
+//	git    2.43.0  main
+//
+// or "Results from other known buckets..." sections with "'name' (version)".
+func (a *Adapter) parseSearchOutput(result *output.ExecutionResult) []manager.Package {
+	lines := strings.Split(result.Stdout, "\n")
+	var packages []manager.Package
+	seen := make(map[string]struct{})
+
+	startIdx := 0
+	for i, line := range lines {
+		if strings.Contains(line, "---") || strings.Contains(line, "===") {
+			startIdx = i + 1
+			break
+		}
+	}
+	if startIdx == 0 && len(lines) > 1 {
+		// Skip possible header "Name Version Source"
+		if strings.Contains(strings.ToLower(lines[0]), "name") {
+			startIdx = 1
+		}
+	}
+
+	for i := startIdx; i < len(lines); i++ {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
+		// Skip section headers
+		lower := strings.ToLower(line)
+		if strings.HasPrefix(lower, "results from") || strings.HasPrefix(lower, "name") {
+			continue
+		}
+
+		// Pattern: 'name' (version)
+		if strings.HasPrefix(line, "'") {
+			name, version := parseScoopQuotedResult(line)
+			if name == "" {
+				continue
+			}
+			key := name + "@" + version
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			packages = append(packages, manager.Package{
+				Name:           name,
+				CurrentVersion: version,
+				IsGlobal:       false,
+				UpdateType:     manager.UpdateNone,
+				Manager:        manager.ManagerScoop,
+			})
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		name := fields[0]
+		version := fields[1]
+		key := name + "@" + version
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		packages = append(packages, manager.Package{
+			Name:           name,
+			CurrentVersion: version,
+			IsGlobal:       false,
+			UpdateType:     manager.UpdateNone,
+			Manager:        manager.ManagerScoop,
+		})
+	}
+
+	return packages
+}
+
+// parseScoopQuotedResult extracts name and version from "'name' (version) ..." lines.
+func parseScoopQuotedResult(line string) (string, string) {
+	// 'git' (2.43.0)
+	start := strings.Index(line, "'")
+	if start < 0 {
+		return "", ""
+	}
+	rest := line[start+1:]
+	end := strings.Index(rest, "'")
+	if end < 0 {
+		return "", ""
+	}
+	name := rest[:end]
+	version := ""
+	if open := strings.Index(rest[end:], "("); open >= 0 {
+		frag := rest[end+open+1:]
+		if close := strings.Index(frag, ")"); close >= 0 {
+			version = strings.TrimSpace(frag[:close])
+		}
+	}
+	return name, version
+}
+
 // CheckHealth performs health checks on Scoop.
 func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	// Run 'scoop status' to check for issues

@@ -94,6 +94,22 @@ gz-pm status
 gz-pm status --verbose
 ```
 
+### Per-Manager Commands (Windows)
+
+Direct list/search against a single manager adapter (always registered;
+fails clearly if the manager is not installed):
+
+```bash
+gz-pm winget list
+gz-pm winget search git
+gz-pm scoop list --output json
+gz-pm scoop search 7zip
+gz-pm chocolatey list
+gz-pm chocolatey search git
+```
+
+See [Per-Manager CLI](docs/specifications/per-manager-cli.md) for output formats and error policy.
+
 ### Bootstrap a New System
 
 ```bash

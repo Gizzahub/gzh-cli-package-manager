@@ -428,3 +428,69 @@ func TestNewAdapter(t *testing.T) {
 		t.Error("NewAdapter() logger is nil")
 	}
 }
+
+func TestAdapter_Search(t *testing.T) {
+	textOutput := `Name                Id                   Version  Match     Source
+---------------------------------------------------------------------------
+Git                 Git.Git              2.43.0             winget
+GitHub CLI          GitHub.cli           2.40.0             winget
+`
+
+	tests := []struct {
+		name      string
+		query     string
+		execFunc  testutil.ExecutorFunc
+		wantCount int
+		wantErr   bool
+		wantFirst string
+	}{
+		{
+			name:  "text search results",
+			query: "git",
+			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+				if command == wingetCommand && len(args) >= 2 && args[0] == "search" && args[1] == "git" {
+					return testutil.SuccessResult(textOutput), nil
+				}
+				return nil, errors.New("unexpected command")
+			},
+			wantCount: 2,
+			wantFirst: "Git",
+		},
+		{
+			name:  "empty query",
+			query: "  ",
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+				t.Fatal("executor should not be called for empty query")
+				return nil, nil
+			},
+			wantErr: true,
+		},
+		{
+			name:  "command fails",
+			query: "git",
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+				return nil, errors.New("search failed")
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
+			packages, err := adapter.Search(context.Background(), tt.query)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Search() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if len(packages) != tt.wantCount {
+				t.Fatalf("Search() count = %d, want %d", len(packages), tt.wantCount)
+			}
+			if tt.wantFirst != "" && packages[0].Name != tt.wantFirst {
+				t.Errorf("Search() first = %q, want %q", packages[0].Name, tt.wantFirst)
+			}
+		})
+	}
+}

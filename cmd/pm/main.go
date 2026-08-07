@@ -56,6 +56,7 @@ func main() {
 	command.SetStatusUseCase(statusUC)
 	command.SetUpdateUseCase(updateUC)
 	command.SetBootstrapUseCase(bootstrapUC)
+	command.SetManagerAdapters(adapters)
 
 	// Execute CLI
 	command.Execute()

@@ -17,6 +17,7 @@ specifications/
 │   ├── UC-004-status.md        # Status/check command
 │   └── UC-005-export.md        # Export configuration
 ├── test-scenarios.md           # Comprehensive test suite (120+ scenarios)
+├── per-manager-cli.md          # winget/scoop/chocolatey per-manager CLI (list|search)
 └── compliance/                  # Quality and compliance tracking
     └── implementation-status.md # Current vs target compliance
 ```

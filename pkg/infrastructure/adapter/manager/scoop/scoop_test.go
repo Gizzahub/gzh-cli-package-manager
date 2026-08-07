@@ -427,3 +427,78 @@ func TestAdapter_Update(t *testing.T) {
 		})
 	}
 }
+
+func TestAdapter_Search(t *testing.T) {
+	tableOutput := `Name   Version Source
+----   ------- ------
+git    2.43.0  main
+github 2.40.0  main
+`
+
+	quotedOutput := `Results from other known buckets...
+'git' (2.43.0) main
+'gh' (2.40.0) extras
+`
+
+	tests := []struct {
+		name      string
+		query     string
+		execFunc  testutil.ExecutorFunc
+		wantCount int
+		wantErr   bool
+		wantFirst string
+	}{
+		{
+			name:  "table results",
+			query: "git",
+			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+				if command == scoopCommand && len(args) == 2 && args[0] == "search" && args[1] == "git" {
+					return testutil.SuccessResult(tableOutput), nil
+				}
+				return nil, errors.New("unexpected command")
+			},
+			wantCount: 2,
+			wantFirst: "git",
+		},
+		{
+			name:  "quoted results",
+			query: "git",
+			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+				if command == scoopCommand && len(args) == 2 && args[0] == "search" {
+					return testutil.SuccessResult(quotedOutput), nil
+				}
+				return nil, errors.New("unexpected command")
+			},
+			wantCount: 2,
+			wantFirst: "git",
+		},
+		{
+			name:  "empty query",
+			query: "",
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+				t.Fatal("executor should not be called")
+				return nil, nil
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
+			packages, err := adapter.Search(context.Background(), tt.query)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Search() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if len(packages) != tt.wantCount {
+				t.Fatalf("Search() count = %d, want %d", len(packages), tt.wantCount)
+			}
+			if packages[0].Name != tt.wantFirst {
+				t.Errorf("Search() first = %q, want %q", packages[0].Name, tt.wantFirst)
+			}
+		})
+	}
+}
