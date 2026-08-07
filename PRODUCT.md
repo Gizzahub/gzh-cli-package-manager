@@ -55,6 +55,12 @@ G5. **Test reliability**
 
 - Target: 커버리지 >= 85% (현재 81.9%; `cmd/pm`·`pkg/domain/cleanup`는 0%)
 
+G6. **Cleanup execute path (issue 25 minimal)**
+
+- Target: 최소 1개 실행 기능 동작 + 테스트
+- 현재: `cleanup cache scan` / `cleanup cache clean --dry-run` /
+  `cleanup quarantine purge` 구현 (UC-006). 영속 저장·orphan/versions는 후속.
+
 ______________________________________________________________________
 
 ## Non-Goals (Explicitly Out of Scope)
