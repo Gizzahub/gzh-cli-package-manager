@@ -1,6 +1,6 @@
-# UC-006: Cleanup (cache scan/clean, quarantine purge)
+# UC-006: Cleanup (cache scan/clean, quarantine purge, orphans/versions list)
 
-**Status**: Implemented (minimal executable slice)
+**Status**: Implemented (minimal executable slice + heuristic orphans/versions)
 **Commands**: `gz-pm cleanup …`
 **Last Updated**: 2026-08-07
 
@@ -11,9 +11,10 @@ Provide safe, inspectable cleanup for package-manager side-effects:
 1. Discover known cache directories and report size/entry counts.
 2. Clear those caches with mandatory dry-run support.
 3. Purge expired quarantine records by retention policy.
+4. List heuristic orphan candidates and multi-version packages (best-effort).
 
 This is **not** a package uninstall/reinstall orchestrator. Quarantine file
-backup/restore remains a follow-up.
+backup/restore and dependency-graph orphan detection remain follow-ups.
 
 ## Subcommands
 
@@ -25,6 +26,8 @@ backup/restore remains a follow-up.
 | `cleanup quarantine list [--manager ID]` | List quarantine records | No |
 | `cleanup quarantine expired [--retention N]` | List records older than N days | No |
 | `cleanup quarantine purge [--retention N] [--dry-run]` | Delete expired quarantine records | Yes (metadata; unless dry-run) |
+| `cleanup orphans list [--manager ID] [--dry-run]` | Heuristic orphan candidates from adapter `ListPackages` | No (list only; dry-run prints would-remove) |
+| `cleanup versions list [--manager ID] [--dry-run]` | Multi-version package rows (best-effort) | No (list only) |
 
 ## Known cache managers
 
@@ -69,9 +72,19 @@ Missing paths are skipped (not errors). Unreadable nodes inside a tree are skipp
 - Quarantine purge dry-run vs execute
 - CLI wiring tests for `cache scan`, `cache clean --dry-run`, `quarantine purge`
 
+## Orphans / versions (heuristic)
+
+- `HeuristicOrphanDetector` flags empty name, placeholder names (`unknown`, `-`),
+  or missing version metadata. No dependency graph.
+- `HeuristicVersionScanner` groups by name and reports names with ≥2 distinct
+  `CurrentVersion` values. Lexicographically last version is marked current.
+- Both use registered adapters via `SetManagerAdapters` (`ListPackages`).
+- CLI never removes packages; `--dry-run` only annotates candidates with a
+  would-remove message.
+
 ## Out of scope (follow-ups)
 
 - Persistent quarantine/cache store across CLI process restarts
-- Orphan package detection (`cleanup orphans`)
-- Multi-version cleanup (`cleanup versions`)
+- Dependency-graph orphan accuracy / actual orphan removal
+- Multi-version uninstall orchestration
 - Actual package uninstall + file backup for quarantine

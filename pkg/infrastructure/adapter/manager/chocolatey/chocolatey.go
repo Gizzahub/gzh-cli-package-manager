@@ -142,6 +142,82 @@ func (a *Adapter) Search(ctx context.Context, query string) ([]manager.Package, 
 	return packages, nil
 }
 
+// Install installs a package by Chocolatey package ID.
+// dryRun skips the native install. Elevation-related errors are wrapped with
+// a clear message suggesting the user re-run as administrator.
+func (a *Adapter) Install(ctx context.Context, pkgID string, dryRun bool) error {
+	pkgID = strings.TrimSpace(pkgID)
+	if pkgID == "" {
+		return fmt.Errorf("install chocolatey package: package id is required")
+	}
+
+	a.logger.Info(ctx, "Chocolatey install",
+		output.Field{Key: "package", Value: pkgID},
+		output.Field{Key: "dry_run", Value: dryRun})
+
+	if dryRun {
+		return nil
+	}
+
+	result, err := a.executor.Execute(ctx, chocoCommand, "install", pkgID, "-y")
+	if err := cmdutil.CheckResult(result, err, "install chocolatey package "+pkgID); err != nil {
+		return wrapElevationError(err)
+	}
+	return nil
+}
+
+// Uninstall removes a package by Chocolatey package ID.
+// dryRun skips the native uninstall. Elevation-related errors are wrapped.
+func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) error {
+	pkgID = strings.TrimSpace(pkgID)
+	if pkgID == "" {
+		return fmt.Errorf("uninstall chocolatey package: package id is required")
+	}
+
+	a.logger.Info(ctx, "Chocolatey uninstall",
+		output.Field{Key: "package", Value: pkgID},
+		output.Field{Key: "dry_run", Value: dryRun})
+
+	if dryRun {
+		return nil
+	}
+
+	result, err := a.executor.Execute(ctx, chocoCommand, "uninstall", pkgID, "-y")
+	if err := cmdutil.CheckResult(result, err, "uninstall chocolatey package "+pkgID); err != nil {
+		return wrapElevationError(err)
+	}
+	return nil
+}
+
+// wrapElevationError rewrites admin/UAC-related failures with a clear suggestion.
+// No real UAC elevation is attempted.
+func wrapElevationError(err error) error {
+	if err == nil {
+		return nil
+	}
+	msg := strings.ToLower(err.Error())
+	elevationHints := []string{
+		"access is denied",
+		"access denied",
+		"requires elevation",
+		"elevation required",
+		"administrator",
+		"run as admin",
+		"not running in an elevated",
+		"uac",
+		"privileged",
+		"permission denied",
+		"must be run as an administrator",
+		"this operation requires elevation",
+	}
+	for _, hint := range elevationHints {
+		if strings.Contains(msg, hint) {
+			return fmt.Errorf("%w (hint: Chocolatey typically requires an elevated shell — re-run as Administrator)", err)
+		}
+	}
+	return err
+}
+
 // CheckHealth performs health checks on Chocolatey.
 func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	// Run 'choco outdated -r' to check for outdated packages
@@ -205,8 +281,9 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 	upgradeResult, err := a.executor.Execute(ctx, chocoCommand, "upgrade", "all", "-y")
 	if err != nil {
 		result.Success = false
-		result.Message = fmt.Sprintf("choco upgrade all failed: %v", err)
-		return result, fmt.Errorf("chocolatey upgrade failed: %w", err)
+		wrapped := wrapElevationError(fmt.Errorf("chocolatey upgrade failed: %w", err))
+		result.Message = wrapped.Error()
+		return result, wrapped
 	}
 
 	if upgradeResult.ExitCode != 0 {

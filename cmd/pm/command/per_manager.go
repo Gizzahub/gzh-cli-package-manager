@@ -41,12 +41,20 @@ var perManagerSpecs = []perManagerSpec{
 		Long: `Run winget-specific package operations through the installed winget adapter.
 
 Subcommands:
-  list    List installed packages
-  search  Search the winget catalog
+  list              List installed packages
+  search            Search the winget catalog
+  install           Install a package by ID
+  uninstall         Uninstall a package by ID
+  upgrade           Upgrade packages (use --all for all)
+  source list       List configured winget sources
 
 Examples:
   gz-pm winget list
   gz-pm winget search git
+  gz-pm winget install Git.Git --dry-run
+  gz-pm winget uninstall Git.Git --dry-run
+  gz-pm winget upgrade --all --dry-run
+  gz-pm winget source list
   gz-pm winget list --output json`,
 	},
 	{
@@ -56,12 +64,22 @@ Examples:
 		Long: `Run Scoop-specific package operations through the installed scoop adapter.
 
 Subcommands:
-  list    List installed packages
-  search  Search scoop buckets
+  list              List installed packages
+  search            Search scoop buckets
+  install           Install a package
+  uninstall         Uninstall a package
+  upgrade           Upgrade packages (use --all for all)
+  bucket list|add|remove  Manage scoop buckets
 
 Examples:
   gz-pm scoop list
   gz-pm scoop search git
+  gz-pm scoop install git --dry-run
+  gz-pm scoop uninstall git --dry-run
+  gz-pm scoop upgrade --all --dry-run
+  gz-pm scoop bucket list
+  gz-pm scoop bucket add extras
+  gz-pm scoop bucket remove extras
   gz-pm scoop search 7zip --output json`,
 	},
 	{
@@ -71,12 +89,18 @@ Examples:
 		Long: `Run Chocolatey-specific package operations through the installed choco adapter.
 
 Subcommands:
-  list    List installed packages (local)
-  search  Search the Chocolatey community feed
+  list       List installed packages (local)
+  search     Search the Chocolatey community feed
+  install    Install a package (may require Administrator)
+  uninstall  Uninstall a package (may require Administrator)
+  upgrade    Upgrade packages (use --all for all)
 
 Examples:
   gz-pm chocolatey list
   gz-pm chocolatey search git
+  gz-pm chocolatey install git --dry-run
+  gz-pm chocolatey uninstall git --dry-run
+  gz-pm chocolatey upgrade --all --dry-run
   gz-pm chocolatey list --output json`,
 	},
 }
@@ -96,6 +120,18 @@ func newPerManagerCmd(spec perManagerSpec) *cobra.Command {
 
 	cmd.AddCommand(newPerManagerListCmd(spec))
 	cmd.AddCommand(newPerManagerSearchCmd(spec))
+	cmd.AddCommand(newPerManagerInstallCmd(spec))
+	cmd.AddCommand(newPerManagerUninstallCmd(spec))
+	cmd.AddCommand(newPerManagerUpgradeCmd(spec))
+
+	// Manager-specific subtrees
+	switch spec.ID {
+	case manager.ManagerWinget:
+		cmd.AddCommand(newWingetSourceCmd(spec))
+	case manager.ManagerScoop:
+		cmd.AddCommand(newScoopBucketCmd(spec))
+	}
+
 	return cmd
 }
 
@@ -129,6 +165,149 @@ func newPerManagerSearchCmd(spec perManagerSpec) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&outputFormat, "output", "o", "text", "Output format (text|json)")
+	return cmd
+}
+
+func newPerManagerInstallCmd(spec perManagerSpec) *cobra.Command {
+	var dryRun bool
+
+	cmd := &cobra.Command{
+		Use:   "install <id>",
+		Short: fmt.Sprintf("Install a package via %s", spec.Use),
+		Long:  fmt.Sprintf("Install a package by ID/name using %s. Use --dry-run to preview.", spec.Use),
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runPerManagerInstall(cmd.Context(), spec, args[0], dryRun, cmd.OutOrStdout())
+		},
+	}
+
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be installed without making changes")
+	return cmd
+}
+
+func newPerManagerUninstallCmd(spec perManagerSpec) *cobra.Command {
+	var dryRun bool
+
+	cmd := &cobra.Command{
+		Use:   "uninstall <id>",
+		Short: fmt.Sprintf("Uninstall a package via %s", spec.Use),
+		Long:  fmt.Sprintf("Uninstall a package by ID/name using %s. Use --dry-run to preview.", spec.Use),
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runPerManagerUninstall(cmd.Context(), spec, args[0], dryRun, cmd.OutOrStdout())
+		},
+	}
+
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be uninstalled without making changes")
+	return cmd
+}
+
+func newPerManagerUpgradeCmd(spec perManagerSpec) *cobra.Command {
+	var dryRun bool
+	var all bool
+
+	cmd := &cobra.Command{
+		Use:   "upgrade [id]",
+		Short: fmt.Sprintf("Upgrade packages via %s", spec.Use),
+		Long: fmt.Sprintf(`Upgrade packages managed by %s via Adapter.Update.
+
+With --all (or no package id), upgrades all packages.
+With a package id, upgrades that package only when the adapter supports package lists.
+Use --dry-run to preview.`, spec.Use),
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			pkgID := ""
+			if len(args) == 1 {
+				pkgID = args[0]
+			}
+			if pkgID == "" {
+				all = true
+			}
+			return runPerManagerUpgrade(cmd.Context(), spec, pkgID, all, dryRun, cmd.OutOrStdout())
+		},
+	}
+
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be upgraded without making changes")
+	cmd.Flags().BoolVar(&all, "all", false, "Upgrade all packages")
+	return cmd
+}
+
+func newWingetSourceCmd(spec perManagerSpec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "source",
+		Short: "Manage winget package sources",
+	}
+	cmd.AddCommand(newWingetSourceListCmd(spec))
+	return cmd
+}
+
+func newWingetSourceListCmd(spec perManagerSpec) *cobra.Command {
+	var outputFormat string
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List winget package sources",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runWingetSourceList(cmd.Context(), spec, outputFormat, cmd.OutOrStdout())
+		},
+	}
+
+	cmd.Flags().StringVarP(&outputFormat, "output", "o", "text", "Output format (text|json)")
+	return cmd
+}
+
+func newScoopBucketCmd(spec perManagerSpec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "bucket",
+		Short: "Manage Scoop buckets",
+	}
+	cmd.AddCommand(newScoopBucketListCmd(spec))
+	cmd.AddCommand(newScoopBucketAddCmd(spec))
+	cmd.AddCommand(newScoopBucketRemoveCmd(spec))
+	return cmd
+}
+
+func newScoopBucketListCmd(spec perManagerSpec) *cobra.Command {
+	var outputFormat string
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List Scoop buckets",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runScoopBucketList(cmd.Context(), spec, outputFormat, cmd.OutOrStdout())
+		},
+	}
+
+	cmd.Flags().StringVarP(&outputFormat, "output", "o", "text", "Output format (text|json)")
+	return cmd
+}
+
+func newScoopBucketAddCmd(spec perManagerSpec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "add <name> [url]",
+		Short: "Add a Scoop bucket",
+		Args:  cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			url := ""
+			if len(args) == 2 {
+				url = args[1]
+			}
+			return runScoopBucketAdd(cmd.Context(), spec, args[0], url, cmd.OutOrStdout())
+		},
+	}
+	return cmd
+}
+
+func newScoopBucketRemoveCmd(spec perManagerSpec) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "remove <name>",
+		Aliases: []string{"rm"},
+		Short:   "Remove a Scoop bucket",
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runScoopBucketRemove(cmd.Context(), spec, args[0], cmd.OutOrStdout())
+		},
+	}
 	return cmd
 }
 
@@ -171,6 +350,267 @@ func runPerManagerSearch(ctx context.Context, spec perManagerSpec, query, format
 	}
 
 	return writePackages(out, format, spec.Use, "search", packages)
+}
+
+// runPerManagerInstall installs a package after Detect succeeds.
+func runPerManagerInstall(ctx context.Context, spec perManagerSpec, pkgID string, dryRun bool, out io.Writer) error {
+	adapter, err := requireAdapter(spec)
+	if err != nil {
+		return err
+	}
+	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
+		return err
+	}
+
+	installer, ok := adapter.(adapterm.Installer)
+	if !ok {
+		return fmt.Errorf("%s does not support install", spec.Use)
+	}
+
+	if dryRun {
+		_, _ = fmt.Fprintf(out, "Dry-run: would install %q via %s\n", pkgID, spec.Use)
+	}
+
+	if err := installer.Install(ctx, pkgID, dryRun); err != nil {
+		return fmt.Errorf("%s install failed: %w", spec.Use, err)
+	}
+
+	if !dryRun {
+		_, _ = fmt.Fprintf(out, "Installed %q via %s\n", pkgID, spec.Use)
+	}
+	return nil
+}
+
+// runPerManagerUninstall uninstalls a package after Detect succeeds.
+func runPerManagerUninstall(ctx context.Context, spec perManagerSpec, pkgID string, dryRun bool, out io.Writer) error {
+	adapter, err := requireAdapter(spec)
+	if err != nil {
+		return err
+	}
+	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
+		return err
+	}
+
+	installer, ok := adapter.(adapterm.Installer)
+	if !ok {
+		return fmt.Errorf("%s does not support uninstall", spec.Use)
+	}
+
+	if dryRun {
+		_, _ = fmt.Fprintf(out, "Dry-run: would uninstall %q via %s\n", pkgID, spec.Use)
+	}
+
+	if err := installer.Uninstall(ctx, pkgID, dryRun); err != nil {
+		return fmt.Errorf("%s uninstall failed: %w", spec.Use, err)
+	}
+
+	if !dryRun {
+		_, _ = fmt.Fprintf(out, "Uninstalled %q via %s\n", pkgID, spec.Use)
+	}
+	return nil
+}
+
+// runPerManagerUpgrade upgrades packages via Adapter.Update.
+func runPerManagerUpgrade(ctx context.Context, spec perManagerSpec, pkgID string, all, dryRun bool, out io.Writer) error {
+	adapter, err := requireAdapter(spec)
+	if err != nil {
+		return err
+	}
+	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
+		return err
+	}
+
+	opts := adapterm.UpdateOptions{
+		DryRun:   dryRun,
+		Strategy: adapterm.StrategyLatest,
+	}
+	if pkgID != "" && !all {
+		opts.Packages = []string{pkgID}
+	}
+
+	if dryRun {
+		if pkgID != "" && !all {
+			_, _ = fmt.Fprintf(out, "Dry-run: would upgrade %q via %s\n", pkgID, spec.Use)
+		} else {
+			_, _ = fmt.Fprintf(out, "Dry-run: would upgrade all packages via %s\n", spec.Use)
+		}
+	}
+
+	result, err := adapter.Update(ctx, opts)
+	if err != nil {
+		return fmt.Errorf("%s upgrade failed: %w", spec.Use, err)
+	}
+
+	if result != nil {
+		if result.Message != "" {
+			_, _ = fmt.Fprintln(out, result.Message)
+		}
+		if !result.Success {
+			return fmt.Errorf("%s upgrade failed: %s", spec.Use, result.Message)
+		}
+		if len(result.UpdatedPackages) > 0 {
+			_, _ = fmt.Fprintf(out, "Updated: %s\n", strings.Join(result.UpdatedPackages, ", "))
+		}
+	}
+	return nil
+}
+
+func runWingetSourceList(ctx context.Context, spec perManagerSpec, format string, out io.Writer) error {
+	adapter, err := requireAdapter(spec)
+	if err != nil {
+		return err
+	}
+	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
+		return err
+	}
+
+	lister, ok := adapter.(adapterm.SourceLister)
+	if !ok {
+		return fmt.Errorf("%s does not support source list", spec.Use)
+	}
+
+	sources, err := lister.ListSources(ctx)
+	if err != nil {
+		return fmt.Errorf("%s source list failed: %w", spec.Use, err)
+	}
+
+	return writeSources(out, format, sources)
+}
+
+func runScoopBucketList(ctx context.Context, spec perManagerSpec, format string, out io.Writer) error {
+	adapter, err := requireAdapter(spec)
+	if err != nil {
+		return err
+	}
+	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
+		return err
+	}
+
+	bm, ok := adapter.(adapterm.BucketManager)
+	if !ok {
+		return fmt.Errorf("%s does not support bucket management", spec.Use)
+	}
+
+	buckets, err := bm.ListBuckets(ctx)
+	if err != nil {
+		return fmt.Errorf("%s bucket list failed: %w", spec.Use, err)
+	}
+
+	return writeBuckets(out, format, buckets)
+}
+
+func runScoopBucketAdd(ctx context.Context, spec perManagerSpec, name, url string, out io.Writer) error {
+	adapter, err := requireAdapter(spec)
+	if err != nil {
+		return err
+	}
+	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
+		return err
+	}
+
+	bm, ok := adapter.(adapterm.BucketManager)
+	if !ok {
+		return fmt.Errorf("%s does not support bucket management", spec.Use)
+	}
+
+	if err := bm.AddBucket(ctx, name, url); err != nil {
+		return fmt.Errorf("%s bucket add failed: %w", spec.Use, err)
+	}
+	_, _ = fmt.Fprintf(out, "Added scoop bucket %q\n", name)
+	return nil
+}
+
+func runScoopBucketRemove(ctx context.Context, spec perManagerSpec, name string, out io.Writer) error {
+	adapter, err := requireAdapter(spec)
+	if err != nil {
+		return err
+	}
+	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
+		return err
+	}
+
+	bm, ok := adapter.(adapterm.BucketManager)
+	if !ok {
+		return fmt.Errorf("%s does not support bucket management", spec.Use)
+	}
+
+	if err := bm.RemoveBucket(ctx, name); err != nil {
+		return fmt.Errorf("%s bucket remove failed: %w", spec.Use, err)
+	}
+	_, _ = fmt.Fprintf(out, "Removed scoop bucket %q\n", name)
+	return nil
+}
+
+func writeSources(out io.Writer, format string, sources []adapterm.Source) error {
+	switch strings.ToLower(format) {
+	case "json":
+		type srcView struct {
+			Name string `json:"name"`
+			Arg  string `json:"arg,omitempty"`
+		}
+		views := make([]srcView, 0, len(sources))
+		for _, s := range sources {
+			views = append(views, srcView{Name: s.Name, Arg: s.Arg})
+		}
+		enc := json.NewEncoder(out)
+		enc.SetIndent("", "  ")
+		return enc.Encode(map[string]any{
+			"count":   len(views),
+			"sources": views,
+		})
+	case "text", "":
+		if len(sources) == 0 {
+			_, err := fmt.Fprintln(out, "No sources configured.")
+			return err
+		}
+		_, _ = fmt.Fprintf(out, "winget sources — %d\n", len(sources))
+		for _, s := range sources {
+			if s.Arg != "" {
+				_, _ = fmt.Fprintf(out, "  %s  %s\n", s.Name, s.Arg)
+			} else {
+				_, _ = fmt.Fprintf(out, "  %s\n", s.Name)
+			}
+		}
+		return nil
+	default:
+		return fmt.Errorf("unknown output format %q (supported: text, json)", format)
+	}
+}
+
+func writeBuckets(out io.Writer, format string, buckets []adapterm.Bucket) error {
+	switch strings.ToLower(format) {
+	case "json":
+		type bucketView struct {
+			Name   string `json:"name"`
+			Source string `json:"source,omitempty"`
+		}
+		views := make([]bucketView, 0, len(buckets))
+		for _, b := range buckets {
+			views = append(views, bucketView{Name: b.Name, Source: b.Source})
+		}
+		enc := json.NewEncoder(out)
+		enc.SetIndent("", "  ")
+		return enc.Encode(map[string]any{
+			"count":   len(views),
+			"buckets": views,
+		})
+	case "text", "":
+		if len(buckets) == 0 {
+			_, err := fmt.Fprintln(out, "No buckets configured.")
+			return err
+		}
+		_, _ = fmt.Fprintf(out, "scoop buckets — %d\n", len(buckets))
+		for _, b := range buckets {
+			if b.Source != "" {
+				_, _ = fmt.Fprintf(out, "  %s  %s\n", b.Name, b.Source)
+			} else {
+				_, _ = fmt.Fprintf(out, "  %s\n", b.Name)
+			}
+		}
+		return nil
+	default:
+		return fmt.Errorf("unknown output format %q (supported: text, json)", format)
+	}
 }
 
 func requireAdapter(spec perManagerSpec) (adapterm.Adapter, error) {

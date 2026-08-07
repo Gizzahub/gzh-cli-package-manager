@@ -38,6 +38,50 @@ type Searcher interface {
 	Search(ctx context.Context, query string) ([]manager.Package, error)
 }
 
+// Installer is an optional capability for install/uninstall operations.
+// Winget, Scoop, and Chocolatey implement this for per-manager CLI.
+type Installer interface {
+	// Install installs a package by ID/name. When dryRun is true, no native
+	// install is executed; the adapter reports what would run.
+	Install(ctx context.Context, pkgID string, dryRun bool) error
+
+	// Uninstall removes a package by ID/name. When dryRun is true, no native
+	// uninstall is executed.
+	Uninstall(ctx context.Context, pkgID string, dryRun bool) error
+}
+
+// Source describes a package source (e.g. winget catalog / msstore).
+type Source struct {
+	// Name is the source identifier (e.g. "winget", "msstore").
+	Name string
+	// Arg is the source argument/URL when available.
+	Arg string
+}
+
+// SourceLister is an optional capability for managers that expose package sources.
+type SourceLister interface {
+	// ListSources returns configured package sources.
+	ListSources(ctx context.Context) ([]Source, error)
+}
+
+// Bucket describes a Scoop bucket.
+type Bucket struct {
+	// Name is the bucket name (e.g. "main", "extras").
+	Name string
+	// Source is the remote URL or path when available.
+	Source string
+}
+
+// BucketManager is an optional capability for Scoop-style bucket operations.
+type BucketManager interface {
+	// ListBuckets returns configured buckets.
+	ListBuckets(ctx context.Context) ([]Bucket, error)
+	// AddBucket adds a bucket by name (and optional URL).
+	AddBucket(ctx context.Context, name, url string) error
+	// RemoveBucket removes a bucket by name.
+	RemoveBucket(ctx context.Context, name string) error
+}
+
 // UpdateOptions contains options for updating packages.
 type UpdateOptions struct {
 	// DryRun performs a dry run without actually updating.

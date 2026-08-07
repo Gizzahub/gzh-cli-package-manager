@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
@@ -512,5 +513,79 @@ github-desktop|3.3.0
 				t.Errorf("Search() Manager = %q, want choco", packages[0].Manager)
 			}
 		})
+	}
+}
+
+func TestAdapter_Install(t *testing.T) {
+	t.Run("dry-run", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("should not be called")
+		}), testutil.NewMockLogger())
+		if err := adapter.Install(context.Background(), "git", true); err != nil {
+			t.Fatalf("Install dry-run: %v", err)
+		}
+	})
+
+	t.Run("install success", func(t *testing.T) {
+		var gotArgs []string
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			if command != chocoCommand {
+				return nil, errors.New("unexpected command")
+			}
+			gotArgs = args
+			return testutil.SuccessResult("Chocolatey installed git"), nil
+		}), testutil.NewMockLogger())
+		if err := adapter.Install(context.Background(), "git", false); err != nil {
+			t.Fatalf("Install: %v", err)
+		}
+		if len(gotArgs) != 3 || gotArgs[0] != "install" || gotArgs[1] != "git" || gotArgs[2] != "-y" {
+			t.Fatalf("args = %v", gotArgs)
+		}
+	})
+
+	t.Run("elevation error wrapped", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return testutil.FailureResult(1, "Access is denied. This operation requires elevation."), nil
+		}), testutil.NewMockLogger())
+		err := adapter.Install(context.Background(), "git", false)
+		if err == nil {
+			t.Fatal("expected elevation error")
+		}
+		if !strings.Contains(err.Error(), "Administrator") {
+			t.Errorf("error should suggest admin: %v", err)
+		}
+	})
+}
+
+func TestAdapter_Uninstall(t *testing.T) {
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, args ...string) (*output.ExecutionResult, error) {
+		if args[0] == "uninstall" {
+			return testutil.SuccessResult("Chocolatey uninstalled git"), nil
+		}
+		return nil, errors.New("unexpected")
+	}), testutil.NewMockLogger())
+	if err := adapter.Uninstall(context.Background(), "git", false); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if err := adapter.Uninstall(context.Background(), "git", true); err != nil {
+		t.Fatalf("Uninstall dry-run: %v", err)
+	}
+	if err := adapter.Uninstall(context.Background(), "", false); err == nil {
+		t.Fatal("expected empty id error")
+	}
+}
+
+func TestWrapElevationError(t *testing.T) {
+	if err := wrapElevationError(nil); err != nil {
+		t.Fatal("nil should stay nil")
+	}
+	base := errors.New("permission denied while installing")
+	wrapped := wrapElevationError(base)
+	if !strings.Contains(wrapped.Error(), "Administrator") {
+		t.Errorf("wrapped = %v", wrapped)
+	}
+	normal := wrapElevationError(errors.New("package not found"))
+	if strings.Contains(normal.Error(), "Administrator") {
+		t.Errorf("non-elevation should not wrap: %v", normal)
 	}
 }

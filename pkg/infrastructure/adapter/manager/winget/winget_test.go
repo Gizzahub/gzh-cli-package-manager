@@ -494,3 +494,105 @@ GitHub CLI          GitHub.cli           2.40.0             winget
 		})
 	}
 }
+
+func TestAdapter_Install(t *testing.T) {
+	t.Run("dry-run skips executor", func(t *testing.T) {
+		called := false
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			called = true
+			return nil, errors.New("should not be called")
+		}), testutil.NewMockLogger())
+		if err := adapter.Install(context.Background(), "Git.Git", true); err != nil {
+			t.Fatalf("Install dry-run: %v", err)
+		}
+		if called {
+			t.Fatal("executor should not run on dry-run")
+		}
+	})
+
+	t.Run("install success", func(t *testing.T) {
+		var gotArgs []string
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			if command != wingetCommand {
+				return nil, errors.New("unexpected command")
+			}
+			gotArgs = args
+			return testutil.SuccessResult("Successfully installed"), nil
+		}), testutil.NewMockLogger())
+		if err := adapter.Install(context.Background(), "Git.Git", false); err != nil {
+			t.Fatalf("Install: %v", err)
+		}
+		if len(gotArgs) < 2 || gotArgs[0] != "install" || gotArgs[2] != "Git.Git" {
+			t.Fatalf("args = %v", gotArgs)
+		}
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
+		if err := adapter.Install(context.Background(), "  ", false); err == nil {
+			t.Fatal("expected error for empty id")
+		}
+	})
+}
+
+func TestAdapter_Uninstall(t *testing.T) {
+	t.Run("dry-run", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("should not be called")
+		}), testutil.NewMockLogger())
+		if err := adapter.Uninstall(context.Background(), "Git.Git", true); err != nil {
+			t.Fatalf("Uninstall dry-run: %v", err)
+		}
+	})
+
+	t.Run("uninstall success", func(t *testing.T) {
+		var gotArgs []string
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			gotArgs = args
+			return testutil.SuccessResult("Successfully uninstalled"), nil
+		}), testutil.NewMockLogger())
+		if err := adapter.Uninstall(context.Background(), "Git.Git", false); err != nil {
+			t.Fatalf("Uninstall: %v", err)
+		}
+		if gotArgs[0] != "uninstall" || gotArgs[2] != "Git.Git" {
+			t.Fatalf("args = %v", gotArgs)
+		}
+	})
+}
+
+func TestAdapter_ListSources(t *testing.T) {
+	sourceOutput := `Name    Argument
+---------------------------------------------------
+msstore https://storeedgefd.dsx.mp.microsoft.com/v9.0
+winget  https://cdn.winget.microsoft.com/cache
+`
+
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command == wingetCommand && len(args) == 2 && args[0] == "source" && args[1] == "list" {
+			return testutil.SuccessResult(sourceOutput), nil
+		}
+		return nil, errors.New("unexpected")
+	}), testutil.NewMockLogger())
+
+	sources, err := adapter.ListSources(context.Background())
+	if err != nil {
+		t.Fatalf("ListSources: %v", err)
+	}
+	if len(sources) != 2 {
+		t.Fatalf("count = %d, want 2", len(sources))
+	}
+	if sources[0].Name != "msstore" || sources[1].Name != "winget" {
+		t.Errorf("sources = %+v", sources)
+	}
+	if sources[1].Arg == "" {
+		t.Error("expected winget source arg")
+	}
+}
+
+func TestParseWingetSources_NoSeparator(t *testing.T) {
+	out := "Name Argument\nwinget https://example\n"
+	sources := parseWingetSources(out)
+	if len(sources) != 1 || sources[0].Name != "winget" {
+		t.Fatalf("sources = %+v", sources)
+	}
+}

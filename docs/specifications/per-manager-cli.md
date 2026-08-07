@@ -1,19 +1,19 @@
 # Per-Manager CLI (winget / scoop / chocolatey)
 
-**Status**: Implemented (MVP — list + search)
+**Status**: Implemented (list + search + install/uninstall/upgrade + sources/buckets)
 **Related issues**: gzh-cli `tasks/issue/22`, `23`, `24`
 **Binary**: `gz-pm` (also available as `gz pm …` when embedded)
 
 ## Intent
 
 Unified commands (`status`, `update`) already orchestrate Windows managers via adapters.
-Per-manager commands expose **manager-native** list/search through those same adapters —
-they wrap the native CLI; they do not reimplement package management.
+Per-manager commands expose **manager-native** list/search/install/uninstall through those
+same adapters — they wrap the native CLI; they do not reimplement package management.
 
 ## Command structure
 
 ```text
-gz-pm <manager> <subcommand> [args] [--output text|json]
+gz-pm <manager> <subcommand> [args] [--output text|json] [--dry-run]
 ```
 
 | Manager CLI name | Adapter ID | Native binary |
@@ -22,28 +22,93 @@ gz-pm <manager> <subcommand> [args] [--output text|json]
 | `scoop`          | `scoop`    | `scoop`       |
 | `chocolatey`     | `choco`    | `choco`       |
 
-### Subcommands (MVP)
+### Common subcommands
 
-| Subcommand | Args | Behavior |
-|------------|------|----------|
-| `list`     | none | Detect → `ListPackages` via adapter |
-| `search`   | `<query>` (required) | Detect → `Search` via adapter |
+| Subcommand  | Args | Flags | Behavior |
+|-------------|------|-------|----------|
+| `list`      | none | `--output` | Detect → `ListPackages` via adapter |
+| `search`    | `<query>` (required) | `--output` | Detect → `Search` via adapter |
+| `install`   | `<id>` (required) | `--dry-run` | Detect → `Installer.Install` |
+| `uninstall` | `<id>` (required) | `--dry-run` | Detect → `Installer.Uninstall` |
+| `upgrade`   | `[id]` optional | `--all`, `--dry-run` | Detect → `Adapter.Update` |
+
+### Manager-specific subcommands
+
+| Manager | Subcommand | Args | Behavior |
+|---------|------------|------|----------|
+| winget | `source list` | none | `SourceLister.ListSources` → parse `winget source list` |
+| scoop | `bucket list` | none | `BucketManager.ListBuckets` |
+| scoop | `bucket add` | `<name> [url]` | `BucketManager.AddBucket` |
+| scoop | `bucket remove` / `rm` | `<name>` | `BucketManager.RemoveBucket` |
 
 Examples:
 
 ```bash
 gz-pm winget list
 gz-pm winget search git
+gz-pm winget install Git.Git --dry-run
+gz-pm winget uninstall Git.Git --dry-run
+gz-pm winget upgrade --all --dry-run
+gz-pm winget source list
+
 gz-pm scoop list --output json
 gz-pm scoop search 7zip
+gz-pm scoop install git --dry-run
+gz-pm scoop uninstall git --dry-run
+gz-pm scoop upgrade --all
+gz-pm scoop bucket list
+gz-pm scoop bucket add extras
+gz-pm scoop bucket remove extras
+
 gz-pm chocolatey list
 gz-pm chocolatey search git -o json
+gz-pm chocolatey install git --dry-run
+gz-pm chocolatey uninstall git --dry-run
+gz-pm chocolatey upgrade --all --dry-run
 ```
 
-### Out of scope for this MVP
+### Dry-run policy
 
-- `install` / `uninstall` / `upgrade` / `bucket` / UAC elevation / progress bars
+- `install` / `uninstall`: adapter skips the native install/uninstall command; CLI prints
+  `Dry-run: would install|uninstall …`.
+- `upgrade`: uses existing `UpdateOptions.DryRun` on `Adapter.Update` (no native upgrade).
+- No real UAC elevation is performed. Chocolatey elevation-related executor errors are
+  rewritten with a clear “run as Administrator” hint.
+
+### Optional capability interfaces
+
+```go
+type Installer interface {
+  Install(ctx, pkgID string, dryRun bool) error
+  Uninstall(ctx, pkgID string, dryRun bool) error
+}
+
+type SourceLister interface {
+  ListSources(ctx) ([]Source, error)
+}
+
+type BucketManager interface {
+  ListBuckets(ctx) ([]Bucket, error)
+  AddBucket(ctx, name, url string) error
+  RemoveBucket(ctx, name string) error
+}
+```
+
+Implemented by:
+
+| Adapter | Installer | SourceLister | BucketManager | Searcher |
+|---------|-----------|--------------|---------------|----------|
+| winget | ✅ | ✅ | — | ✅ |
+| scoop | ✅ | — | ✅ | ✅ |
+| chocolatey | ✅ (+ UAC wrap) | — | — | ✅ |
+
+### Out of scope / residual
+
+- Progress bars / install streaming output
+- Real UAC elevation prompts
+- Manifest display for Scoop
 - Live Windows integration tests (unit tests use injectable `CommandExecutor` mocks)
+- Advanced orphan dependency graphs (see cleanup orphans/versions best-effort)
 
 ## Output formats
 
@@ -78,6 +143,24 @@ No packages found (scoop search).
 }
 ```
 
+Source list JSON:
+
+```json
+{
+  "count": 1,
+  "sources": [{ "name": "winget", "arg": "https://…" }]
+}
+```
+
+Bucket list JSON:
+
+```json
+{
+  "count": 1,
+  "buckets": [{ "name": "main", "source": "https://…" }]
+}
+```
+
 ## Error policy
 
 | Condition | Exit | Message pattern |
@@ -86,15 +169,16 @@ No packages found (scoop search).
 | Adapter missing for ID | non-zero | `<manager>: adapter not registered` |
 | Manager not installed / not on PATH | non-zero | `<manager> is not available on this system (not installed or not in PATH)` |
 | Detect call fails | non-zero | `<manager>: detect failed: …` |
-| List/search native command fails | non-zero | `<manager> list/search failed: …` |
-| Search without query | non-zero | cobra `ExactArgs(1)` validation |
+| List/search/install/uninstall/upgrade fails | non-zero | `<manager> <action> failed: …` |
+| Search/install without required args | non-zero | cobra `ExactArgs` / `RangeArgs` validation |
 | Unknown `--output` | non-zero | `unknown output format "…" (supported: text, json)` |
-| Search not implemented by adapter | non-zero | `<manager> does not support search` |
+| Capability not implemented | non-zero | `<manager> does not support <capability>` |
+| Chocolatey elevation-related failure | non-zero | original error + `(hint: … re-run as Administrator)` |
 
 Notes:
 
 - Manager subcommands **always register** on every platform (including non-Windows).
-- Runtime path always goes through the adapter: **Detect first**, then list/search.
+- Runtime path always goes through the adapter: **Detect first**, then action.
 - Clear “not available” is preferred over silent no-op when the binary is missing.
 - Commands use `RunE` (errors bubble to Cobra); no hidden swallow of failures.
 
@@ -102,13 +186,12 @@ Notes:
 
 ```text
 cmd/pm/command (presentation)
-    → adapterm.Adapter / adapterm.Searcher
+    → adapterm.Adapter / Searcher / Installer / SourceLister / BucketManager
         → CommandExecutor (mockable)
             → native winget | scoop | choco
 ```
 
 - `SetManagerAdapters` injects the same adapter map used by `update`.
-- Winget / Scoop / Chocolatey implement optional `adapterm.Searcher`.
 - Unit tests inject `testutil.MockExecutor`; no live Windows required.
 
 ## Acceptance (issues 22–24)
@@ -116,8 +199,8 @@ cmd/pm/command (presentation)
 | AC | Status |
 |----|--------|
 | Spec: command structure / output / error policy | ✅ this document |
-| `gz-pm winget <subcommand>` ≥1 + tests | ✅ `list`, `search` + mock executor tests |
-| `gz-pm scoop <subcommand>` ≥1 + tests | ✅ `list`, `search` + mock executor tests |
-| `gz-pm chocolatey <subcommand>` ≥1 + tests | ✅ `list`, `search` + mock executor tests |
+| `gz-pm winget` list/search/install/uninstall/upgrade/source list + tests | ✅ mock executor |
+| `gz-pm scoop` list/search/install/uninstall/upgrade/bucket + tests | ✅ mock executor |
+| `gz-pm chocolatey` list/search/install/uninstall/upgrade + UAC wrap + tests | ✅ mock executor |
 
-Advanced scope (sources/buckets/UAC/progress) remains open for follow-up.
+Progress bars and real UAC elevation remain out of scope.

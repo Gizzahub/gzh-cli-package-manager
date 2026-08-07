@@ -271,3 +271,198 @@ func TestPerManager_UnknownOutputFormat(t *testing.T) {
 		t.Errorf("error = %v", err)
 	}
 }
+
+func TestPerManager_WingetInstallDryRun(t *testing.T) {
+	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command == "winget" && len(args) == 1 && args[0] == "--version" {
+			return testutil.SuccessResult("v1.6.0\n"), nil
+		}
+		return nil, errors.New("unexpected install call on dry-run: " + strings.Join(args, " "))
+	})
+
+	out, err := executePerManagerCmd(t, "winget", "install", "Git.Git", "--dry-run")
+	if err != nil {
+		t.Fatalf("winget install dry-run: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "Dry-run") || !strings.Contains(out, "Git.Git") {
+		t.Errorf("output = %q", out)
+	}
+}
+
+func TestPerManager_WingetUninstall(t *testing.T) {
+	var uninstallCalled bool
+	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		switch {
+		case command == "winget" && len(args) == 1 && args[0] == "--version":
+			return testutil.SuccessResult("v1.6.0\n"), nil
+		case command == "winget" && len(args) > 0 && args[0] == "uninstall":
+			uninstallCalled = true
+			return testutil.SuccessResult("ok"), nil
+		default:
+			return nil, errors.New("unexpected: " + strings.Join(args, " "))
+		}
+	})
+
+	out, err := executePerManagerCmd(t, "winget", "uninstall", "Git.Git")
+	if err != nil {
+		t.Fatalf("winget uninstall: %v\n%s", err, out)
+	}
+	if !uninstallCalled {
+		t.Fatal("expected uninstall native call")
+	}
+	if !strings.Contains(out, "Uninstalled") {
+		t.Errorf("output = %q", out)
+	}
+}
+
+func TestPerManager_WingetUpgradeAllDryRun(t *testing.T) {
+	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command == "winget" && len(args) == 1 && args[0] == "--version" {
+			return testutil.SuccessResult("v1.6.0\n"), nil
+		}
+		// Update dry-run does not call executor
+		return nil, errors.New("unexpected: " + strings.Join(args, " "))
+	})
+
+	out, err := executePerManagerCmd(t, "winget", "upgrade", "--all", "--dry-run")
+	if err != nil {
+		t.Fatalf("winget upgrade: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "Dry-run") {
+		t.Errorf("output = %q", out)
+	}
+}
+
+func TestPerManager_WingetSourceList(t *testing.T) {
+	sourceOutput := `Name    Argument
+---------------------------------------------------
+winget  https://cdn.winget.microsoft.com/cache
+`
+
+	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		switch {
+		case command == "winget" && len(args) == 1 && args[0] == "--version":
+			return testutil.SuccessResult("v1.6.0\n"), nil
+		case command == "winget" && len(args) == 2 && args[0] == "source" && args[1] == "list":
+			return testutil.SuccessResult(sourceOutput), nil
+		default:
+			return nil, errors.New("unexpected: " + strings.Join(args, " "))
+		}
+	})
+
+	out, err := executePerManagerCmd(t, "winget", "source", "list")
+	if err != nil {
+		t.Fatalf("winget source list: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "winget") {
+		t.Errorf("output = %q", out)
+	}
+}
+
+func TestPerManager_ScoopInstallUninstall(t *testing.T) {
+	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		switch {
+		case command == "scoop" && len(args) == 1 && args[0] == "--version":
+			return testutil.SuccessResult("v0.3.1\n"), nil
+		case command == "scoop" && len(args) == 2 && args[0] == "install" && args[1] == "git":
+			return testutil.SuccessResult("Installing 'git'"), nil
+		case command == "scoop" && len(args) == 2 && args[0] == "uninstall" && args[1] == "git":
+			return testutil.SuccessResult("Uninstalling 'git'"), nil
+		default:
+			return nil, errors.New("unexpected: " + strings.Join(args, " "))
+		}
+	})
+
+	out, err := executePerManagerCmd(t, "scoop", "install", "git")
+	if err != nil {
+		t.Fatalf("scoop install: %v\n%s", err, out)
+	}
+	out, err = executePerManagerCmd(t, "scoop", "uninstall", "git", "--dry-run")
+	if err != nil {
+		t.Fatalf("scoop uninstall dry-run: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "Dry-run") {
+		t.Errorf("output = %q", out)
+	}
+}
+
+func TestPerManager_ScoopBucket(t *testing.T) {
+	bucketOutput := `Name Source
+---- ------
+main https://github.com/ScoopInstaller/Main
+`
+
+	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		switch {
+		case command == "scoop" && len(args) == 1 && args[0] == "--version":
+			return testutil.SuccessResult("v0.3.1\n"), nil
+		case command == "scoop" && len(args) == 2 && args[0] == "bucket" && args[1] == "list":
+			return testutil.SuccessResult(bucketOutput), nil
+		case command == "scoop" && len(args) >= 3 && args[0] == "bucket" && args[1] == "add":
+			return testutil.SuccessResult("ok"), nil
+		case command == "scoop" && len(args) == 3 && args[0] == "bucket" && args[1] == "rm":
+			return testutil.SuccessResult("ok"), nil
+		default:
+			return nil, errors.New("unexpected: " + strings.Join(args, " "))
+		}
+	})
+
+	out, err := executePerManagerCmd(t, "scoop", "bucket", "list")
+	if err != nil {
+		t.Fatalf("bucket list: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "main") {
+		t.Errorf("output = %q", out)
+	}
+
+	out, err = executePerManagerCmd(t, "scoop", "bucket", "add", "extras")
+	if err != nil {
+		t.Fatalf("bucket add: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "extras") {
+		t.Errorf("output = %q", out)
+	}
+
+	out, err = executePerManagerCmd(t, "scoop", "bucket", "remove", "extras")
+	if err != nil {
+		t.Fatalf("bucket remove: %v\n%s", err, out)
+	}
+}
+
+func TestPerManager_ChocolateyInstallElevation(t *testing.T) {
+	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		switch {
+		case command == "choco" && len(args) == 1 && args[0] == "--version":
+			return testutil.SuccessResult("2.2.2\n"), nil
+		case command == "choco" && len(args) >= 1 && args[0] == "install":
+			return testutil.FailureResult(1, "Access is denied. Requires elevation."), nil
+		default:
+			return nil, errors.New("unexpected")
+		}
+	})
+
+	_, err := executePerManagerCmd(t, "chocolatey", "install", "git")
+	if err == nil {
+		t.Fatal("expected elevation error")
+	}
+	if !strings.Contains(err.Error(), "Administrator") {
+		t.Errorf("error = %v", err)
+	}
+}
+
+func TestPerManager_ChocolateyUpgradeDryRun(t *testing.T) {
+	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command == "choco" && len(args) == 1 && args[0] == "--version" {
+			return testutil.SuccessResult("2.2.2\n"), nil
+		}
+		return nil, errors.New("unexpected on dry-run")
+	})
+
+	out, err := executePerManagerCmd(t, "chocolatey", "upgrade", "--all", "--dry-run")
+	if err != nil {
+		t.Fatalf("chocolatey upgrade: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "Dry-run") {
+		t.Errorf("output = %q", out)
+	}
+}

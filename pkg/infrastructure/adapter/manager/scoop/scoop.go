@@ -275,6 +275,142 @@ func parseScoopQuotedResult(line string) (string, string) {
 	return name, version
 }
 
+// Install installs a package by Scoop name.
+// dryRun skips the native install.
+func (a *Adapter) Install(ctx context.Context, pkgID string, dryRun bool) error {
+	pkgID = strings.TrimSpace(pkgID)
+	if pkgID == "" {
+		return fmt.Errorf("install scoop package: package name is required")
+	}
+
+	a.logger.Info(ctx, "Scoop install",
+		output.Field{Key: "package", Value: pkgID},
+		output.Field{Key: "dry_run", Value: dryRun})
+
+	if dryRun {
+		return nil
+	}
+
+	result, err := a.executor.Execute(ctx, scoopCommand, "install", pkgID)
+	if err := cmdutil.CheckResult(result, err, "install scoop package "+pkgID); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Uninstall removes a package by Scoop name.
+// dryRun skips the native uninstall.
+func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) error {
+	pkgID = strings.TrimSpace(pkgID)
+	if pkgID == "" {
+		return fmt.Errorf("uninstall scoop package: package name is required")
+	}
+
+	a.logger.Info(ctx, "Scoop uninstall",
+		output.Field{Key: "package", Value: pkgID},
+		output.Field{Key: "dry_run", Value: dryRun})
+
+	if dryRun {
+		return nil
+	}
+
+	result, err := a.executor.Execute(ctx, scoopCommand, "uninstall", pkgID)
+	if err := cmdutil.CheckResult(result, err, "uninstall scoop package "+pkgID); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ListBuckets returns configured Scoop buckets via `scoop bucket list`.
+func (a *Adapter) ListBuckets(ctx context.Context) ([]adapterm.Bucket, error) {
+	result, err := a.executor.Execute(ctx, scoopCommand, "bucket", "list")
+	if err := cmdutil.CheckResult(result, err, "list scoop buckets"); err != nil {
+		return nil, err
+	}
+	return parseScoopBuckets(result.Stdout), nil
+}
+
+// AddBucket adds a Scoop bucket. url may be empty for known buckets.
+func (a *Adapter) AddBucket(ctx context.Context, name, url string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf("add scoop bucket: name is required")
+	}
+
+	args := []string{"bucket", "add", name}
+	if strings.TrimSpace(url) != "" {
+		args = append(args, strings.TrimSpace(url))
+	}
+
+	a.logger.Info(ctx, "Scoop bucket add",
+		output.Field{Key: "name", Value: name},
+		output.Field{Key: "url", Value: url})
+
+	result, err := a.executor.Execute(ctx, scoopCommand, args...)
+	if err := cmdutil.CheckResult(result, err, "add scoop bucket "+name); err != nil {
+		return err
+	}
+	return nil
+}
+
+// RemoveBucket removes a Scoop bucket by name.
+func (a *Adapter) RemoveBucket(ctx context.Context, name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf("remove scoop bucket: name is required")
+	}
+
+	a.logger.Info(ctx, "Scoop bucket remove",
+		output.Field{Key: "name", Value: name})
+
+	result, err := a.executor.Execute(ctx, scoopCommand, "bucket", "rm", name)
+	if err := cmdutil.CheckResult(result, err, "remove scoop bucket "+name); err != nil {
+		return err
+	}
+	return nil
+}
+
+// parseScoopBuckets parses `scoop bucket list` text output.
+// Typical columns: Name Source Updated Manifests
+//
+//	Name   Source                                  Updated             Manifests
+//	----   ------                                  -------             ---------
+//	main   https://github.com/ScoopInstaller/Main  2024-01-01 00:00:00 1234
+func parseScoopBuckets(stdout string) []adapterm.Bucket {
+	lines := strings.Split(stdout, "\n")
+	var buckets []adapterm.Bucket
+
+	startIdx := 0
+	for i, line := range lines {
+		if strings.Contains(line, "---") || strings.Contains(line, "===") {
+			startIdx = i + 1
+			break
+		}
+	}
+	if startIdx == 0 && len(lines) > 0 {
+		if strings.Contains(strings.ToLower(lines[0]), "name") {
+			startIdx = 1
+		}
+	}
+
+	for i := startIdx; i < len(lines); i++ {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		b := adapterm.Bucket{Name: fields[0]}
+		if len(fields) >= 2 {
+			b.Source = fields[1]
+		}
+		buckets = append(buckets, b)
+	}
+	return buckets
+}
+
 // CheckHealth performs health checks on Scoop.
 func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	// Run 'scoop status' to check for issues

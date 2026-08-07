@@ -502,3 +502,120 @@ github 2.40.0  main
 		})
 	}
 }
+
+func TestAdapter_Install(t *testing.T) {
+	t.Run("dry-run", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("should not be called")
+		}), testutil.NewMockLogger())
+		if err := adapter.Install(context.Background(), "git", true); err != nil {
+			t.Fatalf("Install dry-run: %v", err)
+		}
+	})
+
+	t.Run("install success", func(t *testing.T) {
+		var gotArgs []string
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			if command != scoopCommand {
+				return nil, errors.New("unexpected command")
+			}
+			gotArgs = args
+			return testutil.SuccessResult("Installing 'git'"), nil
+		}), testutil.NewMockLogger())
+		if err := adapter.Install(context.Background(), "git", false); err != nil {
+			t.Fatalf("Install: %v", err)
+		}
+		if len(gotArgs) != 2 || gotArgs[0] != "install" || gotArgs[1] != "git" {
+			t.Fatalf("args = %v", gotArgs)
+		}
+	})
+
+	t.Run("empty name", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
+		if err := adapter.Install(context.Background(), "", false); err == nil {
+			t.Fatal("expected error")
+		}
+	})
+}
+
+func TestAdapter_Uninstall(t *testing.T) {
+	var gotArgs []string
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, args ...string) (*output.ExecutionResult, error) {
+		gotArgs = args
+		return testutil.SuccessResult("Uninstalling 'git'"), nil
+	}), testutil.NewMockLogger())
+	if err := adapter.Uninstall(context.Background(), "git", false); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if gotArgs[0] != "uninstall" || gotArgs[1] != "git" {
+		t.Fatalf("args = %v", gotArgs)
+	}
+	if err := adapter.Uninstall(context.Background(), "git", true); err != nil {
+		t.Fatalf("Uninstall dry-run: %v", err)
+	}
+}
+
+func TestAdapter_ListBuckets(t *testing.T) {
+	bucketOutput := `Name   Source                                  Updated             Manifests
+----   ------                                  -------             ---------
+main   https://github.com/ScoopInstaller/Main  2024-01-01 00:00:00 1234
+extras https://github.com/ScoopInstaller/Extras 2024-01-01 00:00:00 567
+`
+
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command == scoopCommand && len(args) == 2 && args[0] == "bucket" && args[1] == "list" {
+			return testutil.SuccessResult(bucketOutput), nil
+		}
+		return nil, errors.New("unexpected")
+	}), testutil.NewMockLogger())
+
+	buckets, err := adapter.ListBuckets(context.Background())
+	if err != nil {
+		t.Fatalf("ListBuckets: %v", err)
+	}
+	if len(buckets) != 2 {
+		t.Fatalf("count = %d, want 2", len(buckets))
+	}
+	if buckets[0].Name != "main" || buckets[1].Name != "extras" {
+		t.Errorf("buckets = %+v", buckets)
+	}
+}
+
+func TestAdapter_AddRemoveBucket(t *testing.T) {
+	var calls [][]string
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, args ...string) (*output.ExecutionResult, error) {
+		cp := append([]string{}, args...)
+		calls = append(calls, cp)
+		return testutil.SuccessResult("ok"), nil
+	}), testutil.NewMockLogger())
+
+	if err := adapter.AddBucket(context.Background(), "extras", ""); err != nil {
+		t.Fatalf("AddBucket: %v", err)
+	}
+	if err := adapter.AddBucket(context.Background(), "custom", "https://example.com/bucket"); err != nil {
+		t.Fatalf("AddBucket with url: %v", err)
+	}
+	if err := adapter.RemoveBucket(context.Background(), "extras"); err != nil {
+		t.Fatalf("RemoveBucket: %v", err)
+	}
+
+	if len(calls) != 3 {
+		t.Fatalf("calls = %d, want 3", len(calls))
+	}
+	if calls[0][0] != "bucket" || calls[0][1] != "add" || calls[0][2] != "extras" {
+		t.Errorf("add known = %v", calls[0])
+	}
+	if len(calls[1]) != 4 || calls[1][3] != "https://example.com/bucket" {
+		t.Errorf("add custom = %v", calls[1])
+	}
+	if calls[2][1] != "rm" || calls[2][2] != "extras" {
+		t.Errorf("rm = %v", calls[2])
+	}
+
+	if err := adapter.AddBucket(context.Background(), "", ""); err == nil {
+		t.Fatal("expected empty name error")
+	}
+	if err := adapter.RemoveBucket(context.Background(), "  "); err == nil {
+		t.Fatal("expected empty name error on remove")
+	}
+}

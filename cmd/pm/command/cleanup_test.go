@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/cleanup"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 	repo "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/repository/cleanup"
 )
 
@@ -155,4 +157,90 @@ func TestCleanupQuarantinePurge(t *testing.T) {
 	if _, err := qrepo.Get(ctx, "fresh", "1.0", "npm"); err != nil {
 		t.Fatalf("fresh package should remain: %v", err)
 	}
+}
+
+func TestCleanupOrphansList(t *testing.T) {
+	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{
+		manager.ManagerScoop: &stubListAdapter{packages: []manager.Package{
+			{Name: "git", CurrentVersion: "2.43.0"},
+			{Name: "", CurrentVersion: "1.0"},
+			{Name: "unknown", CurrentVersion: "0.1"},
+		}},
+	})
+	t.Cleanup(func() { SetManagerAdapters(nil) })
+
+	cleanupManagerID = "scoop"
+	cleanupDryRun = true
+	t.Cleanup(func() {
+		cleanupManagerID = ""
+		cleanupDryRun = false
+	})
+
+	out, err := captureStdout(t, func() error {
+		return orphansListCmd.RunE(orphansListCmd, nil)
+	})
+	if err != nil {
+		t.Fatalf("orphans list: %v", err)
+	}
+	if !strings.Contains(out, "orphan") && !strings.Contains(out, "Orphan") {
+		t.Fatalf("expected orphan header: %q", out)
+	}
+	if !strings.Contains(out, "Dry-run: would remove") {
+		t.Fatalf("expected dry-run remove message: %q", out)
+	}
+	if !strings.Contains(out, "(unnamed)") && !strings.Contains(out, "unknown") {
+		t.Fatalf("expected candidate names: %q", out)
+	}
+}
+
+func TestCleanupVersionsList(t *testing.T) {
+	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{
+		manager.ManagerWinget: &stubListAdapter{packages: []manager.Package{
+			{Name: "python", CurrentVersion: "3.11.0"},
+			{Name: "python", CurrentVersion: "3.12.0"},
+			{Name: "git", CurrentVersion: "2.43.0"},
+		}},
+	})
+	t.Cleanup(func() { SetManagerAdapters(nil) })
+
+	cleanupManagerID = "winget"
+	cleanupDryRun = true
+	t.Cleanup(func() {
+		cleanupManagerID = ""
+		cleanupDryRun = false
+	})
+
+	out, err := captureStdout(t, func() error {
+		return versionsListCmd.RunE(versionsListCmd, nil)
+	})
+	if err != nil {
+		t.Fatalf("versions list: %v", err)
+	}
+	if !strings.Contains(out, "python") {
+		t.Fatalf("expected python multi-version: %q", out)
+	}
+	if !strings.Contains(out, "Dry-run: would remove old version") {
+		t.Fatalf("expected dry-run for old version: %q", out)
+	}
+}
+
+// stubListAdapter implements adapterm.Adapter with fixed ListPackages results.
+type stubListAdapter struct {
+	packages []manager.Package
+}
+
+func (s *stubListAdapter) Detect(context.Context) (bool, error) { return true, nil }
+func (s *stubListAdapter) GetVersion(context.Context) (string, error) {
+	return "0", nil
+}
+func (s *stubListAdapter) GetBinaryPath(context.Context) (string, error) { return "", nil }
+func (s *stubListAdapter) GetConfigPath(context.Context) (string, error) { return "", nil }
+func (s *stubListAdapter) ListPackages(context.Context) ([]manager.Package, error) {
+	return s.packages, nil
+}
+func (s *stubListAdapter) CheckHealth(context.Context) (manager.Status, error) {
+	return manager.StatusHealthy, nil
+}
+func (s *stubListAdapter) Update(context.Context, adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
+	return &adapterm.UpdateResult{Success: true}, nil
 }

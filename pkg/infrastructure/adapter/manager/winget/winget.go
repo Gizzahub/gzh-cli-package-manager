@@ -261,6 +261,113 @@ func (a *Adapter) parseSearchText(result *output.ExecutionResult) []manager.Pack
 	return packages
 }
 
+// Install installs a package by winget ID or name.
+// dryRun skips the native install and returns nil after logging intent.
+func (a *Adapter) Install(ctx context.Context, pkgID string, dryRun bool) error {
+	pkgID = strings.TrimSpace(pkgID)
+	if pkgID == "" {
+		return fmt.Errorf("install winget package: package id is required")
+	}
+
+	a.logger.Info(ctx, "Winget install",
+		output.Field{Key: "package", Value: pkgID},
+		output.Field{Key: "dry_run", Value: dryRun})
+
+	if dryRun {
+		return nil
+	}
+
+	result, err := a.executor.Execute(ctx, wingetCommand,
+		"install", "--id", pkgID,
+		"--disable-interactivity",
+		"--accept-package-agreements",
+		"--accept-source-agreements",
+	)
+	if err := cmdutil.CheckResult(result, err, "install winget package "+pkgID); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Uninstall removes a package by winget ID or name.
+// dryRun skips the native uninstall.
+func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) error {
+	pkgID = strings.TrimSpace(pkgID)
+	if pkgID == "" {
+		return fmt.Errorf("uninstall winget package: package id is required")
+	}
+
+	a.logger.Info(ctx, "Winget uninstall",
+		output.Field{Key: "package", Value: pkgID},
+		output.Field{Key: "dry_run", Value: dryRun})
+
+	if dryRun {
+		return nil
+	}
+
+	result, err := a.executor.Execute(ctx, wingetCommand,
+		"uninstall", "--id", pkgID,
+		"--disable-interactivity",
+	)
+	if err := cmdutil.CheckResult(result, err, "uninstall winget package "+pkgID); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ListSources returns configured winget sources via `winget source list`.
+func (a *Adapter) ListSources(ctx context.Context) ([]adapterm.Source, error) {
+	result, err := a.executor.Execute(ctx, wingetCommand, "source", "list")
+	if err := cmdutil.CheckResult(result, err, "list winget sources"); err != nil {
+		return nil, err
+	}
+	return parseWingetSources(result.Stdout), nil
+}
+
+// parseWingetSources parses text table from `winget source list`.
+// Typical columns: Name, Argument
+//
+//	Name    Argument
+//	---------------------------------------------------
+//	msstore https://storeedgefd.dsx.mp.microsoft.com/v9.0
+//	winget  https://cdn.winget.microsoft.com/cache
+func parseWingetSources(stdout string) []adapterm.Source {
+	lines := strings.Split(stdout, "\n")
+	var sources []adapterm.Source
+
+	startIdx := 0
+	for i, line := range lines {
+		if strings.Contains(line, "---") {
+			startIdx = i + 1
+			break
+		}
+	}
+	// No separator: skip possible header
+	if startIdx == 0 && len(lines) > 0 {
+		lower := strings.ToLower(lines[0])
+		if strings.Contains(lower, "name") {
+			startIdx = 1
+		}
+	}
+
+	for i := startIdx; i < len(lines); i++ {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		src := adapterm.Source{Name: fields[0]}
+		if len(fields) >= 2 {
+			src.Arg = fields[1]
+		}
+		sources = append(sources, src)
+	}
+	return sources
+}
+
 // Update performs update operations on winget packages.
 func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
 	a.logger.Info(ctx, "Starting winget update",

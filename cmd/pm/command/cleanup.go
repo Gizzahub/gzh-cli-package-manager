@@ -7,6 +7,8 @@ import (
 	"sync"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/cleanup"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 	repo "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/repository/cleanup"
 	"github.com/spf13/cobra"
 )
@@ -72,14 +74,17 @@ var cleanupCmd = &cobra.Command{
 	Long: `Cleanup operations for package managers including:
 - Quarantine: Safely remove packages with recovery option
 - Cache: Scan and clear package manager caches
-- Orphans: Find and remove unused packages (planned)
+- Orphans: List heuristic orphan package candidates
+- Versions: List packages with multiple installed versions (best-effort)
 
 Examples:
   gz-pm cleanup quarantine list
   gz-pm cleanup quarantine purge --retention 30 --dry-run
   gz-pm cleanup cache status
   gz-pm cleanup cache scan
-  gz-pm cleanup cache clean --manager npm --dry-run`,
+  gz-pm cleanup cache clean --manager npm --dry-run
+  gz-pm cleanup orphans list --manager scoop --dry-run
+  gz-pm cleanup versions list --manager asdf`,
 }
 
 // quarantineCmd is the parent for quarantine subcommands.
@@ -324,6 +329,154 @@ Examples:
 	},
 }
 
+// orphansCmd is the parent for orphan subcommands.
+var orphansCmd = &cobra.Command{
+	Use:   "orphans",
+	Short: "Find heuristic orphan package candidates",
+	Long: `List packages that look like orphans using best-effort heuristics
+(empty name, placeholder name, missing version). Does not consult dependency graphs.
+
+Use --dry-run to print dry-run remove messages (no packages are removed).`,
+}
+
+// orphansListCmd lists orphan candidates from registered adapters.
+var orphansListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List orphan package candidates",
+	RunE: func(_ *cobra.Command, _ []string) error {
+		ctx := context.Background()
+		listers := packageListersFromAdapters()
+		if len(listers) == 0 {
+			return fmt.Errorf("orphans list: no package managers registered (adapters not initialized)")
+		}
+
+		detector := repo.NewHeuristicOrphanDetector(listers)
+
+		var packages []*cleanup.OrphanPackage
+		var err error
+		if cleanupManagerID != "" {
+			packages, err = detector.Detect(ctx, cleanupManagerID)
+		} else {
+			packages, err = detector.DetectAll(ctx)
+		}
+		if err != nil {
+			return err
+		}
+
+		if len(packages) == 0 {
+			fmt.Println("📦 No orphan candidates found")
+			return nil
+		}
+
+		fmt.Println("🧹 Orphan Candidates (heuristic)")
+		fmt.Println()
+		for _, pkg := range packages {
+			fmt.Printf("  %s@%s (%s) — %s\n", pkg.Name, emptyDash(pkg.Version), pkg.ManagerID, pkg.Reason)
+			if cleanupDryRun {
+				fmt.Printf("    Dry-run: would remove %s@%s via %s\n", pkg.Name, emptyDash(pkg.Version), pkg.ManagerID)
+			}
+		}
+		fmt.Printf("\nTotal: %d candidate(s)\n", len(packages))
+		if cleanupDryRun {
+			fmt.Println("No packages were removed (dry-run).")
+		} else {
+			fmt.Println("Listing only — remove is not performed by this command.")
+		}
+		return nil
+	},
+}
+
+// versionsCmd is the parent for version cleanup subcommands.
+var versionsCmd = &cobra.Command{
+	Use:   "versions",
+	Short: "Find packages with multiple installed versions",
+	Long: `Best-effort multi-version detection from adapter ListPackages results.
+Reports names that appear with more than one distinct CurrentVersion.`,
+}
+
+// versionsListCmd lists multi-version packages from registered adapters.
+var versionsListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List packages with multiple installed versions",
+	RunE: func(_ *cobra.Command, _ []string) error {
+		ctx := context.Background()
+		listers := packageListersFromAdapters()
+		if len(listers) == 0 {
+			return fmt.Errorf("versions list: no package managers registered (adapters not initialized)")
+		}
+
+		scanner := repo.NewHeuristicVersionScanner(listers)
+
+		var all []*cleanup.OldVersion
+		if cleanupManagerID != "" {
+			versions, err := scanner.ScanAll(ctx, cleanupManagerID)
+			if err != nil {
+				return err
+			}
+			all = versions
+		} else {
+			for id := range listers {
+				versions, err := scanner.ScanAll(ctx, id)
+				if err != nil {
+					return err
+				}
+				all = append(all, versions...)
+			}
+		}
+
+		if len(all) == 0 {
+			fmt.Println("📦 No multi-version packages found")
+			return nil
+		}
+
+		fmt.Println("📚 Multi-version Packages (best-effort)")
+		fmt.Println()
+		for _, v := range all {
+			marker := "old"
+			if v.IsCurrent {
+				marker = "current"
+			}
+			fmt.Printf("  %s@%s (%s) [%s]\n", v.Name, v.Version, v.ManagerID, marker)
+			if cleanupDryRun && !v.IsCurrent {
+				fmt.Printf("    Dry-run: would remove old version %s@%s via %s\n", v.Name, v.Version, v.ManagerID)
+			}
+		}
+		fmt.Printf("\nTotal: %d version row(s)\n", len(all))
+		return nil
+	},
+}
+
+func packageListersFromAdapters() map[string]repo.PackageLister {
+	if managerAdapters == nil {
+		return nil
+	}
+	out := make(map[string]repo.PackageLister, len(managerAdapters))
+	for id, adapter := range managerAdapters {
+		if adapter == nil {
+			continue
+		}
+		// adapterm.Adapter already has ListPackages — adapt via wrapper.
+		out[string(id)] = adapterPackageLister{adapter: adapter}
+	}
+	return out
+}
+
+// adapterPackageLister adapts adapterm.Adapter to repo.PackageLister.
+type adapterPackageLister struct {
+	adapter adapterm.Adapter
+}
+
+func (a adapterPackageLister) ListPackages(ctx context.Context) ([]manager.Package, error) {
+	return a.adapter.ListPackages(ctx)
+}
+
+func emptyDash(s string) string {
+	if s == "" {
+		return "-"
+	}
+	return s
+}
+
 func init() {
 	rootCmd.AddCommand(cleanupCmd)
 
@@ -338,6 +491,12 @@ func init() {
 	cacheCmd.AddCommand(cacheStatusCmd)
 	cacheCmd.AddCommand(cacheScanCmd)
 	cacheCmd.AddCommand(cacheCleanCmd)
+
+	// Orphans / versions
+	cleanupCmd.AddCommand(orphansCmd)
+	orphansCmd.AddCommand(orphansListCmd)
+	cleanupCmd.AddCommand(versionsCmd)
+	versionsCmd.AddCommand(versionsListCmd)
 
 	// Global flags for cleanup
 	cleanupCmd.PersistentFlags().IntVar(&cleanupRetentionDays, "retention", 30, "Retention period in days")
