@@ -559,7 +559,7 @@ type Message struct {
 ### CLI Flag Configuration
 
 ```go
-// cmd/gz-pm/command/root.go
+// cmd/pm/command/root.go
 package command
 
 import "github.com/spf13/cobra"
@@ -589,7 +589,7 @@ func NewRootCommand() *cobra.Command {
 ### Usage in Commands
 
 ```go
-// cmd/gz-pm/command/update.go
+// cmd/pm/command/update.go
 package command
 
 func NewUpdateCommand(updateUC port.UpdateUseCase) *cobra.Command {

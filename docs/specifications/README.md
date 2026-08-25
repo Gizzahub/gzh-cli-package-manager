@@ -243,9 +243,9 @@ vim pkg/application/update/update_all_test.go
 vim pkg/application/update/update_all.go
 # Code until tests pass
 
-# 4. Validate compliance
-make test-compliance
-# Measures output format, behavior against spec
+# 4. Validate the implementation
+make quality
+# Dedicated specification-compliance automation is not implemented yet.
 ```
 
 ### For Testers
@@ -253,14 +253,14 @@ make test-compliance
 **Test Execution**:
 
 ```bash
-# Run all test scenarios
-make test-scenarios
+# Run the implemented test suite
+make test
 
-# Run specific category
-make test-error-handling
+# Run the relevant package while developing a scenario
+go test ./pkg/application/usecase/update/...
 
-# Generate compliance report
-make compliance-report
+# Produce machine-readable test results when a report input is needed
+go test -json ./... > test-results.json
 ```
 
 **Test Framework** (from test-scenarios.md):

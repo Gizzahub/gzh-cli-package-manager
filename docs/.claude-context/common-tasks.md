@@ -69,8 +69,8 @@ adapterFactory.Register("newmanager", adapter)
 ## Before Committing
 
 ```bash
-# Run validation suite
-make validate
+# Run the repository quality suite
+make quality
 
 # Check architecture compliance
 go list -test -deps ./pkg/domain/... | grep -E "(application|infrastructure|cmd)"

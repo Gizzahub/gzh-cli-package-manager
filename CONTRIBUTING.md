@@ -98,7 +98,7 @@ export CGO_ENABLED=0
 
 ```bash
 # Linting and formatting
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1
 
 # Testing tools
 go install github.com/onsi/ginkgo/v2/ginkgo@latest
@@ -779,7 +779,7 @@ make test-unit
 make test-integration
 
 # E2E tests
-make test-e2e
+go test ./tests/e2e/...
 
 # All tests with coverage
 make test-coverage

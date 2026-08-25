@@ -33,7 +33,7 @@ We need to decide whether to allow CGO (C Go) dependencies in gzh-cli-package-ma
 **Build Configuration**:
 ```bash
 # Makefile
-CGO_ENABLED=0 go build -o bin/gz-pm cmd/gz-pm/main.go
+CGO_ENABLED=0 go build -o build/gz-pm ./cmd/pm
 ```
 
 **Dependency Policy**:
@@ -74,7 +74,7 @@ $ ldd gz-pm
     not a dynamic executable
 
 # Works anywhere (no libc dependencies)
-$ ./gz-pm --version  # Just works
+$ ./build/gz-pm version  # Just works
 ```
 
 With CGO:
@@ -129,7 +129,7 @@ url "https://github.com/gizzahub/gzh-cli-package-manager/releases/download/v1.0.
 # No dependencies needed
 
 # Go install works immediately
-go install github.com/gizzahub/gzh-cli-package-manager/cmd/gz-pm@latest
+go install github.com/gizzahub/gzh-cli-package-manager/cmd/pm@latest
 ```
 
 With CGO:
@@ -312,21 +312,21 @@ Pure Go crypto/compression adds < 10ms overhead (negligible).
 build:
 	CGO_ENABLED=0 go build \
 		-ldflags="-s -w" \
-		-o bin/gz-pm \
-		cmd/gz-pm/main.go
+		-o build/gz-pm \
+		./cmd/pm
 
 .PHONY: build-all
 build-all:
 	# macOS
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o dist/gz-pm-darwin-amd64 cmd/gz-pm/main.go
-	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o dist/gz-pm-darwin-arm64 cmd/gz-pm/main.go
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o dist/gz-pm-darwin-amd64 ./cmd/pm
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o dist/gz-pm-darwin-arm64 ./cmd/pm
 
 	# Linux
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dist/gz-pm-linux-amd64 cmd/gz-pm/main.go
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o dist/gz-pm-linux-arm64 cmd/gz-pm/main.go
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dist/gz-pm-linux-amd64 ./cmd/pm
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o dist/gz-pm-linux-arm64 ./cmd/pm
 
 	# Windows
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o dist/gz-pm-windows-amd64.exe cmd/gz-pm/main.go
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o dist/gz-pm-windows-amd64.exe ./cmd/pm
 
 .PHONY: test
 test:
@@ -480,11 +480,11 @@ If a future requirement **absolutely needs** CGO:
 
 ```bash
 # Verify binary has no dynamic dependencies
-ldd bin/gz-pm
+ldd build/gz-pm
 # Expected: "not a dynamic executable"
 
 # Verify CGO is disabled
-go version -m bin/gz-pm | grep CGO
+go version -m build/gz-pm | grep CGO
 # Expected: CGO_ENABLED=0
 ```
 

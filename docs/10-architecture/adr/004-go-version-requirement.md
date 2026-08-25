@@ -195,7 +195,7 @@ check-go-version:
 	fi
 
 build: check-go-version
-	go build -o bin/gz-pm cmd/gz-pm/main.go
+	go build -o build/gz-pm ./cmd/pm
 ```
 
 ### CI/CD Configuration
@@ -318,7 +318,7 @@ func compareVersions(a, b string) int {
 
 **Build-time check**:
 ```bash
-make check-go-version
+go version
 # Fails if Go < 1.24
 ```
 

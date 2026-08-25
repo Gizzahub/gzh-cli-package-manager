@@ -222,7 +222,7 @@ type ManagerRepository interface {
 
 **Primary Adapter** (CLI → Application):
 ```go
-// cmd/gz-pm/command/update.go
+// cmd/pm/command/update.go
 package command
 
 func NewUpdateCommand(updateUC port.UpdateUseCase) *cobra.Command {
@@ -263,7 +263,7 @@ func (a *HomebrewAdapter) Update(ctx context.Context, opts UpdateOptions) (*Upda
 ### Dependency Injection (Wire Adapters to Ports)
 
 ```go
-// cmd/gz-pm/main.go
+// cmd/pm/main.go
 func main() {
     // Create adapters (infrastructure)
     logger := logger.NewStructuredLogger("gz-pm")

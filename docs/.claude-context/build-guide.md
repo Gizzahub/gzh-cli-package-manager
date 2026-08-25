@@ -32,13 +32,13 @@ make vet
 make lint
 
 # Auto-fix linting issues
-make lint-fix
+golangci-lint run --fix
 
-# Run all validation checks (fmt + vet + lint + test-unit)
-make validate
+# Run all quality checks (fmt + lint + test)
+make quality
 
 # Full CI validation (includes coverage)
-make ci
+make ci-local
 ```
 
 ## Project Information
@@ -63,7 +63,7 @@ make clean
 ## Binary Output
 
 - **Binary name**: `gz-pm`
-- **Output location**: `bin/gz-pm`
+- **Output location**: `build/gz-pm`
 - **Platforms**: macOS, Linux (Ubuntu/Arch), Windows (WSL2)
 
 ## Quick Reference
@@ -72,11 +72,11 @@ make clean
 # Most common commands
 make build           # Build binary
 make test           # Run unit tests
-make validate       # Full validation (fmt + vet + lint + test)
+make quality        # Full quality suite (fmt + lint + test)
 make clean          # Clean artifacts
 
 # Binary location after build
-./bin/gz-pm --version
+./build/gz-pm version
 
 # Directory structure
 cmd/pm/              # CLI entry point (Presentation)

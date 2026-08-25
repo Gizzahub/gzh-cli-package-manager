@@ -32,7 +32,7 @@ We need to decide on the architectural pattern for gzh-cli-package-manager. The 
 
 **Layer Structure**:
 ```
-Presentation (cmd/gz-pm)
+Presentation (cmd/pm)
     ↓
 Application (pkg/application)
     ↓
@@ -202,7 +202,7 @@ Infrastructure (pkg/infrastructure)
 - **Example**: `HomebrewAdapter`, `YAMLConfigRepository`
 - **Rule**: Implements domain and application interfaces
 
-**Presentation Layer** (`cmd/gz-pm/`):
+**Presentation Layer** (`cmd/pm/`):
 - **Contains**: CLI Commands, Input Validation, Output Formatting
 - **Dependencies**: Application (use cases), Infrastructure (for DI)
 - **Example**: `UpdateCommand`, `TextFormatter`
@@ -354,7 +354,7 @@ pkg/infrastructure/
   adapter/manager/homebrew/
     adapter.go (300 lines, Homebrew-specific)
 
-cmd/gz-pm/
+cmd/pm/
   command/
     update.go (100 lines, CLI only)
 ```

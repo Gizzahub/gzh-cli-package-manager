@@ -523,7 +523,7 @@ func (uc *BootstrapAllUseCase) Execute(ctx context.Context, req *dto.BootstrapRe
 ### Dependency Injection
 
 ```go
-// cmd/gz-pm/main.go
+// cmd/pm/main.go
 func main() {
     // Determine config path
     configPath := os.Getenv("PMCTL_CONFIG_PATH")
