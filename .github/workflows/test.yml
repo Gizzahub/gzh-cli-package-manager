@@ -13,9 +13,6 @@ jobs:
   test:
     name: Test
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
-      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -105,15 +102,6 @@ jobs:
 
     - name: Run tests
       run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
-      with:
-        files: ./coverage.txt
-        flags: unittests
-        name: codecov-${{ matrix.os }}
-        use_oidc: true
-        fail_ci_if_error: true
 
   compatibility-go124:
     name: Go 1.24.11 compatibility
