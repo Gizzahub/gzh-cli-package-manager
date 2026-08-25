@@ -778,8 +778,8 @@ make test-unit
 # Integration tests (requires Docker)
 make test-integration
 
-# E2E tests
-go test ./tests/e2e/...
+# Full implemented suite (dedicated E2E automation is not implemented yet)
+go test ./...
 
 # All tests with coverage
 make test-coverage
