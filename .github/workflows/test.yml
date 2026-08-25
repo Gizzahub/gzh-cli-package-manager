@@ -27,9 +27,9 @@ jobs:
 
     - name: Verify Go version
       run: |
-        # ADR-004 guarantees Go 1.24+ throughout the v1.x lifecycle.
-        # go.mod currently declares a newer version; reconcile that policy drift
-        # in its own change rather than silently changing this support contract.
+        # ADR-004 guarantees Go 1.24+ throughout the v1.x lifecycle. This
+        # regular test job intentionally exercises the fixed Go 1.26.6 toolchain;
+        # the compatibility-go124 job exercises the consumer baseline.
         required_major=1
         required_minor=24
         required_patch=0
@@ -114,6 +114,45 @@ jobs:
         # upload failing on a missing token cannot start failing the test job if
         # the action ever changes this default.
         fail_ci_if_error: false
+
+  compatibility-go124:
+    name: Go 1.24.11 compatibility
+    runs-on: ubuntu-latest
+    env:
+      # Do not let the newer toolchain directive auto-download a compiler:
+      # this job proves the advertised consumer baseline itself works.
+      GOTOOLCHAIN: local
+      GOFLAGS: -mod=readonly
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+
+    - name: Set up Go 1.24.11
+      uses: actions/setup-go@v7
+      with:
+        go-version: '1.24.11'
+
+    - name: Verify exact compatibility toolchain
+      run: test "$(go env GOVERSION)" = 'go1.24.11'
+
+    - name: Download dependencies without changing module files
+      run: go mod download
+
+    - name: Verify dependencies
+      run: go mod verify
+
+    - name: Build with Go 1.24.11
+      run: go build ./...
+
+    - name: Test with Go 1.24.11
+      run: go test ./...
+
+    - name: Vet with Go 1.24.11
+      run: go vet ./...
+
+    - name: Verify module files stayed read-only
+      run: git diff --exit-code -- go.mod go.sum
 
   lint:
     name: Lint

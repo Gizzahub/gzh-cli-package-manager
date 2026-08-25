@@ -1,6 +1,8 @@
 module github.com/gizzahub/gzh-cli-package-manager
 
-go 1.26
+// The module remains consumable by Go 1.24.0+. The toolchain below recommends
+// the development compiler when a developer's default Go version is older.
+go 1.24.0
 
 toolchain go1.26.6
 

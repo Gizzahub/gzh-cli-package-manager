@@ -1,7 +1,9 @@
 version: "2"
 
 run:
-  go: "1.26"
+  # Analyze against the public consumer baseline. The lint workflow itself
+  # runs with the pinned development toolchain from the CI configuration.
+  go: "1.24"
   modules-download-mode: readonly
   tests: true
 
