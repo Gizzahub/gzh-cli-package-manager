@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Binary**: `gz-pm` (Package Manager Control)
 **Status**: Documentation phase (Week 2) - implementation pending
 **Architecture**: Clean Architecture + Hexagonal (Ports & Adapters)
-**Go Version**: 1.26+
+**Go Version**: 1.24+ consumer baseline; Go 1.26.7 recommended for development
 
 Think of it as a "package manager for package managers" - unified interface for:
 - **System**: Homebrew, apt, pacman, winget (Windows)

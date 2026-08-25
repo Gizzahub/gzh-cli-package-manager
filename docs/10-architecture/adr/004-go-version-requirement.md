@@ -1,7 +1,7 @@
 # ADR-004: Go 1.24+ Requirement
 
 **Date**: 2025-01-27
-**Status**: Superseded by [ADR-009](009-go-1.26-version-requirement.md)
+**Status**: Accepted
 **Deciders**: Project Team
 **Related**: ADR-006 (No CGO Dependencies)
 
@@ -70,9 +70,9 @@ for _, mgr := range managers {
 - `cmp.Or()` for cleaner default value handling
 
 **6. Compatibility with Parent Project**
-- gzh-cli uses Go 1.24.0
-- Shared development environment
-- Same CI/CD Go version
+- At the time of this decision, gzh-cli used Go 1.24.0
+- The consumer baseline remains aligned with that historical contract
+- Current regular CI uses Go 1.26.7, with a separate Go 1.24.11 compatibility lane
 
 ### Why Not Older Versions?
 
@@ -111,12 +111,12 @@ for _, mgr := range managers {
    - `cmp` package for comparisons
 
 4. **Future-Proof**
-   - Go 1.24 will be supported until at least 2026
-   - Keeps us on modern toolchain
+   - At the time of this decision, Go 1.24 was expected to be supported until at least 2026
+   - The current recommended development toolchain is Go 1.26.7
    - Easier to adopt future features
 
 5. **Consistency with Ecosystem**
-   - gzh-cli already on 1.24
+   - At the time of this decision, gzh-cli was already on 1.24
    - Many Go projects moving to 1.23+
    - Good developer experience
 
@@ -322,22 +322,15 @@ go version
 # Fails if Go < 1.24
 ```
 
-**Runtime check** (optional, for library usage):
-```go
-// pkg/version/check.go
-func init() {
-    version := runtime.Version()
-    if !strings.HasPrefix(version, "go1.24") && !strings.HasPrefix(version, "go1.25") {
-        log.Fatal("Go 1.24+ required")
-    }
-}
-```
+No runtime version guard is used. A prefix-based guard would incorrectly reject
+future compatible Go releases. The `go` directive and CI compatibility job are
+the authoritative enforcement mechanisms.
 
 ### Success Criteria
 
 - [ ] go.mod specifies `go 1.24`
-- [ ] Makefile checks Go version before build
-- [ ] CI/CD uses Go 1.24
+- [ ] toolchain directive recommends Go 1.26.7 for development
+- [ ] CI/CD uses Go 1.26.7 regularly and verifies Go 1.24.11 compatibility
 - [ ] README documents requirement
 - [ ] All developers using Go 1.24+
 
@@ -384,7 +377,7 @@ If critical bug found in Go 1.24:
 - **Go 1.24 Release Notes**: https://go.dev/doc/go1.24
 - **Go 1.23 Release Notes**: https://go.dev/doc/go1.23
 - **Go Version Policy**: https://go.dev/doc/devel/release
-- **Parent Project** (gzh-cli): Uses Go 1.24.0 in go.mod
+- **Parent Project** (gzh-cli): used Go 1.24.0 in go.mod when this ADR was written
 
 ---
 

@@ -1,8 +1,8 @@
 module github.com/gizzahub/gzh-cli-package-manager
 
-// Go 1.26 is the supported consumer baseline. The toolchain directive pins the
-// latest approved patch release for development and CI reproducibility.
-go 1.26.0
+// Go 1.24.0 is the supported consumer baseline. The toolchain directive
+// recommends the development compiler without raising that minimum.
+go 1.24.0
 
 toolchain go1.26.7
 

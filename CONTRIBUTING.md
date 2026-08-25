@@ -32,7 +32,7 @@ This project follows standard open-source community guidelines:
 
 ### Prerequisites
 
-- **Go 1.26.0+** (required - see ADR-009)
+- **Go 1.24.0+** (required - see ADR-004); Go 1.26.7 is recommended for development
 - **Git** for version control
 - **Make** for build automation
 - **Docker** (optional, for integration tests)
@@ -61,7 +61,7 @@ make install
 
 ## Development Setup
 
-### 1. Install Go 1.26+
+### 1. Install the recommended Go 1.26.7 development toolchain
 
 **macOS (Homebrew)**:
 ```bash
@@ -77,8 +77,11 @@ export PATH=$PATH:/usr/local/go/bin
 
 **Verify Installation**:
 ```bash
-go version  # Should show go1.26 or higher
+go version  # Should show go1.26.7
 ```
+
+Go 1.24.0+ remains the consumer minimum. Go 1.24.11 is exercised only by the
+CI compatibility job; it is not the recommended local development installation.
 
 ### 2. Set Up Your Environment
 
@@ -1114,7 +1117,7 @@ We follow [Semantic Versioning](https://semver.org/):
 **Build Fails**:
 ```bash
 # Check Go version
-go version  # Must be 1.26+
+go version  # Must be 1.24+
 
 # Clean and rebuild
 make clean

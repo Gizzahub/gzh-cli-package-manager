@@ -3,7 +3,7 @@
 **Date**: 2025-01-27
 **Status**: Accepted
 **Deciders**: Project Team
-**Related**: ADR-009 (Go 1.26+ Requirement), ADR-001 (Standalone Extraction)
+**Related**: ADR-004 (Go 1.24+ Requirement), ADR-001 (Standalone Extraction)
 
 ---
 

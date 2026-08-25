@@ -3,7 +3,7 @@ version: "2"
 run:
   # Analyze against the public consumer baseline. The lint workflow itself
   # runs with the pinned development toolchain from the CI configuration.
-  go: "1.26"
+  go: "1.24"
   modules-download-mode: readonly
   tests: true
 
@@ -141,10 +141,8 @@ issues:
   max-issues-per-linter: 0
   max-same-issues: 0
   uniq-by-line: true
-  # The pre-public repository has a known lint backlog. Keep that debt visible in
-  # TASK-064 while making CI fail on every issue introduced after this audited
-  # baseline instead of publishing with a permanently red lint job.
-  new-from-rev: 6cdd0cca2a0b7696308c989b86f48990c4ed37c5
+  # Keep the complete TASK-064 backlog visible until it is remediated.
+  new: false
 
 formatters:
   settings:

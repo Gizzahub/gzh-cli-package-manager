@@ -470,7 +470,7 @@ pmctl update --all  # Actually update
 - Architecture: amd64, arm64 (Apple Silicon)
 
 **Go Version**:
-- Minimum: Go 1.26.0
+- Minimum: Go 1.24.0 (Go 1.26.7 recommended for development and regular CI)
 - No CGO dependencies (pure Go)
 - Cross-compilation support
 

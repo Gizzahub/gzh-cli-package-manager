@@ -424,7 +424,7 @@ apt          🚫         ⛔         N/A        N/A (macOS only)
 **Phase**: MVP
 
 **Requirements**:
-- Minimum: Go 1.26.0
+- Minimum: Go 1.24.0 (Go 1.26.7 recommended for development and regular CI)
 - No CGO dependencies (pure Go)
 - Cross-compilation support for all platforms
 
