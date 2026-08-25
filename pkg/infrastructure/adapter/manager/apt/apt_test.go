@@ -294,6 +294,34 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			want:    manager.StatusDegraded,
 			wantErr: false,
 		},
+		{
+			name: "healthy when lock is absent with shell exit error",
+			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+				if command == aptGetCommand && args[0] == checkCommand {
+					return testutil.SuccessResult("Reading package lists... Done\n"), nil
+				}
+				if command == testCommand {
+					return testutil.FailureResult(1, ""), errors.New("exit status 1")
+				}
+				return testutil.SuccessResult(""), nil
+			},
+			want:    manager.StatusHealthy,
+			wantErr: false,
+		},
+		{
+			name: "degraded when lock probe fails",
+			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+				if command == aptGetCommand && args[0] == checkCommand {
+					return testutil.SuccessResult("Reading package lists... Done\n"), nil
+				}
+				if command == testCommand {
+					return nil, errors.New("lock check failed")
+				}
+				return testutil.SuccessResult(""), nil
+			},
+			want:    manager.StatusDegraded,
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

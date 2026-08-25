@@ -187,13 +187,19 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	}
 
 	// Check for dpkg lock file
-	lockCheckResult, _ := a.executor.Execute(ctx, "test", "-f", "/var/lib/dpkg/lock-frontend")
-	if lockCheckResult != nil && lockCheckResult.ExitCode == 0 {
-		a.logger.Warn(ctx, "APT lock file exists", output.Field{Key: "lock_file", Value: "/var/lib/dpkg/lock-frontend"})
+	lockCheckResult, lockCheckErr := a.executor.Execute(ctx, "test", "-f", "/var/lib/dpkg/lock-frontend")
+	if lockCheckResult != nil && lockCheckResult.ExitCode == 1 {
+		return manager.StatusHealthy, nil
+	}
+	if lockCheckErr != nil {
+		a.logger.Warn(ctx, "Failed to check APT lock file", output.Field{Key: "error", Value: lockCheckErr.Error()})
+		return manager.StatusDegraded, nil //nolint:nilerr // CheckHealth reports probe failures as degraded status.
+	}
+	if lockCheckResult == nil || lockCheckResult.ExitCode != 0 {
 		return manager.StatusDegraded, nil
 	}
-
-	return manager.StatusHealthy, nil
+	a.logger.Warn(ctx, "APT lock file exists", output.Field{Key: "lock_file", Value: "/var/lib/dpkg/lock-frontend"})
+	return manager.StatusDegraded, nil
 }
 
 // Update performs update operations (stub implementation).

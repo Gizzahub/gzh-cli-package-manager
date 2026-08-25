@@ -140,6 +140,7 @@ func (m *MapFileSystem) WalkDir(root string, fn fs.WalkDirFunc) error {
 	}
 	rootEntry := fs.FileInfoToDirEntry(info)
 	if err := fn(root, rootEntry, nil); err != nil {
+		//nolint:errorlint // filepath.WalkDir treats only the exact sentinel as SkipDir.
 		if err == fs.SkipDir {
 			return nil
 		}
@@ -206,6 +207,7 @@ func (m *MapFileSystem) WalkDir(root string, fn fs.WalkDirFunc) error {
 			}
 			entry := fs.FileInfoToDirEntry(fi)
 			if err := fn(child.path, entry, nil); err != nil {
+				//nolint:errorlint // filepath.WalkDir treats only the exact sentinel as SkipDir.
 				if err == fs.SkipDir {
 					continue
 				}
