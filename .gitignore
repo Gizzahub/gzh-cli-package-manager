@@ -25,10 +25,10 @@ go.work
 /build/
 /dist/
 /tmp/
-gz-pm
-gz-pm-*
-pmctl
-pmctl-*
+/gz-pm
+/gz-pm-*
+/pmctl
+/pmctl-*
 
 # IDE and editor files
 .vscode/

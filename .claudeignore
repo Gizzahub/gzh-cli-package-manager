@@ -5,8 +5,8 @@
 build/
 dist/
 bin/
-gz-pm
-gzh-pm
+/gz-pm
+/gzh-pm
 
 # Dependencies
 vendor/
