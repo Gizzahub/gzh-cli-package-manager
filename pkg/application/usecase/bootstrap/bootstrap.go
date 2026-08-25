@@ -35,7 +35,8 @@ func NewUseCase(
 func (uc *UseCase) Bootstrap(ctx context.Context, req *dto.BootstrapRequest) (*dto.BootstrapResponse, error) {
 	startTime := time.Now()
 
-	uc.logger.Info(ctx, "Starting package manager bootstrap",
+	uc.logger.Info(
+		ctx, "Starting package manager bootstrap",
 		output.Field{Key: "config_path", Value: req.ConfigPath},
 		output.Field{Key: "interactive", Value: req.Interactive},
 		output.Field{Key: "dry_run", Value: req.DryRun},
@@ -118,7 +119,8 @@ func (uc *UseCase) Bootstrap(ctx context.Context, req *dto.BootstrapRequest) (*d
 
 	summary.TotalDuration = time.Since(startTime).Seconds()
 
-	uc.logger.Info(ctx, "Bootstrap completed",
+	uc.logger.Info(
+		ctx, "Bootstrap completed",
 		output.Field{Key: "installed", Value: summary.InstalledManagers},
 		output.Field{Key: "failed", Value: summary.FailedManagers},
 		output.Field{Key: "already_installed", Value: summary.AlreadyInstalledManagers},

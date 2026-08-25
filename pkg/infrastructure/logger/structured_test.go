@@ -53,7 +53,8 @@ func TestStructuredLogger_DebugWithFields(t *testing.T) {
 		logger: log.New(&buf, "test: ", 0),
 	}
 
-	logger.Debug(context.Background(), "debug with fields",
+	logger.Debug(
+		context.Background(), "debug with fields",
 		output.Field{Key: "key1", Value: "value1"},
 		output.Field{Key: "key2", Value: 42},
 	)
@@ -98,7 +99,8 @@ func TestStructuredLogger_Warn(t *testing.T) {
 		logger: log.New(&buf, "test: ", 0),
 	}
 
-	logger.Warn(context.Background(), "warning message",
+	logger.Warn(
+		context.Background(), "warning message",
 		output.Field{Key: "component", Value: "adapter"},
 	)
 
@@ -122,7 +124,8 @@ func TestStructuredLogger_Error(t *testing.T) {
 	}
 
 	testErr := errors.New("test error")
-	logger.Error(context.Background(), "error occurred", testErr,
+	logger.Error(
+		context.Background(), "error occurred", testErr,
 		output.Field{Key: "operation", Value: "detect"},
 	)
 
@@ -148,7 +151,8 @@ func TestStructuredLogger_MultipleFields(t *testing.T) {
 		logger: log.New(&buf, "test: ", 0),
 	}
 
-	logger.Info(context.Background(), "multiple fields",
+	logger.Info(
+		context.Background(), "multiple fields",
 		output.Field{Key: "field1", Value: "value1"},
 		output.Field{Key: "field2", Value: "value2"},
 		output.Field{Key: "field3", Value: 123},

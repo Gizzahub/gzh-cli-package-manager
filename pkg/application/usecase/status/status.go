@@ -102,7 +102,8 @@ func (uc *UseCase) GetStatus(ctx context.Context, req *dto.StatusRequest) (*dto.
 		summary.UpdatablePackages += mgr.UpdatableCount()
 	}
 
-	uc.logger.Info(ctx, "Status retrieved successfully",
+	uc.logger.Info(
+		ctx, "Status retrieved successfully",
 		output.Field{Key: "total_managers", Value: summary.TotalManagers},
 		output.Field{Key: "installed_managers", Value: summary.InstalledManagers},
 	)

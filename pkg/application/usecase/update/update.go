@@ -41,7 +41,8 @@ func NewUseCase(
 func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.UpdateResponse, error) {
 	startTime := time.Now()
 
-	uc.logger.Info(ctx, "Starting package manager update",
+	uc.logger.Info(
+		ctx, "Starting package manager update",
 		output.Field{Key: "all", Value: req.All},
 		output.Field{Key: "dry_run", Value: req.DryRun},
 		output.Field{Key: "strategy", Value: string(req.Strategy)},
@@ -109,7 +110,8 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 	for _, mgr := range managers {
 		// Check if pip should be skipped in conda environment
 		if mgr.ID == manager.ManagerPip && env != nil && !env.IsPipSafe && !req.PipAllowConda {
-			uc.logger.Warn(ctx, "Skipping pip update in conda environment",
+			uc.logger.Warn(
+				ctx, "Skipping pip update in conda environment",
 				output.Field{Key: "env_type", Value: string(env.Type)},
 				output.Field{Key: "env_name", Value: env.Name},
 			)
@@ -147,7 +149,8 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 
 	summary.TotalDuration = time.Since(startTime).Seconds()
 
-	uc.logger.Info(ctx, "Update completed",
+	uc.logger.Info(
+		ctx, "Update completed",
 		output.Field{Key: "successful", Value: summary.SuccessfulManagers},
 		output.Field{Key: "failed", Value: summary.FailedManagers},
 		output.Field{Key: "skipped", Value: summary.SkippedManagers},
@@ -222,7 +225,8 @@ func (uc *UseCase) updateManager(
 
 	result.SkippedPackages = updateResult.FailedPackages
 
-	uc.logger.Info(ctx, "Manager update completed",
+	uc.logger.Info(
+		ctx, "Manager update completed",
 		output.Field{Key: "manager", Value: mgr.Name},
 		output.Field{Key: "success", Value: result.Success},
 		output.Field{Key: "updated_packages", Value: len(result.UpdatedPackages)},

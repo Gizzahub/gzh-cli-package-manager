@@ -23,7 +23,8 @@ func NewShellExecutor(logger output.Logger) *ShellExecutor {
 
 // Execute runs a command and returns the result.
 func (e *ShellExecutor) Execute(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-	e.logger.Debug(ctx, "Executing command",
+	e.logger.Debug(
+		ctx, "Executing command",
 		output.Field{Key: "command", Value: command},
 		output.Field{Key: "args", Value: args},
 	)
@@ -51,7 +52,8 @@ func (e *ShellExecutor) Execute(ctx context.Context, command string, args ...str
 	}
 
 	if err != nil {
-		e.logger.Debug(ctx, "Command execution failed",
+		e.logger.Debug(
+			ctx, "Command execution failed",
 			output.Field{Key: "command", Value: command},
 			output.Field{Key: "exit_code", Value: result.ExitCode},
 			output.Field{Key: "stderr", Value: result.Stderr},
@@ -59,7 +61,8 @@ func (e *ShellExecutor) Execute(ctx context.Context, command string, args ...str
 		return result, fmt.Errorf("command execution failed: %w", err)
 	}
 
-	e.logger.Debug(ctx, "Command executed successfully",
+	e.logger.Debug(
+		ctx, "Command executed successfully",
 		output.Field{Key: "command", Value: command},
 		output.Field{Key: "exit_code", Value: result.ExitCode},
 	)
@@ -69,7 +72,8 @@ func (e *ShellExecutor) Execute(ctx context.Context, command string, args ...str
 
 // ExecuteWithInput runs a command with stdin input.
 func (e *ShellExecutor) ExecuteWithInput(ctx context.Context, input string, command string, args ...string) (*output.ExecutionResult, error) {
-	e.logger.Debug(ctx, "Executing command with input",
+	e.logger.Debug(
+		ctx, "Executing command with input",
 		output.Field{Key: "command", Value: command},
 		output.Field{Key: "args", Value: args},
 	)
@@ -98,14 +102,16 @@ func (e *ShellExecutor) ExecuteWithInput(ctx context.Context, input string, comm
 	}
 
 	if err != nil {
-		e.logger.Debug(ctx, "Command execution with input failed",
+		e.logger.Debug(
+			ctx, "Command execution with input failed",
 			output.Field{Key: "command", Value: command},
 			output.Field{Key: "exit_code", Value: result.ExitCode},
 		)
 		return result, fmt.Errorf("command execution with input failed: %w", err)
 	}
 
-	e.logger.Debug(ctx, "Command with input executed successfully",
+	e.logger.Debug(
+		ctx, "Command with input executed successfully",
 		output.Field{Key: "command", Value: command},
 	)
 

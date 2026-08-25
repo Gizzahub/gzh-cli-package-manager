@@ -92,7 +92,8 @@ func (d *Detector) Detect(ctx context.Context) *Environment {
 		env.Path = condaEnv.Path
 		env.IsPipSafe = false
 		env.Warnings = append(env.Warnings, "Conda environment detected. Using pip may cause dependency conflicts with conda packages.")
-		d.logger.Debug(ctx, "Detected Conda environment",
+		d.logger.Debug(
+			ctx, "Detected Conda environment",
 			output.Field{Key: "name", Value: condaEnv.Name},
 			output.Field{Key: "path", Value: condaEnv.Path},
 		)
@@ -105,7 +106,8 @@ func (d *Detector) Detect(ctx context.Context) *Environment {
 			env.Name = venv.Name
 			env.Path = venv.Path
 			env.IsPipSafe = true // pip is safe in virtualenv
-			d.logger.Debug(ctx, "Detected virtualenv environment",
+			d.logger.Debug(
+				ctx, "Detected virtualenv environment",
 				output.Field{Key: "name", Value: venv.Name},
 				output.Field{Key: "path", Value: venv.Path},
 			)

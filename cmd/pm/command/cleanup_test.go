@@ -239,15 +239,18 @@ func (s *stubListAdapter) GetConfigPath(context.Context) (string, error) { retur
 func (s *stubListAdapter) ListPackages(context.Context) ([]manager.Package, error) {
 	return s.packages, nil
 }
+
 func (s *stubListAdapter) CheckHealth(context.Context) (manager.Status, error) {
 	return manager.StatusHealthy, nil
 }
+
 func (s *stubListAdapter) Update(context.Context, adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
 	return &adapterm.UpdateResult{Success: true}, nil
 }
 
 // Install/Uninstall satisfy adapterm.Installer for remove-path tests.
 func (s *stubListAdapter) Install(context.Context, string, bool) error { return nil }
+
 func (s *stubListAdapter) Uninstall(_ context.Context, pkgID string, dryRun bool) error {
 	if s.uninstalled == nil {
 		s.uninstalled = []string{}

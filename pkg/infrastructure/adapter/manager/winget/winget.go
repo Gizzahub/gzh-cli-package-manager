@@ -277,7 +277,8 @@ func (a *Adapter) Install(ctx context.Context, pkgID string, dryRun bool) error 
 		return nil
 	}
 
-	result, err := a.executor.Execute(ctx, wingetCommand,
+	result, err := a.executor.Execute(
+		ctx, wingetCommand,
 		"install", "--id", pkgID,
 		"--disable-interactivity",
 		"--accept-package-agreements",
@@ -305,7 +306,8 @@ func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) erro
 		return nil
 	}
 
-	result, err := a.executor.Execute(ctx, wingetCommand,
+	result, err := a.executor.Execute(
+		ctx, wingetCommand,
 		"uninstall", "--id", pkgID,
 		"--disable-interactivity",
 	)
