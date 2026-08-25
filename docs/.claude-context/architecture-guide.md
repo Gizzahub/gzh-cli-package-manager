@@ -85,7 +85,7 @@ find pkg cmd -name "*.go" -exec wc -l {} \; | awk '$1 > 500 {print $2 ": " $1 " 
 - **Validation**: Run `./scripts/check-cgo.sh` to ensure no CGO deps
 
 ### Go Version Requirement
-- **Minimum**: Go 1.24.0+
+- **Minimum**: Go 1.26.0+
 - **Check**: `make check-go-version`
 
 ## Manual Dependency Injection Pattern

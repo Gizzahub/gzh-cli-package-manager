@@ -38,7 +38,7 @@ jobs:
           local candidate="$1"
 
           # Require a stable Go release. Development builds and prereleases such
-          # as go1.24rc1 are intentionally rejected for CI reproducibility.
+          # as go1.26rc1 are intentionally rejected for CI reproducibility.
           if [[ ! "$candidate" =~ ^go(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo "Expected a stable Go version (go<major>.<minor>.<patch>); found ${candidate:-<missing>}"
             return 1
@@ -51,11 +51,11 @@ jobs:
           if (( installed_major < required_major || \
                 (installed_major == required_major && installed_minor < required_minor) || \
                 (installed_major == required_major && installed_minor == required_minor && installed_patch < required_patch) )); then
-            echo "Go ${required_major}.${required_minor}.${required_patch}+ required by ADR-004; found $candidate"
+            echo "Go ${required_major}.${required_minor}.${required_patch}+ required by ADR-009; found $candidate"
             return 1
           fi
 
-          echo "Go $candidate satisfies the ADR-004 minimum (${required_major}.${required_minor}.${required_patch})"
+          echo "Go $candidate satisfies the ADR-009 minimum (${required_major}.${required_minor}.${required_patch})"
         }
 
         verify_go_version "$installed_go"
