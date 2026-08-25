@@ -2,6 +2,8 @@ module github.com/gizzahub/gzh-cli-package-manager
 
 go 1.26
 
+toolchain go1.26.6
+
 require (
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
