@@ -45,8 +45,8 @@
 
 | Package | Coverage | Reason |
 |---------|----------|--------|
-| `cmd/pm` | 0.0% | CLI entry point - tested via integration tests |
-| `cmd/pm/command` | 0.0% | CLI commands - tested via integration tests |
+| `cmd/gz-pm` | 0.0% | CLI entry point - tested via integration tests |
+| `cmd/gz-pm/command` | 0.0% | CLI commands - tested via integration tests |
 | `internal/version` | 0.0% | Simple version constants |
 
 ### No Test Files 📝

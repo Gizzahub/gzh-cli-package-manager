@@ -15,7 +15,7 @@ Domain)이며, Domain은 어떤 레이어에도 의존하지 않습니다. 규�
 | Domain | §2.1 | `pkg/domain` | [10-domain.md](10-domain.md) |
 | Application | §2.2 | `pkg/application` | [20-application.md](20-application.md) |
 | Infrastructure | §2.3 | `pkg/infrastructure` | [30-infrastructure.md](30-infrastructure.md) |
-| Presentation | §2.4 | `cmd/pmctl` | [40-presentation.md](40-presentation.md) |
+| Presentation | §2.4 | `cmd/gz-pm` | [40-presentation.md](40-presentation.md) |
 
 ## 관련 문서
 

@@ -40,7 +40,7 @@ sequenceDiagram
     participant Adapter
     participant Executor
 
-    User->>CLI: pmctl update --all
+    User->>CLI: gz-pm update --all
     CLI->>CLI: Parse flags, validate
     CLI->>UseCase: Execute(UpdateAllRequest)
 

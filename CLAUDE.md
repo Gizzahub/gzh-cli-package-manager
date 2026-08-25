@@ -57,7 +57,7 @@ Think of it as a "package manager for package managers" - unified interface for:
 
 ```
 .
-├── cmd/pm/              # CLI entry (Presentation)
+├── cmd/gz-pm/              # CLI entry (Presentation)
 ├── pkg/
 │   ├── domain/          # Core logic (NO external deps)
 │   ├── application/     # Use cases + ports

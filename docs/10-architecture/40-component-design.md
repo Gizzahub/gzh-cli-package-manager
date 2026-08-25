@@ -137,7 +137,7 @@ type ConfigurationRepository interface {
 **Implementations**:
 
 1. **YAML Repository** (production):
-   - Read/write: `~/.config/pmctl/config.yml`
+   - Read/write: `~/.config/gz-pm/config.yml`
    - Atomic writes: temp file → rename
    - Schema validation
 

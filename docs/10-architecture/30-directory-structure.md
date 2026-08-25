@@ -5,7 +5,7 @@
 ```
 gzh-cli-package-manager/
 ├── cmd/
-│   └── pmctl/                   # CLI entry point
+│   └── gz-pm/                   # CLI entry point
 │       ├── main.go              # DI setup, main function
 │       ├── command/             # Cobra commands
 │       ├── formatter/           # Output formatters

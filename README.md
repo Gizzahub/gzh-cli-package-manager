@@ -42,6 +42,8 @@ gz-pm update --all
 
 ### Homebrew (macOS/Linux)
 
+Planned for the first approved release; no formula or stable tag is published yet.
+
 ```bash
 brew tap gizzahub/tap
 brew install gz-pm
@@ -50,7 +52,7 @@ brew install gz-pm
 ### Go Install
 
 ```bash
-go install github.com/gizzahub/gzh-cli-package-manager/cmd/pm@latest
+go install github.com/gizzahub/gzh-cli-package-manager/cmd/gz-pm@latest
 ```
 
 ### From Source
@@ -64,7 +66,8 @@ make install  # Installs to $GOPATH/bin (no sudo required)
 
 ### Binary Releases
 
-Download pre-built binaries from [GitHub Releases](https://github.com/gizzahub/gzh-cli-package-manager/releases).
+After the first approved tag, download `gz-pm-<os>-<arch>` artifacts from
+[GitHub Releases](https://github.com/gizzahub/gzh-cli-package-manager/releases).
 
 ## 🚀 Quick Start
 
@@ -265,7 +268,7 @@ make install
 
 ```
 gzh-cli-package-manager/
-├── cmd/pm/                 # CLI entry point
+├── cmd/gz-pm/                 # CLI entry point
 ├── pkg/
 │   ├── domain/            # Core business logic (entities, interfaces)
 │   ├── application/       # Use cases and workflows

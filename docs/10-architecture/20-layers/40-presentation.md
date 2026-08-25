@@ -1,4 +1,4 @@
-# 2.4 Presentation Layer (cmd/pmctl)
+# 2.4 Presentation Layer (cmd/gz-pm)
 
 > gzh-cli-package-manager 레이어 아키텍처 · [레이어 인덱스](README.md) · [아키텍처 인덱스](../README.md) · [ARCHITECTURE.md](../../../ARCHITECTURE.md)
 
@@ -12,7 +12,7 @@
 **Components**:
 
 ```go
-cmd/pmctl/
+cmd/gz-pm/
 ├── main.go                      # Entry point, DI setup
 ├── command/                     # Cobra commands
 │   ├── root.go                 # Root command
@@ -35,7 +35,7 @@ cmd/pmctl/
 **Example Command**:
 
 ```go
-// cmd/pmctl/command/update.go
+// cmd/gz-pm/command/update.go
 package command
 
 import (
@@ -87,7 +87,7 @@ func NewUpdateCommand(updateUC *update.UpdateAllManagersUseCase) *cobra.Command 
 **Dependency Injection** (main.go):
 
 ```go
-// cmd/pmctl/main.go
+// cmd/gz-pm/main.go
 package main
 
 import (
@@ -97,11 +97,11 @@ import (
 
 func main() {
     // 1. Initialize infrastructure
-    logger := logger.NewStructuredLogger("pmctl")
+    logger := logger.NewStructuredLogger("gz-pm")
     executor := executor.NewShellExecutor(logger)
 
     // 2. Initialize repositories
-    configRepo := yaml.NewConfigRepository("~/.config/pmctl", logger)
+    configRepo := yaml.NewConfigRepository("~/.config/gz-pm", logger)
     managerRepo := repository.NewManagerRepository(executor, logger)
 
     // 3. Initialize adapters

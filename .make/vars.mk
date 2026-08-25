@@ -4,13 +4,14 @@
 # Project settings
 BINARY_NAME := gz-pm
 BUILD_DIR := build
-MAIN_PKG := ./cmd/pm
+MAIN_PKG := ./cmd/gz-pm
 
 # Version information
 VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "dev")
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.GitCommit=$(GIT_COMMIT) -X main.BuildDate=$(BUILD_DATE)"
+VERSION_PKG := github.com/gizzahub/gzh-cli-package-manager/internal/version
+LDFLAGS := -ldflags "-X $(VERSION_PKG).Version=$(VERSION) -X $(VERSION_PKG).GitCommit=$(GIT_COMMIT) -X $(VERSION_PKG).BuildDate=$(BUILD_DATE)"
 
 # Go commands
 GO := go

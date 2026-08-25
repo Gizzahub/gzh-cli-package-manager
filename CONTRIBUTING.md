@@ -1,6 +1,6 @@
-# Contributing to gzh-cli-package-manager (pmctl)
+# Contributing to gzh-cli-package-manager (gz-pm)
 
-Welcome! We're excited that you're interested in contributing to pmctl. This guide will help you get started with development, understand our architecture, and contribute effectively.
+Welcome! We're excited that you're interested in contributing to gz-pm. This guide will help you get started with development, understand our architecture, and contribute effectively.
 
 ## 📋 Table of Contents
 
@@ -151,13 +151,13 @@ go test -v ./pkg/domain/manager/...
 
 ## Architecture Overview
 
-pmctl follows **Clean Architecture** with **Hexagonal (Ports & Adapters)** pattern.
+gz-pm follows **Clean Architecture** with **Hexagonal (Ports & Adapters)** pattern.
 
 ### Layer Structure
 
 ```
 ┌─────────────────────────────────────────────┐
-│  Presentation Layer (cmd/pmctl)             │
+│  Presentation Layer (cmd/gz-pm)             │
 │  - CLI commands (Cobra)                     │
 │  - Input validation                         │
 │  - Output formatting                        │
@@ -758,7 +758,7 @@ func TestHomebrewAdapter_Update_Integration(t *testing.T) {
 #!/bin/bash
 set -euo pipefail
 
-# Build pmctl
+# Build gz-pm
 make build
 
 # Test basic update
@@ -1152,7 +1152,7 @@ By contributing, you agree that your contributions will be licensed under the sa
 
 ## Thank You!
 
-Thank you for contributing to pmctl! Your efforts help make package management better for everyone.
+Thank you for contributing to gz-pm! Your efforts help make package management better for everyone.
 
 **Quick Links**:
 - [Architecture Overview](ARCHITECTURE.md)

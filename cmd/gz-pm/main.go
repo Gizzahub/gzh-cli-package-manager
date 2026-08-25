@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/gizzahub/gzh-cli-package-manager/cmd/pm/command"
+	"github.com/gizzahub/gzh-cli-package-manager/cmd/gz-pm/command"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/usecase/bootstrap"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/usecase/status"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/usecase/update"

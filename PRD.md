@@ -1,7 +1,7 @@
 # Product Requirements Document: gzh-cli-package-manager
 
 > **Product Name**: gzh-cli-package-manager
-> **CLI Binary**: `pmctl`
+> **CLI Binary**: `gz-pm`
 > **Version**: 1.0.0
 > **Last Updated**: 2025-01-27
 > **Status**: Draft
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-**gzh-cli-package-manager** (`pmctl`) is a standalone CLI tool that orchestrates multiple package managers through a unified interface. It solves the "package manager sprawl" problem faced by modern developers who must manage Homebrew, asdf, npm, pip, apt, and many other tools simultaneously.
+**gzh-cli-package-manager** (`gz-pm`) is a standalone CLI tool that orchestrates multiple package managers through a unified interface. It solves the "package manager sprawl" problem faced by modern developers who must manage Homebrew, asdf, npm, pip, apt, and many other tools simultaneously.
 
 ### The Problem
 
@@ -29,8 +29,8 @@ Modern software development requires managing packages across:
 
 ### The Solution
 
-`pmctl` provides:
-- **Unified update command**: `pmctl update --all` updates everything
+`gz-pm` provides:
+- **Unified update command**: `gz-pm update --all` updates everything
 - **Intelligent conflict detection**: Warns about duplicate installations
 - **Environment awareness**: Detects conda, virtualenv, Docker contexts
 - **Rich progress reporting**: Beautiful terminal output with actionable feedback
@@ -84,9 +84,9 @@ Modern software development requires managing packages across:
 - Manual update scripts are brittle and break often
 - No visibility into what's out of date
 
-**How pmctl Helps**:
-- `pmctl status --output json` for automated inventory
-- `pmctl update --all --dry-run` for preview before deployments
+**How gz-pm Helps**:
+- `gz-pm status --output json` for automated inventory
+- `gz-pm update --all --dry-run` for preview before deployments
 - Consistent commands across macOS, Ubuntu, Arch Linux
 
 **Quote**: "I need one tool that works everywhere, not 10 different update scripts."
@@ -110,8 +110,8 @@ Modern software development requires managing packages across:
 - Wastes time debugging "it works on my machine" issues caused by old tools
 - brew, npm, pip all need separate update commands
 
-**How pmctl Helps**:
-- Single `pmctl update --all` command updates everything
+**How gz-pm Helps**:
+- Single `gz-pm update --all` command updates everything
 - Duplicate detection prevents asdf/brew conflicts
 - Rich output shows what changed and why
 
@@ -136,10 +136,10 @@ Modern software development requires managing packages across:
 - Version mismatches cause integration issues
 - Documentation gets out of date quickly
 
-**How pmctl Helps**:
-- `pmctl bootstrap` installs all required managers
-- `pmctl export --all` creates reproducible environment configs
-- `pmctl import` sets up new machine from config
+**How gz-pm Helps**:
+- `gz-pm bootstrap` installs all required managers
+- `gz-pm export --all` creates reproducible environment configs
+- `gz-pm import` sets up new machine from config
 
 **Quote**: "New devs should be productive on day 1, not day 3."
 
@@ -154,8 +154,8 @@ Modern software development requires managing packages across:
 **User Story**: As a developer, I want to update all my package managers and their packages with a single command, so I don't have to remember and execute different update procedures for each tool.
 
 **Acceptance Criteria**:
-- Execute `pmctl update --all` updates all detected managers
-- Support selective updates: `pmctl update --manager brew`
+- Execute `gz-pm update --all` updates all detected managers
+- Support selective updates: `gz-pm update --manager brew`
 - Show progress for each manager with clear status
 - Handle failures gracefully (continue with remaining managers)
 - Complete typical update in < 5 minutes (excluding downloads)
@@ -170,7 +170,7 @@ Modern software development requires managing packages across:
 
 **Priority**: P0 (MVP Blocker)
 
-**User Story**: As a developer, I want pmctl to automatically discover which package managers I have installed, so I don't need to configure anything manually.
+**User Story**: As a developer, I want gz-pm to automatically discover which package managers I have installed, so I don't need to configure anything manually.
 
 **Acceptance Criteria**:
 - Detect brew, asdf, npm, pip, apt, pacman, yay, sdkman, nvm, rbenv, pyenv automatically
@@ -204,11 +204,11 @@ Modern software development requires managing packages across:
 **Example**:
 ```bash
 # Update everything to latest stable
-pmctl update --all --strategy stable
+gz-pm update --all --strategy stable
 
 # Update Homebrew aggressively, pip conservatively
 # Config: brew=latest, pip=minor
-pmctl update --all
+gz-pm update --all
 ```
 
 **Related Requirements**: REQ-UC001-002
@@ -317,7 +317,7 @@ Run without --dry-run to apply changes
 
 **Priority**: P1 (High - MVP Recommended)
 
-**User Story**: As a Python developer, I want pmctl to detect when I'm in a conda environment, so it doesn't break my environment with pip updates.
+**User Story**: As a Python developer, I want gz-pm to detect when I'm in a conda environment, so it doesn't break my environment with pip updates.
 
 **Acceptance Criteria**:
 - Detect conda/mamba environments (check `$CONDA_DEFAULT_ENV`)
@@ -337,7 +337,7 @@ Run without --dry-run to apply changes
 **User Story**: As a new team member, I want to install all required package managers automatically, so I can get productive quickly.
 
 **Acceptance Criteria**:
-- `pmctl bootstrap` installs missing managers
+- `gz-pm bootstrap` installs missing managers
 - Support: homebrew, asdf, nvm, rbenv, pyenv, sdkman
 - Platform-specific installation methods
 - Dependency resolution (install dependencies first)
@@ -347,9 +347,9 @@ Run without --dry-run to apply changes
 **Example**:
 ```bash
 # New machine setup
-pmctl bootstrap  # Installs homebrew, asdf
-pmctl update --all --dry-run  # Preview what would update
-pmctl update --all  # Actually update
+gz-pm bootstrap  # Installs homebrew, asdf
+gz-pm update --all --dry-run  # Preview what would update
+gz-pm update --all  # Actually update
 ```
 
 **Related Requirements**: REQ-BOOTSTRAP-001, REQ-BOOTSTRAP-002
@@ -363,7 +363,7 @@ pmctl update --all  # Actually update
 **User Story**: As a developer, I want to quickly see which package managers are installed and their health status.
 
 **Acceptance Criteria**:
-- `pmctl status` shows all managers with versions
+- `gz-pm status` shows all managers with versions
 - Indicate: supported, installed, version, package count
 - Platform-specific availability
 - Health checks: valid binary, valid config, network connectivity
@@ -427,7 +427,7 @@ pmctl update --all  # Actually update
 ❌ docker: Insufficient disk space (need 1.2GB, available: 800MB)
    • Fix: brew cleanup or free disk space
    • Run: df -h to check disk usage
-   • Documentation: https://docs.pmctl.dev/disk-space
+   • Documentation: planned; no public documentation URL is published yet
 ```
 
 **Help Documentation**:
@@ -478,7 +478,7 @@ pmctl update --all  # Actually update
 - Core functionality maintained
 - Configuration file format compatible
 - JSON output structure preserved
-- Command naming evolved (`pmctl` vs `gz pm`)
+- Command naming evolved (`gz-pm` vs `gz pm`)
 
 **Rationale**: Developers use diverse platforms. Cross-platform support is table stakes.
 
@@ -513,14 +513,14 @@ pmctl update --all  # Actually update
 
 **Step 1: Installation** (30 seconds)
 ```bash
-brew install pmctl
+brew install gz-pm
 # OR
-go install github.com/gizzahub/gzh-cli-package-manager/cmd/pmctl@latest
+go install github.com/gizzahub/gzh-cli-package-manager/cmd/gz-pm@latest
 ```
 
 **Step 2: Status Check** (5 seconds)
 ```bash
-pmctl status
+gz-pm status
 ```
 
 **Output**:
@@ -534,18 +534,18 @@ npm          ✅         ✅         10.2.4     8
 pip          ✅         ✅         24.0       35
 
 💡 Tip: Install asdf for better version management
-Run: pmctl bootstrap --manager asdf
+Run: gz-pm bootstrap --manager asdf
 ```
 
 **Step 3: Bootstrap Missing Managers** (2 minutes)
 ```bash
-pmctl bootstrap --manager asdf
+gz-pm bootstrap --manager asdf
 ```
 
 **Step 4: First Update** (3 minutes)
 ```bash
-pmctl update --all --dry-run  # Preview
-pmctl update --all  # Execute
+gz-pm update --all --dry-run  # Preview
+gz-pm update --all  # Execute
 ```
 
 **Total Time**: ~6 minutes from zero to fully updated
@@ -716,7 +716,7 @@ pmctl update --all  # Execute
 ### Risk 4: Low Adoption
 **Impact**: High | **Probability**: Medium
 
-**Description**: Developers continue using shell scripts instead of pmctl.
+**Description**: Developers continue using shell scripts instead of gz-pm.
 
 **Mitigation**:
 - Exceptional UX (beautiful output, great docs)

@@ -7,6 +7,8 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -14,38 +16,54 @@ import (
 	"testing"
 )
 
-// getBinaryPath returns the path to the built gz-pm binary.
-func getBinaryPath(t *testing.T) string {
-	t.Helper()
+var testBinaryPath string
 
+func TestMain(m *testing.M) {
+	code := buildTestBinary()
+	if code == 0 {
+		code = m.Run()
+	}
+	if testBinaryPath != "" {
+		_ = os.RemoveAll(filepath.Dir(testBinaryPath))
+	}
+	os.Exit(code)
+}
+
+func buildTestBinary() int {
 	// Get project root (3 levels up from test/integration)
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
-		t.Fatal("Failed to get caller information")
+		fmt.Fprintln(os.Stderr, "failed to get caller information")
+		return 1
 	}
 
-	projectRoot := filepath.Join(filepath.Dir(file), "..", "..")
-	binaryPath := filepath.Join(projectRoot, "bin", "gz-pm")
-
-	// Check if binary exists
-	if _, err := exec.LookPath(binaryPath); err != nil {
-		// Try to build
-		cmd := exec.Command("make", "build")
-		cmd.Dir = projectRoot
-		if output, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("Failed to build binary: %v\nOutput: %s", err, output)
-		}
+	projectRoot := filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
+	buildDir, err := os.MkdirTemp("", "gz-pm-integration-")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create integration build directory: %v\n", err)
+		return 1
 	}
+	binaryName := "gz-pm"
+	if runtime.GOOS == "windows" {
+		binaryName += ".exe"
+	}
+	testBinaryPath = filepath.Join(buildDir, binaryName)
 
-	return binaryPath
+	cmd := exec.Command("go", "build", "-o", testBinaryPath, "./cmd/gz-pm")
+	cmd.Dir = projectRoot
+	cmd.Env = append(os.Environ(), "GOWORK=off")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to build public command path: %v\nOutput: %s", err, output)
+		return 1
+	}
+	return 0
 }
 
 // runCommand executes the CLI and returns stdout, stderr, and error.
 func runCommand(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
 
-	binary := getBinaryPath(t)
-	cmd := exec.Command(binary, args...)
+	cmd := exec.Command(testBinaryPath, args...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

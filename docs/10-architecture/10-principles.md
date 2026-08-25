@@ -6,7 +6,7 @@
 
 ```
 ┌─────────────────────────────────────────────┐
-│  Presentation Layer (cmd/pmctl)             │  ← Frameworks & Drivers
+│  Presentation Layer (cmd/gz-pm)             │  ← Frameworks & Drivers
 │  - CLI Commands (Cobra)                     │
 │  - Formatters (Text, JSON)                  │
 │  - Input Validation                         │

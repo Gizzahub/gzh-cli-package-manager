@@ -6,7 +6,7 @@
 
 ## Document Overview
 
-This document specifies all functional and non-functional requirements for the `gzh-cli-package-manager` (CLI binary: `pmctl`), a standalone package manager orchestration tool extracted from gzh-cli.
+This document specifies all functional and non-functional requirements for the `gzh-cli-package-manager` (CLI binary: `gz-pm`), a standalone package manager orchestration tool extracted from gzh-cli.
 
 **Scope**: Complete extraction of PM functionality (~11,662 lines) with clean architecture.
 
@@ -57,7 +57,7 @@ This document specifies all functional and non-functional requirements for the `
 
 **Configuration Example**:
 ```yaml
-# ~/.config/pmctl/config.yml
+# ~/.config/gz-pm/config.yml
 update:
   defaultStrategy: stable
   managerOverrides:
@@ -208,7 +208,7 @@ Found 2 potential conflicts:
 ⚠️  Conda environment detected: /opt/miniconda3/envs/myproject
    • pip updates in conda environments can cause dependency conflicts
    • Use conda/mamba for package management instead
-   • Override with: pmctl update --manager pip --pip-allow-conda
+   • Override with: gz-pm update --manager pip --pip-allow-conda
 ```
 
 **Test Scenarios**: Test 5.1, 5.2
@@ -333,8 +333,8 @@ apt          🚫         ⛔         N/A        N/A (macOS only)
 **Description**: Export currently installed packages to configuration files.
 
 **Acceptance Criteria**:
-- [ ] Export all managers: `pmctl export --all`
-- [ ] Export specific manager: `pmctl export --manager brew`
+- [ ] Export all managers: `gz-pm export --all`
+- [ ] Export specific manager: `gz-pm export --manager brew`
 - [ ] Output formats: YAML, JSON
 - [ ] Include version information
 - [ ] Include manager-specific metadata
@@ -348,7 +348,7 @@ apt          🚫         ⛔         N/A        N/A (macOS only)
 **Description**: Install packages from exported configuration files.
 
 **Acceptance Criteria**:
-- [ ] Read configuration from `~/.config/pmctl/*.yml`
+- [ ] Read configuration from `~/.config/gz-pm/*.yml`
 - [ ] Install missing packages
 - [ ] Respect version constraints
 - [ ] Handle dependency resolution
@@ -365,9 +365,9 @@ apt          🚫         ⛔         N/A        N/A (macOS only)
 **Description**: Manage package manager caches to free disk space.
 
 **Acceptance Criteria**:
-- [ ] `pmctl cache status`: Show cache sizes
-- [ ] `pmctl cache clean`: Clean all caches
-- [ ] `pmctl cache clean --manager brew`: Clean specific manager
+- [ ] `gz-pm cache status`: Show cache sizes
+- [ ] `gz-pm cache clean`: Clean all caches
+- [ ] `gz-pm cache clean --manager brew`: Clean specific manager
 - [ ] Dry-run support
 - [ ] Report space freed
 
@@ -449,7 +449,7 @@ apt          🚫         ⛔         N/A        N/A (macOS only)
    • Current: 14.9 (via Homebrew)
    • Available: 16.1 (breaking changes)
    • Fix: brew unlink postgresql@14 && brew install postgresql@16
-   • Documentation: https://docs.pmctl.dev/postgresql-upgrade
+   • Documentation: planned; no public documentation URL is published yet
 ```
 
 ---
@@ -557,8 +557,8 @@ apt          🚫         ⛔         N/A        N/A (macOS only)
 | REQ-UC001-001 | UC-001 §2.1 | Test 1.1, 1.2, 1.3 | cmd/update/update.go | 🟡 Planned |
 | REQ-UC001-002 | UC-001 §3.1 | Test 8.1, 8.2, 8.3 | pkg/domain/update/strategy.go | 🟡 Planned |
 | REQ-UC001-003 | UC-001 §2.2 | Test 7.1 | pkg/application/update/usecase.go | 🟡 Planned |
-| REQ-UC001-004 | UC-001 §4.1 | Test 2.1, 2.3 | cmd/pmctl/formatter/enhanced.go | 🟡 Planned |
-| REQ-UC001-005 | UC-001 §4.2 | Test 2.2 | cmd/pmctl/formatter/json.go | 🟡 Planned |
+| REQ-UC001-004 | UC-001 §4.1 | Test 2.1, 2.3 | cmd/gz-pm/formatter/enhanced.go | 🟡 Planned |
+| REQ-UC001-005 | UC-001 §4.2 | Test 2.2 | cmd/gz-pm/formatter/json.go | 🟡 Planned |
 | REQ-UC001-006 | UC-001 §5.1 | Test 5.3 | pkg/domain/diagnostics/duplicates.go | 🟡 Planned |
 | REQ-UC001-007 | UC-001 §6.1 | Test 5.1, 5.2 | pkg/infrastructure/detector/environment.go | 🟡 Planned |
 
@@ -619,7 +619,7 @@ The following are **not** included in v1.0:
 3. **Package Creation**: Only consumption, not authoring packages
 4. **Repository Hosting**: Relies on existing package repositories
 5. **Telemetry**: No usage tracking or analytics
-6. **Auto-Updates**: User must manually update pmctl itself
+6. **Auto-Updates**: User must manually update gz-pm itself
 
 ---
 

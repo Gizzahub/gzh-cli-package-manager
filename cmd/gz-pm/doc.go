@@ -1,4 +1,4 @@
-// Package main is the entry point for the pmctl CLI application.
+// Package main is the entry point for the gz-pm CLI application.
 //
 // This package belongs to the presentation layer and is responsible for:
 //   - CLI command definitions (using Cobra)

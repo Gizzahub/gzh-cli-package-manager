@@ -185,7 +185,7 @@ Notes:
 ## Architecture
 
 ```text
-cmd/pm/command (presentation)
+cmd/gz-pm/command (presentation)
     → adapterm.Adapter / Searcher / Installer / SourceLister / BucketManager
         → CommandExecutor (mockable)
             → native winget | scoop | choco
