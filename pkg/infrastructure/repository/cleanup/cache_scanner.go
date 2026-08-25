@@ -191,10 +191,12 @@ func (s *CacheScanner) Clean(ctx context.Context, managerID string, dryRun bool)
 		}
 		// Refresh repo entry to zeros after successful clean.
 		if s.repo != nil {
-			_ = s.repo.UpdateInfo(ctx, &cleanup.CacheInfo{
+			if err := s.repo.UpdateInfo(ctx, &cleanup.CacheInfo{
 				ManagerID: info.ManagerID,
 				CachePath: info.CachePath,
-			})
+			}); err != nil {
+				summary.Errors = append(summary.Errors, fmt.Sprintf("%s: update cache info: %v", info.ManagerID, err))
+			}
 		}
 	}
 

@@ -2,10 +2,37 @@ package cleanup
 
 import (
 	"context"
+	"errors"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
+
+	domaincleanup "github.com/gizzahub/gzh-cli-package-manager/pkg/domain/cleanup"
 )
+
+type cacheRepositoryStub struct {
+	updateErr    error
+	updateCalls  int
+	failOnUpdate int
+}
+
+func (r *cacheRepositoryStub) GetInfo(context.Context, string) (*domaincleanup.CacheInfo, error) {
+	return nil, nil
+}
+
+func (r *cacheRepositoryStub) ListAll(context.Context) ([]*domaincleanup.CacheInfo, error) {
+	return nil, nil
+}
+
+func (r *cacheRepositoryStub) UpdateInfo(_ context.Context, _ *domaincleanup.CacheInfo) error {
+	r.updateCalls++
+	if r.updateCalls == r.failOnUpdate {
+		return r.updateErr
+	}
+	return nil
+}
 
 func TestResolveCachePaths(t *testing.T) {
 	t.Parallel()
@@ -186,5 +213,43 @@ func TestCacheScanner_CleanExecutes(t *testing.T) {
 	}
 	if _, err := fsys.Stat(filepath.Join(npmCache, "a")); err == nil {
 		t.Fatal("expected file a to be removed")
+	}
+}
+
+func TestCacheScanner_CleanReportsRepositoryRefreshFailure(t *testing.T) {
+	t.Parallel()
+
+	home := "/home/user"
+	npmCache := filepath.Join(home, ".npm")
+	failingRepo := &cacheRepositoryStub{
+		failOnUpdate: 2,
+		updateErr:    errors.New("metadata store unavailable"),
+	}
+	fileSystem := NewMapFileSystem()
+	target := filepath.Join(npmCache, "package.tgz")
+	fileSystem.AddFile(target, 1024, time.Now())
+	scanner := NewCacheScanner(
+		WithFileSystem(fileSystem),
+		WithHomeDir(home),
+		WithGOOS("linux"),
+		WithEnvLookup(func(string) string { return "" }),
+		WithCacheRepository(failingRepo),
+	)
+
+	summary, err := scanner.Clean(context.Background(), "npm", false)
+	if !errors.Is(err, domaincleanup.ErrCacheClearFailed) {
+		t.Fatalf("Clean() error = %v, want ErrCacheClearFailed", err)
+	}
+	if summary == nil || len(summary.Errors) != 1 {
+		t.Fatalf("Clean() summary = %#v, want one reported error", summary)
+	}
+	if !strings.Contains(summary.Errors[0], "npm: update cache info: metadata store unavailable") {
+		t.Fatalf("summary error = %q", summary.Errors[0])
+	}
+	if _, err := fileSystem.Stat(target); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Clean() did not remove target: %v", err)
+	}
+	if failingRepo.updateCalls != 2 {
+		t.Fatalf("UpdateInfo calls = %d, want 2", failingRepo.updateCalls)
 	}
 }
