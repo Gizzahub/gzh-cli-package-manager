@@ -56,7 +56,7 @@ func (l *StructuredLogger) log(level, msg string, fields []output.Field) {
 		if i > 0 {
 			fieldStr.WriteString(" ")
 		}
-		fieldStr.WriteString(fmt.Sprintf("%s=%v", field.Key, field.Value))
+		_, _ = fmt.Fprintf(&fieldStr, "%s=%v", field.Key, field.Value)
 	}
 
 	l.logger.Printf("[%s] %s | %s", level, msg, fieldStr.String())

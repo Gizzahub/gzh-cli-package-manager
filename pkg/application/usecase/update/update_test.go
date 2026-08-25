@@ -701,35 +701,6 @@ func TestUseCase_Update_NoManagersSpecified(t *testing.T) {
 	}
 }
 
-// mockEnvDetector implements environment detection for testing.
-type mockEnvDetector struct {
-	envType  string
-	envName  string
-	pipSafe  bool
-	warnings []string
-}
-
-func (m *mockEnvDetector) Detect(_ context.Context) *struct {
-	Type      string
-	Name      string
-	Path      string
-	IsPipSafe bool
-	Warnings  []string
-} {
-	return &struct {
-		Type      string
-		Name      string
-		Path      string
-		IsPipSafe bool
-		Warnings  []string
-	}{
-		Type:      m.envType,
-		Name:      m.envName,
-		IsPipSafe: m.pipSafe,
-		Warnings:  m.warnings,
-	}
-}
-
 func TestUseCase_Update_WithNilEnvDetector(t *testing.T) {
 	now := time.Now()
 
