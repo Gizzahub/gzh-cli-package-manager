@@ -698,4 +698,3 @@ func writePackages(out io.Writer, format, managerName, action string, packages [
 		return fmt.Errorf("unknown output format %q (supported: text, json)", format)
 	}
 }
-

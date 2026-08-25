@@ -205,4 +205,3 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 	result.Message = "asdf plugins updated"
 	return result, nil
 }
-

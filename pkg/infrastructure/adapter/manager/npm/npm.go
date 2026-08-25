@@ -190,4 +190,3 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 	result.Message = "npm global packages updated"
 	return result, nil
 }
-

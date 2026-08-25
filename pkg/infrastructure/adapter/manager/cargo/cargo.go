@@ -200,4 +200,3 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 	result.Message = "cargo global packages updated via install-update"
 	return result, nil
 }
-

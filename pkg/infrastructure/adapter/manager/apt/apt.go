@@ -244,4 +244,3 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 	result.Message = "apt packages upgraded"
 	return result, nil
 }
-

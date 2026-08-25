@@ -188,4 +188,3 @@ func TestCacheScanner_CleanExecutes(t *testing.T) {
 		t.Fatal("expected file a to be removed")
 	}
 }
-
