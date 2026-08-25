@@ -2,9 +2,9 @@ name: Test
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: [ master, 'dev/**' ]
   pull_request:
-    branches: [ master, main, develop ]
+    branches: [ master ]
 
 jobs:
   test:
@@ -98,21 +98,6 @@ jobs:
 
     - name: Run tests
       run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
-      with:
-        files: ./coverage.txt
-        flags: unittests
-        name: codecov-${{ matrix.os }}
-        # v4 ended tokenless uploads for most repositories. The secret may not be
-        # set yet; an empty value behaves exactly as v3 did without one, so this
-        # line costs nothing now and is the whole fix once the secret exists.
-        token: ${{ secrets.CODECOV_TOKEN }}
-        # Coverage reporting is not a merge gate here. Stated explicitly so the
-        # upload failing on a missing token cannot start failing the test job if
-        # the action ever changes this default.
-        fail_ci_if_error: false
 
   lint:
     name: Lint
