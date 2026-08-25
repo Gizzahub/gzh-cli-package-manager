@@ -1,206 +1,156 @@
-version: 2
+version: "2"
 
 run:
   go: "1.26"
-  timeout: 5m
-  tests: true
   modules-download-mode: readonly
+  tests: true
 
 linters:
   enable:
-    # Core linters (error detection)
-    - errcheck      # Check for unchecked errors
-    - govet         # Examine Go source code and reports suspicious constructs
-    - ineffassign   # Detect ineffectual assignments
-    - staticcheck   # Static analysis (includes gosimple)
-    - unused        # Check for unused constants, variables, functions and types
-
-    # Code quality
-    - revive        # Fast, configurable, extensible, flexible linter
-    - gocyclo       # Check cyclomatic complexity (ADR-002 requirement)
-    - goconst       # Find repeated strings that could be constants
-    # gofmt and goimports are now formatters in golangci-lint v2
-    # - gofmt         # Check whether code was gofmt-ed
-    # - goimports     # Check import statements are formatted according to goimports
-    - misspell      # Finds commonly misspelled English words
-    - unconvert     # Remove unnecessary type conversions
-    - unparam       # Find unused function parameters
-    - nakedret      # Find naked returns in functions greater than a specified function length
-    - prealloc      # Find slice declarations that could potentially be pre-allocated
-    - godot         # Check comments end in period
-    - whitespace    # Check for unnecessary whitespace
-    - nolintlint    # Reports ill-formed or insufficient nolint directives
-
-    # Security
-    - gosec         # Inspect source code for security problems
-
-    # Bugs
-    - bodyclose     # Check whether HTTP response body is closed successfully
-    - nilerr        # Find code that returns nil even if it checks that error is not nil
-    - rowserrcheck  # Check whether Err of rows is checked successfully
-    - sqlclosecheck # Check that sql.Rows and sql.Stmt are closed
-    # - exportloopref # Removed in golangci-lint v2 (now in Go compiler)
-
-    # Complexity
-    - gocognit      # Compute and check the cognitive complexity of functions
-    - nestif        # Report deeply nested if statements
-    - cyclop        # Check function and package cyclomatic complexity
-
-    # Performance
-    - gocritic      # Meta-linter with various checks
-    # - gosimple      # Now part of staticcheck in v2
-
-    # Style
-    # - stylecheck    # Now part of staticcheck in v2
-    - goheader      # Check Go header comments
-    - gomodguard    # Check that module dependencies are allowed
-    - depguard      # Check if package imports are in allowlist/denylist
-
-    # Format (now formatters in golangci-lint v2)
-    # - gofumpt       # Stricter gofmt
-    # - gci           # Control golang import order
-
-    # Code smell
-    - dupl          # Code clone detection
-    # - goerr113      # Renamed to err113 in v2
-    - errorlint     # Find code that will cause problems with error wrapping
-    - wrapcheck     # Check that errors from external packages are wrapped
-
-linters-settings:
-  errcheck:
-    check-blank: true
-    check-type-assertions: true
-
-  govet:
-    check-shadowing: true
-    enable-all: true
-
-  gocyclo:
-    # Maximum cyclomatic complexity (ADR-002 requirement: < 15)
-    min-complexity: 15
-
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-
-  godot:
-    scope: declarations
-    exclude:
-      - "^TODO:"
-      - "^FIXME:"
-
-  revive:
+    - bodyclose
+    - cyclop
+    - depguard
+    - dupl
+    - errorlint
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - goheader
+    - gomodguard_v2
+    - gosec
+    - misspell
+    - nakedret
+    - nestif
+    - nilerr
+    - nolintlint
+    - prealloc
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - unconvert
+    - unparam
+    - whitespace
+    - wrapcheck
+  settings:
+    cyclop:
+      max-complexity: 15
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: io/ioutil
+              desc: Use io or os instead of deprecated io/ioutil
+    dupl:
+      threshold: 100
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    errorlint:
+      errorf: true
+      asserts: true
+      comparison: true
+    gocognit:
+      min-complexity: 20
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    gocritic:
+      disabled-checks:
+        - paramTypeCombine
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+    gocyclo:
+      min-complexity: 15
+    godot:
+      scope: declarations
+      exclude:
+        - '^TODO:'
+        - '^FIXME:'
+    gomodguard_v2:
+      blocked:
+        - module: github.com/pkg/errors
+          recommendations:
+            - fmt
+            - errors
+          reason: Use standard library errors package
+    gosec:
+      excludes:
+        - G104
+    govet:
+      enable-all: true
+    nakedret:
+      max-func-lines: 30
+    nestif:
+      min-complexity: 4
+    revive:
+      rules:
+        - name: exported
+          severity: warning
+        - name: package-comments
+          severity: warning
+        - name: var-naming
+          severity: warning
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+        - -ST1003
+    wrapcheck:
+      ignore-sigs:
+        - .Errorf(
+        - errors.New(
+        - errors.Unwrap(
+        - .Wrap(
+        - .Wrapf(
+        - .WithMessage(
+        - .WithMessagef(
+        - .WithStack(
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      - name: exported
-        severity: warning
-      - name: package-comments
-        severity: warning
-      - name: var-naming
-        severity: warning
-
-  stylecheck:
-    checks: ["all", "-ST1000", "-ST1003"]
-    # ST1000: Incorrect or missing package comment
-    # ST1003: Underscores in package names
-
-  gosec:
-    excludes:
-      - G104 # Audit errors not checked - we use errcheck for this
-
-  gocognit:
-    min-complexity: 20
-
-  nestif:
-    min-complexity: 4
-
-  cyclop:
-    max-complexity: 15
-
-  nakedret:
-    max-func-lines: 30
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - performance
-      - style
-    disabled-checks:
-      - paramTypeCombine # conflicts with other linters
-
-  depguard:
-    rules:
-      main:
-        deny:
-          - pkg: "io/ioutil"
-            desc: "Use io or os instead of deprecated io/ioutil"
-
-  gomodguard:
-    blocked:
-      modules:
-        - github.com/pkg/errors:
-            recommendations:
-              - fmt
-              - errors
-            reason: "Use standard library errors package"
-
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/gizzahub)
-
-  dupl:
-    threshold: 100
-
-  goerr113:
-    check-error-free-funcs:
-      - errors.New
-      - errors.Unwrap
-
-  errorlint:
-    errorf: true
-    asserts: true
-    comparison: true
-
-  wrapcheck:
-    ignoreSigs:
-      - .Errorf(
-      - errors.New(
-      - errors.Unwrap(
-      - .Wrap(
-      - .Wrapf(
-      - .WithMessage(
-      - .WithMessagef(
-      - .WithStack(
+      - linters:
+          - dupl
+          - errcheck
+          - gocyclo
+          - gosec
+        path: _test\.go
+      - linters:
+          - revive
+          - staticcheck
+        path: doc\.go
+      - linters:
+          - all
+        path: .*\.pb\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 
 issues:
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - gosec
-        - errcheck
-        - gocyclo
-        - dupl
-
-    # Exclude doc.go files from requiring package comments
-    - path: doc\.go
-      linters:
-        - revive
-        - stylecheck
-
-    # Exclude generated files
-    - path: ".*\\.pb\\.go"
-      linters:
-        - all
-
   max-issues-per-linter: 0
   max-same-issues: 0
+  uniq-by-line: true
   new: false
 
-output:
-  format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
-  uniq-by-line: true
-  sort-results: true
+formatters:
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/gizzahub)
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

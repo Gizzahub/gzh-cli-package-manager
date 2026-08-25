@@ -7,11 +7,17 @@ install-tools: install-lint install-fumpt ## Install all development tools
 	@echo "✅ All tools installed"
 
 install-lint: ## Install golangci-lint
-	@echo "Installing golangci-lint $(GOLANGCI_LINT_VERSION)..."
-	@if ! command -v golangci-lint >/dev/null 2>&1; then \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin $(GOLANGCI_LINT_VERSION); \
+	@if [ -x "$(GOLANGCI_LINT_BIN)" ] && \
+		"$(GOLANGCI_LINT_BIN)" version --short 2>/dev/null | grep -qxF "$(GOLANGCI_LINT_BARE)"; then \
+		echo "golangci-lint $(GOLANGCI_LINT_VERSION) already installed: $(GOLANGCI_LINT_BIN)"; \
 	else \
-		echo "golangci-lint already installed"; \
+		echo "Installing golangci-lint $(GOLANGCI_LINT_VERSION) to $(GOLANGCI_LINT_BIN)..."; \
+		mkdir -p "$(GOLANGCI_LINT_DIR)"; \
+		GOBIN="$(GOLANGCI_LINT_DIR)" $(GOINSTALL) github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION); \
+		"$(GOLANGCI_LINT_BIN)" version --short 2>/dev/null | grep -qxF "$(GOLANGCI_LINT_BARE)" || { \
+			echo "golangci-lint installation did not produce $(GOLANGCI_LINT_VERSION): $(GOLANGCI_LINT_BIN)" >&2; \
+			exit 1; \
+		}; \
 	fi
 
 install-fumpt: ## Install gofumpt
