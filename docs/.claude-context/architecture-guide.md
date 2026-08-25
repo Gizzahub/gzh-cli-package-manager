@@ -86,7 +86,7 @@ find pkg cmd -name "*.go" -exec wc -l {} \; | awk '$1 > 500 {print $2 ": " $1 " 
 
 ### Go Version Requirement
 - **Minimum**: Go 1.26.0+
-- **Check**: `make check-go-version`
+- **Check**: `go version`
 
 ## Manual Dependency Injection Pattern
 

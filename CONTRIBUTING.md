@@ -115,8 +115,8 @@ go install github.com/AlekSi/gocov-xml@latest
 git clone https://github.com/gizzahub/gzh-cli-package-manager.git
 cd gzh-cli-package-manager
 
-# Check Go version requirement
-make check-go-version
+# Confirm the selected Go toolchain
+go version
 
 # Download dependencies
 go mod download
@@ -125,7 +125,7 @@ go mod download
 make build
 
 # Verify build
-./bin/pmctl --version
+./build/gz-pm version
 ```
 
 ### 5. Run Tests
@@ -419,7 +419,7 @@ We use `golangci-lint` with strict settings:
 make lint
 
 # Auto-fix issues where possible
-make lint-fix
+golangci-lint run --fix
 ```
 
 **Enabled Linters**:
@@ -618,7 +618,7 @@ When refactoring code, follow these principles:
 **3. Validate Changes**
 - All existing tests must pass
 - No decrease in code coverage
-- Run `make validate` before committing
+- Run `make quality` before committing
 
 **4. Document Patterns**
 - Update this section with new patterns
@@ -759,11 +759,11 @@ set -euo pipefail
 make build
 
 # Test basic update
-output=$(./bin/pmctl update --all --dry-run)
+output=$(./build/gz-pm update --all --dry-run)
 echo "$output" | grep -q "Updating package managers"
 
 # Test JSON output
-json=$(./bin/pmctl update --all --dry-run --output json)
+json=$(./build/gz-pm update --all --dry-run --output json)
 echo "$json" | jq -e '.summary.total_managers > 0'
 
 echo "✅ E2E tests passed"
@@ -1133,7 +1133,7 @@ go test -count=1 ./...  # Disable cache
 **Linter Errors**:
 ```bash
 # Auto-fix where possible
-make lint-fix
+golangci-lint run --fix
 
 # See specific issues
 golangci-lint run --verbose

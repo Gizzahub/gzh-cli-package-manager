@@ -22,9 +22,9 @@ Think of it as a "package manager for package managers" - unified interface for:
 
 | Command | Purpose | Usage |
 |---------|---------|-------|
-| `make build` | Build binary → `bin/gz-pm` | Before testing |
+| `make build` | Build binary → `build/gz-pm` | Before testing |
 | `make test-unit` | Unit tests (fast, no Docker) | Quick validation |
-| `make validate` | fmt + vet + lint + test-unit | Pre-commit |
+| `make quality` | fmt + lint + test | Pre-commit |
 | `make test-coverage` | Full coverage report | Coverage check |
 | `make fmt` | Format code (required) | Before commit |
 | `make lint` | Run golangci-lint | Fix issues |
@@ -40,7 +40,7 @@ Think of it as a "package manager for package managers" - unified interface for:
 ### DO
 - ✅ Use `gzh-cli-core` for common utilities (logger, testutil, errors, config)
 - ✅ Follow Clean Architecture layers (Domain → Application → Infrastructure → Presentation)
-- ✅ Run `make validate` before every commit
+- ✅ Run `make quality` before every commit
 - ✅ Maintain 90%+ test coverage
 - ✅ Keep files < 300 lines (~10KB)
 
@@ -88,9 +88,9 @@ Think of it as a "package manager for package managers" - unified interface for:
    - ⚠️ Violates Clean Architecture
    - ✅ Check: `go list -test -deps ./pkg/domain/... | grep infrastructure`
 
-2. **Skipping `make validate` before commit**
+2. **Skipping `make quality` before commit**
    - ⚠️ CI will fail
-   - ✅ Run: `make validate` (includes fmt + lint + test)
+   - ✅ Run: `make quality` (includes fmt + lint + test)
 
 3. **Adding CGO dependencies**
    - ⚠️ Breaks cross-compilation
