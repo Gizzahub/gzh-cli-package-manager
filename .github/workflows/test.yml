@@ -27,8 +27,51 @@ jobs:
 
     - name: Verify Go version
       run: |
-        go version
-        go version | grep -q "go1.24" || (echo "Go 1.24+ required" && exit 1)
+        # ADR-004 guarantees Go 1.24+ throughout the v1.x lifecycle.
+        # go.mod currently declares a newer version; reconcile that policy drift
+        # in its own change rather than silently changing this support contract.
+        required_major=1
+        required_minor=24
+        required_patch=0
+        installed_go="$(go env GOVERSION)"
+
+        verify_go_version() {
+          local candidate="$1"
+
+          # Require a stable Go release. Development builds and prereleases such
+          # as go1.24rc1 are intentionally rejected for CI reproducibility.
+          if [[ ! "$candidate" =~ ^go(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Expected a stable Go version (go<major>.<minor>.<patch>); found ${candidate:-<missing>}"
+            return 1
+          fi
+
+          local installed_major="${BASH_REMATCH[1]}"
+          local installed_minor="${BASH_REMATCH[2]}"
+          local installed_patch="${BASH_REMATCH[3]}"
+
+          if (( installed_major < required_major || \
+                (installed_major == required_major && installed_minor < required_minor) || \
+                (installed_major == required_major && installed_minor == required_minor && installed_patch < required_patch) )); then
+            echo "Go ${required_major}.${required_minor}.${required_patch}+ required by ADR-004; found $candidate"
+            return 1
+          fi
+
+          echo "Go $candidate satisfies the ADR-004 minimum (${required_major}.${required_minor}.${required_patch})"
+        }
+
+        verify_go_version "$installed_go"
+
+        # Keep the parser and floor comparison covered without relying on a
+        # particular runner image. The negative cases must remain rejected.
+        for candidate in go1.24.0 go1.24.9 go1.26.6 go2.0.0; do
+          verify_go_version "$candidate"
+        done
+        for candidate in go1.23.99 go1.24rc1 go1.26.bad go1.26.6evil go1.26.6.7; do
+          if verify_go_version "$candidate"; then
+            echo "Expected Go version validation to reject $candidate"
+            exit 1
+          fi
+        done
 
     - name: Cache Go modules
       uses: actions/cache@v6
