@@ -4,7 +4,7 @@
 
 ```
 ┌─────────────────────────────────────┐
-│  Presentation (cmd/pm)              │  CLI, input validation, formatting
+│  Presentation (cmd/gz-pm)           │  CLI, input validation, formatting
 │  - Cobra commands                   │
 │  - Output formatters                │
 └──────────────┬──────────────────────┘
@@ -53,7 +53,7 @@
 - Contains: adapters (Homebrew, asdf, npm), repositories, executors
 - Test: Docker-based integration tests (85%+ coverage target)
 
-### 4. Presentation Layer (`cmd/pm/`)
+### 4. Presentation Layer (`cmd/gz-pm/`)
 - Imports: application + infrastructure (for DI only)
 - Contains: CLI commands, input validation, output formatting
 - Thin layer - delegates to application use cases
@@ -93,7 +93,7 @@ find pkg cmd -name "*.go" -exec wc -l {} \; | awk '$1 > 500 {print $2 ": " $1 " 
 ## Manual Dependency Injection Pattern
 
 ```go
-// cmd/pm/main.go
+// cmd/gz-pm/main.go
 func main() {
     // 1. Infrastructure setup
     logger := logger.NewStructuredLogger("gz-pm")

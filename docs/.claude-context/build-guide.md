@@ -3,7 +3,7 @@
 ## Build & Development
 
 ```bash
-# Build binary (outputs to bin/gz-pm)
+# Build binary (outputs to build/gz-pm)
 make build
 
 # Build for all platforms (macOS, Linux, Windows)
@@ -79,7 +79,7 @@ make clean          # Clean artifacts
 ./build/gz-pm version
 
 # Directory structure
-cmd/pm/              # CLI entry point (Presentation)
+cmd/gz-pm/           # CLI entry point (Presentation)
 pkg/domain/          # Business logic (NO external deps)
 pkg/application/     # Use cases (orchestration)
 pkg/infrastructure/  # Adapters, repos (external integrations)

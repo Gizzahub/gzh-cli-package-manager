@@ -22,7 +22,7 @@ type ManagerAdapter interface {
 ### 3. Register in factory
 
 ```go
-// cmd/pm/main.go
+// cmd/gz-pm/main.go
 adapterFactory.Register("newmanager", adapter)
 ```
 
@@ -41,8 +41,8 @@ adapterFactory.Register("newmanager", adapter)
 2. **Create use case** (`pkg/application/`) - orchestration
 3. **Define ports** (`pkg/application/port/`) - interfaces
 4. **Implement adapters** (`pkg/infrastructure/`) - external integrations
-5. **Add CLI command** (`cmd/pm/command/`) - user interface
-6. **Wire dependencies** (`cmd/pm/main.go`) - manual DI
+5. **Add CLI command** (`cmd/gz-pm/command/`) - user interface
+6. **Wire dependencies** (`cmd/gz-pm/main.go`) - manual DI
 
 ## Before Making Changes
 

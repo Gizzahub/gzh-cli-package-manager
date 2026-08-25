@@ -16,7 +16,7 @@ gz-pm update
 gz-pm update --all                      # Explicit all (same as default)
 gz-pm update --manager brew             # Single manager
 gz-pm update --managers brew,asdf,npm   # Multiple specific managers
-pm ctl update --all --dry-run            # Preview changes without executing
+gz-pm update --all --dry-run             # Preview changes without executing
 gz-pm update --all --output json        # Machine-readable JSON output
 ```
 

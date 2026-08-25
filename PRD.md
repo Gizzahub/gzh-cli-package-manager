@@ -513,10 +513,10 @@ gz-pm update --all  # Actually update
 
 **Step 1: Installation** (30 seconds)
 ```bash
-brew install gz-pm
-# OR
 go install github.com/gizzahub/gzh-cli-package-manager/cmd/gz-pm@latest
 ```
+
+Homebrew 설치는 첫 승인 릴리스와 formula 게시 이후 제공할 예정이다.
 
 **Step 2: Status Check** (5 seconds)
 ```bash
