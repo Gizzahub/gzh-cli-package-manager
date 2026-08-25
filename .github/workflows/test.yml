@@ -14,24 +14,23 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        go: ['1.26.6']
+        go: ['1.26.7']
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Set up Go
-      uses: actions/setup-go@v7
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
       with:
         go-version: ${{ matrix.go }}
 
     - name: Verify Go version
       run: |
-        # ADR-004 guarantees Go 1.24+ throughout the v1.x lifecycle. This
-        # regular test job intentionally exercises the fixed Go 1.26.6 toolchain;
-        # the compatibility-go124 job exercises the consumer baseline.
+        # ADR-009 establishes Go 1.26 as the consumer baseline. The regular
+        # test job exercises the latest approved patch release.
         required_major=1
-        required_minor=24
+        required_minor=26
         required_patch=0
         installed_go="$(go env GOVERSION)"
 
@@ -63,10 +62,10 @@ jobs:
 
         # Keep the parser and floor comparison covered without relying on a
         # particular runner image. The negative cases must remain rejected.
-        for candidate in go1.24.0 go1.24.9 go1.26.6 go2.0.0; do
+        for candidate in go1.26.0 go1.26.7 go1.27.0 go2.0.0; do
           verify_go_version "$candidate"
         done
-        for candidate in go1.23.99 go1.24rc1 go1.26.bad go1.26.6evil go1.26.6.7; do
+        for candidate in go1.25.99 go1.26rc1 go1.26.bad go1.26.7evil go1.26.7.8; do
           if verify_go_version "$candidate"; then
             echo "Expected Go version validation to reject $candidate"
             exit 1
@@ -74,7 +73,7 @@ jobs:
         done
 
     - name: Cache Go modules
-      uses: actions/cache@v6
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: |
           ~/.cache/go-build
@@ -101,7 +100,7 @@ jobs:
       run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v7
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
       with:
         files: ./coverage.txt
         flags: unittests
@@ -115,60 +114,21 @@ jobs:
         # the action ever changes this default.
         fail_ci_if_error: false
 
-  compatibility-go124:
-    name: Go 1.24.11 compatibility
-    runs-on: ubuntu-latest
-    env:
-      # Do not let the newer toolchain directive auto-download a compiler:
-      # this job proves the advertised consumer baseline itself works.
-      GOTOOLCHAIN: local
-      GOFLAGS: -mod=readonly
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v7
-
-    - name: Set up Go 1.24.11
-      uses: actions/setup-go@v7
-      with:
-        go-version: '1.24.11'
-
-    - name: Verify exact compatibility toolchain
-      run: test "$(go env GOVERSION)" = 'go1.24.11'
-
-    - name: Download dependencies without changing module files
-      run: go mod download
-
-    - name: Verify dependencies
-      run: go mod verify
-
-    - name: Build with Go 1.24.11
-      run: go build ./...
-
-    - name: Test with Go 1.24.11
-      run: go test ./...
-
-    - name: Vet with Go 1.24.11
-      run: go vet ./...
-
-    - name: Verify module files stayed read-only
-      run: git diff --exit-code -- go.mod go.sum
-
   lint:
     name: Lint
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Set up Go
-      uses: actions/setup-go@v7
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
       with:
-        go-version: '1.26.6'
+        go-version: '1.26.7'
 
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v9
+      uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
       with:
         version: v2.13.1
         args: --timeout=5m
@@ -177,9 +137,9 @@ jobs:
     name: Vulncheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
-          go-version: '1.26.6'
+          go-version: '1.26.7'
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

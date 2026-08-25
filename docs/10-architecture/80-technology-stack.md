@@ -4,7 +4,7 @@
 
 ### 8.1 Core Technologies
 
-- **Language**: Go 1.24.0+ (pure Go, no CGO)
+- **Language**: Go 1.26.0+ (pure Go, no CGO)
 - **CLI Framework**: [Cobra](https://github.com/spf13/cobra)
 - **Configuration**: YAML ([gopkg.in/yaml.v3](https://pkg.go.dev/gopkg.in/yaml.v3))
 - **Logging**: [uber-go/zap](https://github.com/uber-go/zap) (structured logging)
@@ -22,7 +22,7 @@
 // go.mod
 module github.com/gizzahub/gzh-cli-package-manager
 
-go 1.24
+go 1.26
 
 require (
     github.com/spf13/cobra v1.9.1

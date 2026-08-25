@@ -32,7 +32,7 @@ This project follows standard open-source community guidelines:
 
 ### Prerequisites
 
-- **Go 1.24.0+** (required - see ADR-004)
+- **Go 1.26.0+** (required - see ADR-009)
 - **Git** for version control
 - **Make** for build automation
 - **Docker** (optional, for integration tests)
@@ -61,23 +61,23 @@ make install
 
 ## Development Setup
 
-### 1. Install Go 1.24+
+### 1. Install Go 1.26+
 
 **macOS (Homebrew)**:
 ```bash
-brew install go@1.24
+brew install go@1.26
 ```
 
 **Linux**:
 ```bash
-wget https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.24.0.linux-amd64.tar.gz
+wget https://go.dev/dl/go1.26.7.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.26.7.linux-amd64.tar.gz
 export PATH=$PATH:/usr/local/go/bin
 ```
 
 **Verify Installation**:
 ```bash
-go version  # Should show go1.24 or higher
+go version  # Should show go1.26 or higher
 ```
 
 ### 2. Set Up Your Environment
@@ -1114,7 +1114,7 @@ We follow [Semantic Versioning](https://semver.org/):
 **Build Fails**:
 ```bash
 # Check Go version
-go version  # Must be 1.24+
+go version  # Must be 1.26+
 
 # Clean and rebuild
 make clean

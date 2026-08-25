@@ -470,7 +470,7 @@ pmctl update --all  # Actually update
 - Architecture: amd64, arm64 (Apple Silicon)
 
 **Go Version**:
-- Minimum: Go 1.24.0
+- Minimum: Go 1.26.0
 - No CGO dependencies (pure Go)
 - Cross-compilation support
 
@@ -757,7 +757,7 @@ pmctl update --all  # Execute
 - **Requirements**: `/REQUIREMENTS.md`
 - **Architecture**: `/ARCHITECTURE.md`
 - **Specifications**: `/docs/specifications/`
-- **Original gzh-cli**: `/home/archmagece/myopen/gizzahub/gzh-cli/`
+- **Original gzh-cli**: [Gizzahub/gzh-cli](https://github.com/Gizzahub/gzh-cli)
 
 ---
 

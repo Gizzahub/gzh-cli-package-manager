@@ -2,7 +2,7 @@
 
 > **Unified package manager orchestration for multi-platform development environments**
 
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go)](https://go.dev)
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat&logo=go)](https://go.dev)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -234,7 +234,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
 ### Prerequisites
 
-- Go 1.24+ (required)
+- Go 1.26+ (required)
 - Make
 - Docker (for integration tests)
 

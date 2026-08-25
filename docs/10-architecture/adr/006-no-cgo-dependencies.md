@@ -3,7 +3,7 @@
 **Date**: 2025-01-27
 **Status**: Accepted
 **Deciders**: Project Team
-**Related**: ADR-004 (Go 1.24+ Requirement), ADR-001 (Standalone Extraction)
+**Related**: ADR-009 (Go 1.26+ Requirement), ADR-001 (Standalone Extraction)
 
 ---
 
@@ -105,7 +105,7 @@ Without CGO (GitHub Actions):
 ```yaml
 - uses: actions/setup-go@v5
   with:
-    go-version: '1.24'
+    go-version: '1.26.7'
 - run: make build  # Just works
 ```
 
@@ -352,7 +352,7 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/setup-go@v5
       with:
-        go-version: '1.24'
+        go-version: '1.26.7'
 
     - name: Build
       run: make build

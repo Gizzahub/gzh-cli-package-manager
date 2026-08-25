@@ -14,7 +14,9 @@ jobs:
     steps:
       - name: Fetch Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@v3
+        # pull_request_target runs with base-repository permissions. Pin the
+        # only third-party action to an immutable revision before going public.
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 

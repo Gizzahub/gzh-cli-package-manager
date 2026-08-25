@@ -1,7 +1,7 @@
 # ADR-004: Go 1.24+ Requirement
 
 **Date**: 2025-01-27
-**Status**: Accepted
+**Status**: Superseded by [ADR-009](009-go-1.26-version-requirement.md)
 **Deciders**: Project Team
 **Related**: ADR-006 (No CGO Dependencies)
 

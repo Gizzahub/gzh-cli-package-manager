@@ -424,7 +424,7 @@ apt          🚫         ⛔         N/A        N/A (macOS only)
 **Phase**: MVP
 
 **Requirements**:
-- Minimum: Go 1.24.0
+- Minimum: Go 1.26.0
 - No CGO dependencies (pure Go)
 - Cross-compilation support for all platforms
 
@@ -644,7 +644,7 @@ Before v1.0 release:
 - **Test Scenarios**: `/docs/specifications/test-scenarios.md`
 - **Architecture**: `/ARCHITECTURE.md`
 - **ADRs**: `/docs/10-architecture/adr/`
-- **Original gzh-cli specs**: `/home/archmagece/myopen/gizzahub/gzh-cli/specs/cli/pm/`
+- **Original gzh-cli specs**: [Gizzahub/gzh-cli](https://github.com/Gizzahub/gzh-cli)
 
 ---
 

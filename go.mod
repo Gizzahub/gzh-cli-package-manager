@@ -1,10 +1,10 @@
 module github.com/gizzahub/gzh-cli-package-manager
 
-// The module remains consumable by Go 1.24.0+. The toolchain below recommends
-// the development compiler when a developer's default Go version is older.
-go 1.24.0
+// Go 1.26 is the supported consumer baseline. The toolchain directive pins the
+// latest approved patch release for development and CI reproducibility.
+go 1.26.0
 
-toolchain go1.26.6
+toolchain go1.26.7
 
 require (
 	github.com/spf13/cobra v1.10.2
