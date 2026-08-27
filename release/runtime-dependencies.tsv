@@ -1,0 +1,19 @@
+# runtime-dependencies/v1
+# main-package: ./cmd/gz-pm
+# columns: goos<TAB>goarch<TAB>module<TAB>version
+linux	amd64	github.com/spf13/cobra	v1.10.2
+linux	amd64	github.com/spf13/pflag	v1.0.9
+linux	amd64	gopkg.in/yaml.v3	v3.0.1
+linux	arm64	github.com/spf13/cobra	v1.10.2
+linux	arm64	github.com/spf13/pflag	v1.0.9
+linux	arm64	gopkg.in/yaml.v3	v3.0.1
+darwin	amd64	github.com/spf13/cobra	v1.10.2
+darwin	amd64	github.com/spf13/pflag	v1.0.9
+darwin	amd64	gopkg.in/yaml.v3	v3.0.1
+darwin	arm64	github.com/spf13/cobra	v1.10.2
+darwin	arm64	github.com/spf13/pflag	v1.0.9
+darwin	arm64	gopkg.in/yaml.v3	v3.0.1
+windows	amd64	github.com/inconshreveable/mousetrap	v1.1.0
+windows	amd64	github.com/spf13/cobra	v1.10.2
+windows	amd64	github.com/spf13/pflag	v1.0.9
+windows	amd64	gopkg.in/yaml.v3	v3.0.1

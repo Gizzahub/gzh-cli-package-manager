@@ -8,6 +8,7 @@
 # Include modular makefiles
 include .make/vars.mk
 include .make/build.mk
+include .make/release.mk
 include .make/deps.mk
 include .make/test.mk
 include .make/quality.mk
