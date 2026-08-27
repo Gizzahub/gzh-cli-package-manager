@@ -39,8 +39,8 @@ func TestQuarantinePurger_DryRunAndPurge(t *testing.T) {
 	if summary.PackagesRemoved != 1 || summary.SpaceFreedMB != 12.5 {
 		t.Fatalf("dry-run summary: %+v", summary)
 	}
-	if _, err := repo.Get(ctx, "old-pkg", "1.0.0", "homebrew"); err != nil {
-		t.Fatalf("dry-run should keep package: %v", err)
+	if _, lookupErr := repo.Get(ctx, "old-pkg", "1.0.0", "homebrew"); lookupErr != nil {
+		t.Fatalf("dry-run should keep package: %v", lookupErr)
 	}
 
 	// Actual purge
