@@ -317,8 +317,8 @@ func runPerManagerList(ctx context.Context, spec perManagerSpec, format string, 
 	if err != nil {
 		return err
 	}
-	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
-		return err
+	if detectErr := ensureDetected(ctx, adapter, spec.Use); detectErr != nil {
+		return detectErr
 	}
 
 	packages, err := adapter.ListPackages(ctx)
@@ -335,8 +335,8 @@ func runPerManagerSearch(ctx context.Context, spec perManagerSpec, query, format
 	if err != nil {
 		return err
 	}
-	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
-		return err
+	if detectErr := ensureDetected(ctx, adapter, spec.Use); detectErr != nil {
+		return detectErr
 	}
 
 	searcher, ok := adapter.(adapterm.Searcher)
@@ -416,8 +416,8 @@ func runPerManagerUpgrade(ctx context.Context, spec perManagerSpec, pkgID string
 	if err != nil {
 		return err
 	}
-	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
-		return err
+	if detectErr := ensureDetected(ctx, adapter, spec.Use); detectErr != nil {
+		return detectErr
 	}
 
 	opts := adapterm.UpdateOptions{
@@ -460,8 +460,8 @@ func runWingetSourceList(ctx context.Context, spec perManagerSpec, format string
 	if err != nil {
 		return err
 	}
-	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
-		return err
+	if detectErr := ensureDetected(ctx, adapter, spec.Use); detectErr != nil {
+		return detectErr
 	}
 
 	lister, ok := adapter.(adapterm.SourceLister)
@@ -482,8 +482,8 @@ func runScoopBucketList(ctx context.Context, spec perManagerSpec, format string,
 	if err != nil {
 		return err
 	}
-	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
-		return err
+	if detectErr := ensureDetected(ctx, adapter, spec.Use); detectErr != nil {
+		return detectErr
 	}
 
 	bm, ok := adapter.(adapterm.BucketManager)
