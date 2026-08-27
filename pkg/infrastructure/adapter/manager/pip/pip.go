@@ -105,8 +105,8 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	}
 
 	var installed []pipPackage
-	if err := cmdutil.UnmarshalJSON(result, &installed, "parse pip packages"); err != nil {
-		return nil, err
+	if parseErr := cmdutil.UnmarshalJSON(result, &installed, "parse pip packages"); parseErr != nil {
+		return nil, parseErr
 	}
 
 	// Get outdated packages
