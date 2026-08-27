@@ -66,8 +66,8 @@ func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 // GetBinaryPath returns the path to the asdf binary.
 func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, whichCommand, asdfCommand)
-	if err := cmdutil.CheckResult(result, err, "locate asdf binary"); err != nil {
-		return "", err
+	if checkErr := cmdutil.CheckResult(result, err, "locate asdf binary"); checkErr != nil {
+		return "", checkErr
 	}
 	return cmdutil.ExtractStdout(result), nil
 }
