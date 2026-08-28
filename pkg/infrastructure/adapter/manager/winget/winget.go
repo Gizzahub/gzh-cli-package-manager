@@ -45,8 +45,8 @@ func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 // GetVersion retrieves the version of the installed winget.
 func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, wingetCommand, "--version")
-	if err := cmdutil.CheckResult(result, err, "get winget version"); err != nil {
-		return "", err
+	if resultErr := cmdutil.CheckResult(result, err, "get winget version"); resultErr != nil {
+		return "", resultErr
 	}
 
 	// Output format: "v1.6.3482\n" or similar
@@ -58,8 +58,8 @@ func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 	// On Windows, use 'where' command instead of 'which'
 	result, err := a.executor.Execute(ctx, "where", wingetCommand)
-	if err := cmdutil.CheckResult(result, err, "find winget binary"); err != nil {
-		return "", err
+	if resultErr := cmdutil.CheckResult(result, err, "find winget binary"); resultErr != nil {
+		return "", resultErr
 	}
 
 	// 'where' may return multiple lines; take the first one
@@ -96,8 +96,8 @@ type wingetListOutput struct {
 func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	// Use winget export to get JSON list of installed packages
 	result, err := a.executor.Execute(ctx, wingetCommand, "list", "--source", "winget", "--disable-interactivity")
-	if err := cmdutil.CheckResult(result, err, "list winget packages"); err != nil {
-		return nil, err
+	if resultErr := cmdutil.CheckResult(result, err, "list winget packages"); resultErr != nil {
+		return nil, resultErr
 	}
 
 	// Try to parse as JSON first
@@ -199,8 +199,8 @@ func (a *Adapter) Search(ctx context.Context, query string) ([]manager.Package, 
 	}
 
 	result, err := a.executor.Execute(ctx, wingetCommand, "search", query, "--disable-interactivity")
-	if err := cmdutil.CheckResult(result, err, "search winget packages"); err != nil {
-		return nil, err
+	if resultErr := cmdutil.CheckResult(result, err, "search winget packages"); resultErr != nil {
+		return nil, resultErr
 	}
 
 	// Prefer JSON when available; fall back to text table parsing.
@@ -284,8 +284,8 @@ func (a *Adapter) Install(ctx context.Context, pkgID string, dryRun bool) error 
 		"--accept-package-agreements",
 		"--accept-source-agreements",
 	)
-	if err := cmdutil.CheckResult(result, err, "install winget package "+pkgID); err != nil {
-		return err
+	if resultErr := cmdutil.CheckResult(result, err, "install winget package "+pkgID); resultErr != nil {
+		return resultErr
 	}
 	return nil
 }
@@ -311,8 +311,8 @@ func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) erro
 		"uninstall", "--id", pkgID,
 		"--disable-interactivity",
 	)
-	if err := cmdutil.CheckResult(result, err, "uninstall winget package "+pkgID); err != nil {
-		return err
+	if resultErr := cmdutil.CheckResult(result, err, "uninstall winget package "+pkgID); resultErr != nil {
+		return resultErr
 	}
 	return nil
 }
@@ -320,8 +320,8 @@ func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) erro
 // ListSources returns configured winget sources via `winget source list`.
 func (a *Adapter) ListSources(ctx context.Context) ([]adapterm.Source, error) {
 	result, err := a.executor.Execute(ctx, wingetCommand, "source", "list")
-	if err := cmdutil.CheckResult(result, err, "list winget sources"); err != nil {
-		return nil, err
+	if resultErr := cmdutil.CheckResult(result, err, "list winget sources"); resultErr != nil {
+		return nil, resultErr
 	}
 	return parseWingetSources(result.Stdout), nil
 }
