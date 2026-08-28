@@ -39,8 +39,8 @@ func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 // GetVersion retrieves the version of the installed Pacman.
 func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "pacman", "--version")
-	if err := cmdutil.CheckResult(result, err, "get pacman version"); err != nil {
-		return "", err
+	if checkErr := cmdutil.CheckResult(result, err, "get pacman version"); checkErr != nil {
+		return "", checkErr
 	}
 
 	// Output format: " .--.                  Pacman v7.0.0 - libalpm v15.0.0"
@@ -57,8 +57,8 @@ func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 // GetBinaryPath returns the path to the Pacman binary.
 func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "which", "pacman")
-	if err := cmdutil.CheckResult(result, err, "find pacman binary"); err != nil {
-		return "", err
+	if checkErr := cmdutil.CheckResult(result, err, "find pacman binary"); checkErr != nil {
+		return "", checkErr
 	}
 	return cmdutil.ExtractStdout(result), nil
 }
@@ -73,8 +73,8 @@ func (a *Adapter) GetConfigPath(_ context.Context) (string, error) {
 func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	// Get list of installed packages with versions
 	result, err := a.executor.Execute(ctx, "pacman", "-Q")
-	if err := cmdutil.CheckResult(result, err, "list pacman packages"); err != nil {
-		return nil, err
+	if checkErr := cmdutil.CheckResult(result, err, "list pacman packages"); checkErr != nil {
+		return nil, checkErr
 	}
 
 	// Get list of packages with available updates
