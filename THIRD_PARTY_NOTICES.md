@@ -49,6 +49,6 @@ payload mapping before license texts are copied or release packaging changes.
 | `github.com/stretchr/testify` | v1.12.1 | Test only | MIT |
 | `go.yaml.in/yaml/v3` | v3.0.5 | Test only | MIT and Apache-2.0; upstream NOTICE applies |
 
-The authoritative license and NOTICE texts are distributed in each module's
-source archive. This inventory is attribution metadata, not a replacement for
-those texts in a binary release bundle.
+The cited upstream LICENSE and NOTICE files are sourced from the modules'
+source archives. This inventory, and those upstream files alone where noted,
+are not a replacement for all texts required in a binary release bundle.
