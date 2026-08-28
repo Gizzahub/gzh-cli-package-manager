@@ -37,8 +37,8 @@ func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 // GetVersion retrieves the version of the installed Homebrew.
 func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "brew", "--version")
-	if err := cmdutil.CheckResult(result, err, "get brew version"); err != nil {
-		return "", err
+	if resultErr := cmdutil.CheckResult(result, err, "get brew version"); resultErr != nil {
+		return "", resultErr
 	}
 
 	// Output format: "Homebrew 4.2.1\n..."
@@ -53,8 +53,8 @@ func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 // GetBinaryPath returns the path to the Homebrew binary.
 func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "which", "brew")
-	if err := cmdutil.CheckResult(result, err, "find brew binary"); err != nil {
-		return "", err
+	if resultErr := cmdutil.CheckResult(result, err, "find brew binary"); resultErr != nil {
+		return "", resultErr
 	}
 	return cmdutil.ExtractStdout(result), nil
 }
@@ -62,8 +62,8 @@ func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 // GetConfigPath returns the path to the Homebrew configuration.
 func (a *Adapter) GetConfigPath(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "brew", "--prefix")
-	if err := cmdutil.CheckResult(result, err, "get brew prefix"); err != nil {
-		return "", err
+	if resultErr := cmdutil.CheckResult(result, err, "get brew prefix"); resultErr != nil {
+		return "", resultErr
 	}
 	return cmdutil.ExtractStdout(result), nil
 }
@@ -72,8 +72,8 @@ func (a *Adapter) GetConfigPath(ctx context.Context) (string, error) {
 func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	// Use brew info --json=v2 --installed for detailed package information
 	result, err := a.executor.Execute(ctx, "brew", "info", "--json=v2", "--installed")
-	if err := cmdutil.CheckResult(result, err, "list brew packages"); err != nil {
-		return nil, err
+	if resultErr := cmdutil.CheckResult(result, err, "list brew packages"); resultErr != nil {
+		return nil, resultErr
 	}
 
 	// Parse JSON output
