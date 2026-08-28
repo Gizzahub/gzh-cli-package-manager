@@ -39,8 +39,8 @@ func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 // GetVersion retrieves the version of the installed NPM.
 func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "npm", "--version")
-	if err := cmdutil.CheckResult(result, err, "get npm version"); err != nil {
-		return "", err
+	if resultErr := cmdutil.CheckResult(result, err, "get npm version"); resultErr != nil {
+		return "", resultErr
 	}
 	return cmdutil.ExtractStdout(result), nil
 }
@@ -48,8 +48,8 @@ func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 // GetBinaryPath returns the path to the NPM binary.
 func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, "which", "npm")
-	if err := cmdutil.CheckResult(result, err, "find npm binary"); err != nil {
-		return "", err
+	if resultErr := cmdutil.CheckResult(result, err, "find npm binary"); resultErr != nil {
+		return "", resultErr
 	}
 	return cmdutil.ExtractStdout(result), nil
 }
@@ -58,8 +58,8 @@ func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 func (a *Adapter) GetConfigPath(ctx context.Context) (string, error) {
 	// Get npm config prefix (global install location)
 	result, err := a.executor.Execute(ctx, "npm", "config", "get", "prefix")
-	if err := cmdutil.CheckResult(result, err, "get npm config prefix"); err != nil {
-		return "", err
+	if resultErr := cmdutil.CheckResult(result, err, "get npm config prefix"); resultErr != nil {
+		return "", resultErr
 	}
 	return cmdutil.ExtractStdout(result), nil
 }
@@ -68,8 +68,8 @@ func (a *Adapter) GetConfigPath(ctx context.Context) (string, error) {
 func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	// Get list of globally installed packages
 	result, err := a.executor.Execute(ctx, "npm", "list", "-g", "--depth=0", "--json")
-	if err := cmdutil.CheckResult(result, err, "list npm packages"); err != nil {
-		return nil, err
+	if resultErr := cmdutil.CheckResult(result, err, "list npm packages"); resultErr != nil {
+		return nil, resultErr
 	}
 
 	// Parse JSON output
@@ -79,8 +79,8 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 		} `json:"dependencies"`
 	}
 
-	if err := cmdutil.UnmarshalJSON(result, &npmList, "parse npm packages"); err != nil {
-		return nil, err
+	if resultErr := cmdutil.UnmarshalJSON(result, &npmList, "parse npm packages"); resultErr != nil {
+		return nil, resultErr
 	}
 
 	// Get outdated packages
