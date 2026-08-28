@@ -45,8 +45,8 @@ func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 // GetVersion retrieves the version of the installed Chocolatey.
 func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, chocoCommand, "--version")
-	if err := cmdutil.CheckResult(result, err, "get chocolatey version"); err != nil {
-		return "", err
+	if resultErr := cmdutil.CheckResult(result, err, "get chocolatey version"); resultErr != nil {
+		return "", resultErr
 	}
 
 	// Output format: "2.2.2" or "2.2.2\n"
@@ -61,8 +61,8 @@ func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 	// On Windows, use 'where' command
 	result, err := a.executor.Execute(ctx, "where", chocoCommand)
-	if err := cmdutil.CheckResult(result, err, "find chocolatey binary"); err != nil {
-		return "", err
+	if resultErr := cmdutil.CheckResult(result, err, "find chocolatey binary"); resultErr != nil {
+		return "", resultErr
 	}
 
 	// 'where' may return multiple lines; take the first one
@@ -88,8 +88,8 @@ func (a *Adapter) GetConfigPath(_ context.Context) (string, error) {
 func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	// Use 'choco list -r' for machine-readable output
 	result, err := a.executor.Execute(ctx, chocoCommand, "list", "-r")
-	if err := cmdutil.CheckResult(result, err, "list chocolatey packages"); err != nil {
-		return nil, err
+	if resultErr := cmdutil.CheckResult(result, err, "list chocolatey packages"); resultErr != nil {
+		return nil, resultErr
 	}
 
 	return a.parseListOutput(result), nil
@@ -131,8 +131,8 @@ func (a *Adapter) Search(ctx context.Context, query string) ([]manager.Package, 
 
 	// Machine-readable: package|version per line
 	result, err := a.executor.Execute(ctx, chocoCommand, "search", query, "-r")
-	if err := cmdutil.CheckResult(result, err, "search chocolatey packages"); err != nil {
-		return nil, err
+	if resultErr := cmdutil.CheckResult(result, err, "search chocolatey packages"); resultErr != nil {
+		return nil, resultErr
 	}
 
 	packages := a.parseListOutput(result)
@@ -160,8 +160,8 @@ func (a *Adapter) Install(ctx context.Context, pkgID string, dryRun bool) error 
 	}
 
 	result, err := a.executor.Execute(ctx, chocoCommand, "install", pkgID, "-y")
-	if err := cmdutil.CheckResult(result, err, "install chocolatey package "+pkgID); err != nil {
-		return wrapElevationError(err)
+	if resultErr := cmdutil.CheckResult(result, err, "install chocolatey package "+pkgID); resultErr != nil {
+		return wrapElevationError(resultErr)
 	}
 	return nil
 }
@@ -183,8 +183,8 @@ func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) erro
 	}
 
 	result, err := a.executor.Execute(ctx, chocoCommand, "uninstall", pkgID, "-y")
-	if err := cmdutil.CheckResult(result, err, "uninstall chocolatey package "+pkgID); err != nil {
-		return wrapElevationError(err)
+	if resultErr := cmdutil.CheckResult(result, err, "uninstall chocolatey package "+pkgID); resultErr != nil {
+		return wrapElevationError(resultErr)
 	}
 	return nil
 }
