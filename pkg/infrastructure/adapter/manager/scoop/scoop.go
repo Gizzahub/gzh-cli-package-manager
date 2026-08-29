@@ -46,8 +46,8 @@ func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 // GetVersion retrieves the version of the installed Scoop.
 func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 	result, err := a.executor.Execute(ctx, scoopCommand, "--version")
-	if err := cmdutil.CheckResult(result, err, "get scoop version"); err != nil {
-		return "", err
+	if resultErr := cmdutil.CheckResult(result, err, "get scoop version"); resultErr != nil {
+		return "", resultErr
 	}
 
 	// Output format varies, but typically includes version info
@@ -76,8 +76,8 @@ func (a *Adapter) GetVersion(ctx context.Context) (string, error) {
 func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 	// On Windows, use 'where' command
 	result, err := a.executor.Execute(ctx, "where", scoopCommand)
-	if err := cmdutil.CheckResult(result, err, "find scoop binary"); err != nil {
-		return "", err
+	if resultErr := cmdutil.CheckResult(result, err, "find scoop binary"); resultErr != nil {
+		return "", resultErr
 	}
 
 	// 'where' may return multiple lines; take the first one
@@ -107,8 +107,8 @@ func (a *Adapter) GetConfigPath(_ context.Context) (string, error) {
 func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	// Use 'scoop list' to get installed packages
 	result, err := a.executor.Execute(ctx, scoopCommand, "list")
-	if err := cmdutil.CheckResult(result, err, "list scoop packages"); err != nil {
-		return nil, err
+	if resultErr := cmdutil.CheckResult(result, err, "list scoop packages"); resultErr != nil {
+		return nil, resultErr
 	}
 
 	return a.parseListOutput(result), nil
@@ -163,8 +163,8 @@ func (a *Adapter) Search(ctx context.Context, query string) ([]manager.Package, 
 	}
 
 	result, err := a.executor.Execute(ctx, scoopCommand, "search", query)
-	if err := cmdutil.CheckResult(result, err, "search scoop packages"); err != nil {
-		return nil, err
+	if resultErr := cmdutil.CheckResult(result, err, "search scoop packages"); resultErr != nil {
+		return nil, resultErr
 	}
 
 	return a.parseSearchOutput(result), nil
@@ -292,8 +292,8 @@ func (a *Adapter) Install(ctx context.Context, pkgID string, dryRun bool) error 
 	}
 
 	result, err := a.executor.Execute(ctx, scoopCommand, "install", pkgID)
-	if err := cmdutil.CheckResult(result, err, "install scoop package "+pkgID); err != nil {
-		return err
+	if resultErr := cmdutil.CheckResult(result, err, "install scoop package "+pkgID); resultErr != nil {
+		return resultErr
 	}
 	return nil
 }
@@ -315,8 +315,8 @@ func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) erro
 	}
 
 	result, err := a.executor.Execute(ctx, scoopCommand, "uninstall", pkgID)
-	if err := cmdutil.CheckResult(result, err, "uninstall scoop package "+pkgID); err != nil {
-		return err
+	if resultErr := cmdutil.CheckResult(result, err, "uninstall scoop package "+pkgID); resultErr != nil {
+		return resultErr
 	}
 	return nil
 }
@@ -324,8 +324,8 @@ func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) erro
 // ListBuckets returns configured Scoop buckets via `scoop bucket list`.
 func (a *Adapter) ListBuckets(ctx context.Context) ([]adapterm.Bucket, error) {
 	result, err := a.executor.Execute(ctx, scoopCommand, "bucket", "list")
-	if err := cmdutil.CheckResult(result, err, "list scoop buckets"); err != nil {
-		return nil, err
+	if resultErr := cmdutil.CheckResult(result, err, "list scoop buckets"); resultErr != nil {
+		return nil, resultErr
 	}
 	return parseScoopBuckets(result.Stdout), nil
 }
@@ -347,8 +347,8 @@ func (a *Adapter) AddBucket(ctx context.Context, name, url string) error {
 		output.Field{Key: "url", Value: url})
 
 	result, err := a.executor.Execute(ctx, scoopCommand, args...)
-	if err := cmdutil.CheckResult(result, err, "add scoop bucket "+name); err != nil {
-		return err
+	if resultErr := cmdutil.CheckResult(result, err, "add scoop bucket "+name); resultErr != nil {
+		return resultErr
 	}
 	return nil
 }
@@ -364,8 +364,8 @@ func (a *Adapter) RemoveBucket(ctx context.Context, name string) error {
 		output.Field{Key: "name", Value: name})
 
 	result, err := a.executor.Execute(ctx, scoopCommand, "bucket", "rm", name)
-	if err := cmdutil.CheckResult(result, err, "remove scoop bucket "+name); err != nil {
-		return err
+	if resultErr := cmdutil.CheckResult(result, err, "remove scoop bucket "+name); resultErr != nil {
+		return resultErr
 	}
 	return nil
 }
