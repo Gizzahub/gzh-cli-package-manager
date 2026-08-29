@@ -165,7 +165,7 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	result, err := a.executor.Execute(ctx, asdfCommand, "version")
 	if err != nil || result.ExitCode != 0 {
 		a.logger.Warn(ctx, "Failed to run asdf version", output.Field{Key: "error", Value: err})
-		return manager.StatusDegraded, nil
+		return manager.StatusDegraded, nil //nolint:nilerr // CheckHealth reports probe failures as degraded status.
 	}
 
 	// Check if asdf data directory exists

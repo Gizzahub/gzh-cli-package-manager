@@ -24,7 +24,9 @@ type Adapter interface {
 	// ListPackages retrieves all packages managed by this manager.
 	ListPackages(ctx context.Context) ([]manager.Package, error)
 
-	// CheckHealth performs health checks on the package manager.
+	// CheckHealth performs best-effort health checks on the package manager.
+	// Probe failures are reported as StatusDegraded with a nil error; callers
+	// should use the returned status, rather than error, for health state.
 	CheckHealth(ctx context.Context) (manager.Status, error)
 
 	// Update performs update operations on the package manager and its packages.

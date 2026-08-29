@@ -182,7 +182,7 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	if err != nil {
 		a.logger.Warn(ctx, "Failed to check winget sources",
 			output.Field{Key: "error", Value: err.Error()})
-		return manager.StatusDegraded, nil
+		return manager.StatusDegraded, nil //nolint:nilerr // CheckHealth reports probe failures as degraded status.
 	}
 
 	if result.ExitCode == 0 {

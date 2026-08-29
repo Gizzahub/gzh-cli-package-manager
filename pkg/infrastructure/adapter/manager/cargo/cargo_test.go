@@ -260,6 +260,14 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			want:    manager.StatusDegraded,
 			wantErr: false,
 		},
+		{
+			name: "executor error reports degraded status",
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+				return nil, errors.New("command failed")
+			},
+			want:    manager.StatusDegraded,
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

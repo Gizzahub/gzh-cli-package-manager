@@ -158,7 +158,7 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	checkResult, err := a.executor.Execute(ctx, cmd, checkCommand)
 	if err != nil {
 		a.logger.Warn(ctx, "Failed to run pip check", output.Field{Key: "error", Value: err.Error()})
-		return manager.StatusDegraded, nil
+		return manager.StatusDegraded, nil //nolint:nilerr // CheckHealth reports probe failures as degraded status.
 	}
 
 	if checkResult.ExitCode != 0 {
