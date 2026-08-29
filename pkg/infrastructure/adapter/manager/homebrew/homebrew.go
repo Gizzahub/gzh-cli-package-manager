@@ -211,7 +211,7 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 	if err != nil {
 		a.logger.Warn(ctx, "brew upgrade failed", output.Field{Key: "error", Value: err.Error()})
 		result.Message = "Homebrew updated, but package upgrade failed"
-		// Don't fail completely if upgrade fails
+		//nolint:nilerr // brew update succeeded; package upgrades are a non-fatal partial success.
 		return result, nil
 	}
 
