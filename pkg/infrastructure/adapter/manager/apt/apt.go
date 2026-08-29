@@ -41,7 +41,7 @@ func NewAdapter(executor output.CommandExecutor, logger output.Logger) *Adapter 
 func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 	result, err := a.executor.Execute(ctx, whichCommand, aptCommand)
 	if err != nil || result.ExitCode != 0 {
-		return false, nil
+		return false, nil //nolint:nilerr // Detect treats probe failures as unavailable.
 	}
 	return true, nil
 }

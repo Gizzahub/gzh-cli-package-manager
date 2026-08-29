@@ -44,6 +44,14 @@ func TestAdapter_Detect(t *testing.T) {
 			want:    false,
 			wantErr: false,
 		},
+		{
+			name: "executor error reports cargo unavailable",
+			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+				return nil, errors.New("command failed")
+			},
+			want:    false,
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

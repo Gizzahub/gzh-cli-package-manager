@@ -61,7 +61,7 @@ func (a *Adapter) resolveUserHomeDir() (string, error) {
 func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 	result, err := a.executor.Execute(ctx, whichCommand, cargoCommand)
 	if err != nil || result.ExitCode != 0 {
-		return false, nil
+		return false, nil //nolint:nilerr // Detect treats probe failures as unavailable.
 	}
 	return true, nil
 }
