@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 
@@ -17,6 +18,16 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/winget"
 	"github.com/spf13/cobra"
 )
+
+type failingWriter struct {
+	err error
+}
+
+const packagesOutputContext = "write packages output"
+
+func (w failingWriter) Write(_ []byte) (int, error) {
+	return 0, w.err
+}
 
 // installTestAdapters wires real adapters backed by a mock executor for CLI tests.
 func installTestAdapters(t *testing.T, execFunc testutil.ExecutorFunc) {
@@ -464,5 +475,76 @@ func TestPerManager_ChocolateyUpgradeDryRun(t *testing.T) {
 	}
 	if !strings.Contains(out, "Dry-run") {
 		t.Errorf("output = %q", out)
+	}
+}
+
+func TestPerManagerOutputWriteErrorsPreserveCauseAndContext(t *testing.T) {
+	writerErr := errors.New("writer failed")
+	tests := []struct {
+		write   func(io.Writer) error
+		name    string
+		context string
+	}{
+		{
+			name:    "sources JSON",
+			context: "write sources output",
+			write: func(out io.Writer) error {
+				return writeSources(out, "json", []adapterm.Source{{Name: "winget"}})
+			},
+		},
+		{
+			name:    "sources empty text",
+			context: "write sources output",
+			write: func(out io.Writer) error {
+				return writeSources(out, "text", nil)
+			},
+		},
+		{
+			name:    "buckets JSON",
+			context: "write buckets output",
+			write: func(out io.Writer) error {
+				return writeBuckets(out, "json", []adapterm.Bucket{{Name: "main"}})
+			},
+		},
+		{
+			name:    "buckets empty text",
+			context: "write buckets output",
+			write: func(out io.Writer) error {
+				return writeBuckets(out, "text", nil)
+			},
+		},
+		{
+			name:    "packages JSON",
+			context: packagesOutputContext,
+			write: func(out io.Writer) error {
+				return writePackages(out, "json", "winget", "list", []manager.Package{{Name: "git"}})
+			},
+		},
+		{
+			name:    "packages empty text",
+			context: packagesOutputContext,
+			write: func(out io.Writer) error {
+				return writePackages(out, "text", "winget", "list", nil)
+			},
+		},
+		{
+			name:    "packages item text",
+			context: packagesOutputContext,
+			write: func(out io.Writer) error {
+				return writePackages(out, "text", "winget", "list", []manager.Package{{Name: "git"}})
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.write(failingWriter{err: writerErr})
+			if !errors.Is(err, writerErr) {
+				t.Fatalf("error = %v, want errors.Is(..., writerErr)", err)
+			}
+			if !strings.Contains(err.Error(), tt.context) {
+				t.Errorf("error = %q, want context %q", err, tt.context)
+			}
+		})
 	}
 }

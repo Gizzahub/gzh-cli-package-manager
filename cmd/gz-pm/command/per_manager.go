@@ -554,14 +554,14 @@ func writeSources(out io.Writer, format string, sources []adapterm.Source) error
 		}
 		enc := json.NewEncoder(out)
 		enc.SetIndent("", "  ")
-		return enc.Encode(map[string]any{
+		return wrapOutputError("sources", enc.Encode(map[string]any{
 			"count":   len(views),
 			"sources": views,
-		})
+		}))
 	case "text", "":
 		if len(sources) == 0 {
 			_, err := fmt.Fprintln(out, "No sources configured.")
-			return err
+			return wrapOutputError("sources", err)
 		}
 		_, _ = fmt.Fprintf(out, "winget sources — %d\n", len(sources))
 		for _, s := range sources {
@@ -590,14 +590,14 @@ func writeBuckets(out io.Writer, format string, buckets []adapterm.Bucket) error
 		}
 		enc := json.NewEncoder(out)
 		enc.SetIndent("", "  ")
-		return enc.Encode(map[string]any{
+		return wrapOutputError("buckets", enc.Encode(map[string]any{
 			"count":   len(views),
 			"buckets": views,
-		})
+		}))
 	case "text", "":
 		if len(buckets) == 0 {
 			_, err := fmt.Fprintln(out, "No buckets configured.")
-			return err
+			return wrapOutputError("buckets", err)
 		}
 		_, _ = fmt.Fprintf(out, "scoop buckets — %d\n", len(buckets))
 		for _, b := range buckets {
@@ -673,11 +673,11 @@ func writePackages(out io.Writer, format, managerName, action string, packages [
 		}
 		enc := json.NewEncoder(out)
 		enc.SetIndent("", "  ")
-		return enc.Encode(resp)
+		return wrapOutputError("packages", enc.Encode(resp))
 	case "text", "":
 		if len(views) == 0 {
 			_, err := fmt.Fprintf(out, "No packages found (%s %s).\n", managerName, action)
-			return err
+			return wrapOutputError("packages", err)
 		}
 		_, _ = fmt.Fprintf(out, "%s %s — %d package(s)\n", managerName, action, len(views))
 		for _, p := range views {
@@ -690,11 +690,18 @@ func writePackages(out io.Writer, format, managerName, action string, packages [
 				line += fmt.Sprintf(" → %s", p.AvailableVersion)
 			}
 			if _, err := fmt.Fprintln(out, line); err != nil {
-				return err
+				return wrapOutputError("packages", err)
 			}
 		}
 		return nil
 	default:
 		return fmt.Errorf("unknown output format %q (supported: text, json)", format)
 	}
+}
+
+func wrapOutputError(kind string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("write %s output: %w", kind, err)
 }
