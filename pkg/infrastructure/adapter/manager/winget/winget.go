@@ -208,7 +208,7 @@ func (a *Adapter) Search(ctx context.Context, query string) ([]manager.Package, 
 	if err != nil {
 		a.logger.Warn(ctx, "Failed to parse winget search JSON, falling back to text parsing",
 			output.Field{Key: "error", Value: err.Error()})
-		return a.parseSearchText(result), nil
+		return a.parseSearchText(result), nil //nolint:nilerr // JSON is optional; a text parse is a successful fallback.
 	}
 	return packages, nil
 }
