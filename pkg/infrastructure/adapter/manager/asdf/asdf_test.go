@@ -3,6 +3,8 @@ package asdf
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
@@ -395,25 +397,26 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 	homeErr := errors.New("home directory unavailable")
 
 	t.Run("resolved home directory", func(t *testing.T) {
+		homeDir := t.TempDir()
 		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
-		adapter.userHomeDir = func() (string, error) {
-			return "/tmp/asdf-home", nil
-		}
+		adapter.homeDirResolver = &homeDirResolver{resolve: func() (string, error) {
+			return homeDir, nil
+		}}
 
 		got, err := adapter.GetConfigPath(context.Background())
 		if err != nil {
 			t.Fatalf("GetConfigPath() error = %v", err)
 		}
-		if got != "/tmp/asdf-home/.asdfrc" {
-			t.Errorf("GetConfigPath() = %q, want %q", got, "/tmp/asdf-home/.asdfrc")
+		if want := filepath.Join(homeDir, ".asdfrc"); got != want {
+			t.Errorf("GetConfigPath() = %q, want %q", got, want)
 		}
 	})
 
 	t.Run("home directory error", func(t *testing.T) {
 		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
-		adapter.userHomeDir = func() (string, error) {
+		adapter.homeDirResolver = &homeDirResolver{resolve: func() (string, error) {
 			return "", homeErr
-		}
+		}}
 
 		got, err := adapter.GetConfigPath(context.Background())
 		if !errors.Is(err, homeErr) {
@@ -423,6 +426,21 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 			t.Errorf("GetConfigPath() = %q, want empty path", got)
 		}
 	})
+}
+
+func TestAdapter_GetConfigPath_ZeroValue(t *testing.T) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		t.Skipf("UserHomeDir unavailable: %v", err)
+	}
+
+	got, err := (&Adapter{}).GetConfigPath(context.Background())
+	if err != nil {
+		t.Fatalf("GetConfigPath() error = %v", err)
+	}
+	if want := filepath.Join(homeDir, ".asdfrc"); got != want {
+		t.Errorf("GetConfigPath() = %q, want %q", got, want)
+	}
 }
 
 func TestAdapter_ListPackages_Error(t *testing.T) {

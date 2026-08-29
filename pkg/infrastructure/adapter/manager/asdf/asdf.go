@@ -26,18 +26,37 @@ const (
 
 // Adapter implements the manager.Adapter interface for ASDF.
 type Adapter struct {
-	executor    output.CommandExecutor
-	logger      output.Logger
-	userHomeDir func() (string, error)
+	executor        output.CommandExecutor
+	logger          output.Logger
+	homeDirResolver *homeDirResolver
+}
+
+type homeDirResolver struct {
+	resolve func() (string, error)
 }
 
 // NewAdapter creates a new ASDF adapter.
 func NewAdapter(executor output.CommandExecutor, logger output.Logger) *Adapter {
 	return &Adapter{
-		executor:    executor,
-		logger:      logger,
-		userHomeDir: os.UserHomeDir,
+		executor: executor,
+		logger:   logger,
+		homeDirResolver: &homeDirResolver{
+			resolve: os.UserHomeDir,
+		},
 	}
+}
+
+func (a *Adapter) resolveUserHomeDir() (string, error) {
+	if a.homeDirResolver == nil || a.homeDirResolver.resolve == nil {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("resolve home directory: %w", err)
+		}
+
+		return homeDir, nil
+	}
+
+	return a.homeDirResolver.resolve()
 }
 
 // Detect checks if ASDF is installed on the system.
@@ -77,7 +96,7 @@ func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 // GetConfigPath returns the path to ASDF configuration.
 func (a *Adapter) GetConfigPath(_ context.Context) (string, error) {
 	// ASDF config is typically in ~/.asdfrc
-	homeDir, err := a.userHomeDir()
+	homeDir, err := a.resolveUserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("resolve home directory for ASDF configuration: %w", err)
 	}

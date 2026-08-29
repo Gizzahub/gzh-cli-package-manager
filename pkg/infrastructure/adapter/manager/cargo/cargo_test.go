@@ -3,6 +3,8 @@ package cargo
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
@@ -280,25 +282,33 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 	homeErr := errors.New("home directory unavailable")
 
 	t.Run("resolved home directory", func(t *testing.T) {
-		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
-		adapter.userHomeDir = func() (string, error) {
-			return "/tmp/cargo-home", nil
+		homeDir := t.TempDir()
+		cargoDir := filepath.Join(homeDir, ".cargo")
+		if err := os.Mkdir(cargoDir, 0o755); err != nil {
+			t.Fatalf("Mkdir(%q): %v", cargoDir, err)
 		}
+		configTOML := filepath.Join(cargoDir, "config.toml")
+		if _, err := os.Stat(configTOML); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("config.toml must be absent: stat error = %v", err)
+		}
+
+		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
+		adapter.homeDirResolver = &homeDirResolver{resolve: func() (string, error) { return homeDir, nil }}
 		path, err := adapter.GetConfigPath(context.Background())
 
 		if err != nil {
 			t.Fatalf("GetConfigPath() error = %v", err)
 		}
-		if path != "/tmp/cargo-home/.cargo/config" {
-			t.Errorf("GetConfigPath() = %q, want %q", path, "/tmp/cargo-home/.cargo/config")
+		if want := filepath.Join(cargoDir, "config"); path != want {
+			t.Errorf("GetConfigPath() = %q, want %q", path, want)
 		}
 	})
 
 	t.Run("home directory error", func(t *testing.T) {
 		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
-		adapter.userHomeDir = func() (string, error) {
+		adapter.homeDirResolver = &homeDirResolver{resolve: func() (string, error) {
 			return "", homeErr
-		}
+		}}
 		path, err := adapter.GetConfigPath(context.Background())
 
 		if !errors.Is(err, homeErr) {
@@ -308,6 +318,27 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 			t.Errorf("GetConfigPath() = %q, want empty path", path)
 		}
 	})
+}
+
+func TestAdapter_GetConfigPath_ZeroValue(t *testing.T) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		t.Skipf("UserHomeDir unavailable: %v", err)
+	}
+
+	got, err := (&Adapter{}).GetConfigPath(context.Background())
+	if err != nil {
+		t.Fatalf("GetConfigPath() error = %v", err)
+	}
+
+	configTOML := filepath.Join(homeDir, ".cargo", "config.toml")
+	want := filepath.Join(homeDir, ".cargo", "config")
+	if _, err := os.Stat(configTOML); err == nil {
+		want = configTOML
+	}
+	if got != want {
+		t.Errorf("GetConfigPath() = %q, want %q", got, want)
+	}
 }
 
 func TestAdapter_GetVersion_EdgeCases(t *testing.T) {
