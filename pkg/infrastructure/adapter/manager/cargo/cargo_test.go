@@ -277,33 +277,37 @@ func TestAdapter_CheckHealth(t *testing.T) {
 }
 
 func TestAdapter_GetConfigPath(t *testing.T) {
-	tests := []struct {
-		name    string
-		want    string
-		wantErr bool
-	}{
-		{
-			name:    "default cargo home",
-			want:    "", // Will use HOME environment
-			wantErr: false,
-		},
-	}
+	homeErr := errors.New("home directory unavailable")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
-			path, err := adapter.GetConfigPath(context.Background())
+	t.Run("resolved home directory", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
+		adapter.userHomeDir = func() (string, error) {
+			return "/tmp/cargo-home", nil
+		}
+		path, err := adapter.GetConfigPath(context.Background())
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetConfigPath() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			// Just verify path is not empty for default case
-			if path == "" && !tt.wantErr {
-				t.Error("GetConfigPath() returned empty path")
-			}
-		})
-	}
+		if err != nil {
+			t.Fatalf("GetConfigPath() error = %v", err)
+		}
+		if path != "/tmp/cargo-home/.cargo/config" {
+			t.Errorf("GetConfigPath() = %q, want %q", path, "/tmp/cargo-home/.cargo/config")
+		}
+	})
+
+	t.Run("home directory error", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
+		adapter.userHomeDir = func() (string, error) {
+			return "", homeErr
+		}
+		path, err := adapter.GetConfigPath(context.Background())
+
+		if !errors.Is(err, homeErr) {
+			t.Errorf("GetConfigPath() error = %v, want cause %v", err, homeErr)
+		}
+		if path != "" {
+			t.Errorf("GetConfigPath() = %q, want empty path", path)
+		}
+	})
 }
 
 func TestAdapter_GetVersion_EdgeCases(t *testing.T) {

@@ -24,15 +24,17 @@ const (
 
 // Adapter implements the manager.Adapter interface for Cargo.
 type Adapter struct {
-	executor output.CommandExecutor
-	logger   output.Logger
+	executor    output.CommandExecutor
+	logger      output.Logger
+	userHomeDir func() (string, error)
 }
 
 // NewAdapter creates a new Cargo adapter.
 func NewAdapter(executor output.CommandExecutor, logger output.Logger) *Adapter {
 	return &Adapter{
-		executor: executor,
-		logger:   logger,
+		executor:    executor,
+		logger:      logger,
+		userHomeDir: os.UserHomeDir,
 	}
 }
 
@@ -74,9 +76,9 @@ func (a *Adapter) GetBinaryPath(ctx context.Context) (string, error) {
 // GetConfigPath returns the path to Cargo configuration.
 func (a *Adapter) GetConfigPath(_ context.Context) (string, error) {
 	// Cargo config is in ~/.cargo/config.toml or ~/.cargo/config
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := a.userHomeDir()
 	if err != nil {
-		return "~/.cargo/config.toml", nil
+		return "", fmt.Errorf("resolve home directory for Cargo configuration: %w", err)
 	}
 
 	configPath := filepath.Join(homeDir, ".cargo", "config.toml")

@@ -392,16 +392,37 @@ func TestAdapter_GetBinaryPath_Error(t *testing.T) {
 }
 
 func TestAdapter_GetConfigPath(t *testing.T) {
-	adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
-	got, err := adapter.GetConfigPath(context.Background())
-	if err != nil {
-		t.Errorf("GetConfigPath() error = %v", err)
-	}
+	homeErr := errors.New("home directory unavailable")
 
-	// Should contain .asdfrc
-	if got == "" {
-		t.Error("GetConfigPath() should not return empty string")
-	}
+	t.Run("resolved home directory", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
+		adapter.userHomeDir = func() (string, error) {
+			return "/tmp/asdf-home", nil
+		}
+
+		got, err := adapter.GetConfigPath(context.Background())
+		if err != nil {
+			t.Fatalf("GetConfigPath() error = %v", err)
+		}
+		if got != "/tmp/asdf-home/.asdfrc" {
+			t.Errorf("GetConfigPath() = %q, want %q", got, "/tmp/asdf-home/.asdfrc")
+		}
+	})
+
+	t.Run("home directory error", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
+		adapter.userHomeDir = func() (string, error) {
+			return "", homeErr
+		}
+
+		got, err := adapter.GetConfigPath(context.Background())
+		if !errors.Is(err, homeErr) {
+			t.Errorf("GetConfigPath() error = %v, want cause %v", err, homeErr)
+		}
+		if got != "" {
+			t.Errorf("GetConfigPath() = %q, want empty path", got)
+		}
+	})
 }
 
 func TestAdapter_ListPackages_Error(t *testing.T) {
