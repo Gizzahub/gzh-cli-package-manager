@@ -2,6 +2,7 @@ package cleanup
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -20,6 +21,14 @@ type CacheScanner struct {
 	known     []KnownCachePath
 	repo      cleanup.CacheRepository
 }
+
+type missingCacheRootError struct {
+	err error
+}
+
+func (e *missingCacheRootError) Error() string { return e.err.Error() }
+
+func (e *missingCacheRootError) Unwrap() error { return e.err }
 
 // CacheScannerOption configures a CacheScanner.
 type CacheScannerOption func(*CacheScanner)
@@ -86,8 +95,10 @@ func (s *CacheScanner) Scan(ctx context.Context, managerID string) ([]*cleanup.C
 		}
 		info, err := s.scanPath(ctx, id, path)
 		if err != nil {
-			// Skip missing paths; report other errors.
-			if os.IsNotExist(err) {
+			// Skip missing cache roots; report all traversal errors, including
+			// missing descendants.
+			var missingRootErr *missingCacheRootError
+			if errors.As(err, &missingRootErr) {
 				continue
 			}
 			return nil, fmt.Errorf("scan %s (%s): %w", id, path, err)
@@ -109,6 +120,9 @@ func (s *CacheScanner) Scan(ctx context.Context, managerID string) ([]*cleanup.C
 func (s *CacheScanner) scanPath(_ context.Context, managerID, path string) (*cleanup.CacheInfo, error) {
 	info, err := s.fs.Stat(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, &missingCacheRootError{err: err}
+		}
 		return nil, err
 	}
 	if !info.IsDir() {
@@ -124,15 +138,14 @@ func (s *CacheScanner) scanPath(_ context.Context, managerID, path string) (*cle
 
 	err = s.fs.WalkDir(path, func(p string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
-			// Skip unreadable nodes rather than failing the whole scan.
-			return nil
+			return fmt.Errorf("walk %s: %w", p, walkErr)
 		}
 		if d == nil || d.IsDir() {
 			return nil
 		}
 		fi, statErr := d.Info()
 		if statErr != nil {
-			return nil
+			return fmt.Errorf("inspect %s: %w", p, statErr)
 		}
 		totalBytes += fi.Size()
 		entries++

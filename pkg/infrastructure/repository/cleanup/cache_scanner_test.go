@@ -3,6 +3,7 @@ package cleanup
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,30 @@ type cacheRepositoryStub struct {
 	updateCalls  int
 	failOnUpdate int
 }
+
+type injectedWalkFileSystem struct {
+	*MapFileSystem
+	walkDir        func(string, fs.WalkDirFunc) error
+	removeAllCalls int
+}
+
+func (f *injectedWalkFileSystem) WalkDir(root string, fn fs.WalkDirFunc) error {
+	return f.walkDir(root, fn)
+}
+
+func (f *injectedWalkFileSystem) RemoveAll(path string) error {
+	f.removeAllCalls++
+	return f.MapFileSystem.RemoveAll(path)
+}
+
+type infoErrorDirEntry struct {
+	err error
+}
+
+func (e infoErrorDirEntry) Name() string               { return "package.tgz" }
+func (e infoErrorDirEntry) IsDir() bool                { return false }
+func (e infoErrorDirEntry) Type() fs.FileMode          { return 0 }
+func (e infoErrorDirEntry) Info() (fs.FileInfo, error) { return nil, e.err }
 
 func (r *cacheRepositoryStub) GetInfo(context.Context, string) (*domaincleanup.CacheInfo, error) {
 	return nil, nil
@@ -151,6 +176,93 @@ func TestCacheScanner_ScanManagerFilter(t *testing.T) {
 	}
 	if len(results) != 1 || results[0].ManagerID != "npm" {
 		t.Fatalf("filter failed: %+v", results)
+	}
+}
+
+func TestCacheScanner_PropagatesWalkErrorsAndPreventsClean(t *testing.T) {
+	t.Parallel()
+
+	const (
+		home          = "/home/user"
+		managerID     = "npm"
+		secondManager = "pip"
+	)
+	cachePath := filepath.Join(home, ".npm")
+	secondCachePath := filepath.Join(home, ".cache", "pip")
+
+	tests := []struct {
+		newErr  func() error
+		walkErr func(string, fs.WalkDirFunc, error) error
+		name    string
+	}{
+		{
+			name:   "callback walk error",
+			newErr: func() error { return errors.New("callback walk error") },
+			walkErr: func(root string, fn fs.WalkDirFunc, wantErr error) error {
+				return fn(filepath.Join(root, "unreadable"), nil, wantErr)
+			},
+		},
+		{
+			name:   "directory entry info error",
+			newErr: func() error { return errors.New("directory entry info error") },
+			walkErr: func(root string, fn fs.WalkDirFunc, wantErr error) error {
+				return fn(filepath.Join(root, "package.tgz"), infoErrorDirEntry{err: wantErr}, nil)
+			},
+		},
+		{
+			name:   "callback nested not exist error",
+			newErr: func() error { return os.ErrNotExist },
+			walkErr: func(root string, fn fs.WalkDirFunc, wantErr error) error {
+				return fn(filepath.Join(root, "missing"), nil, wantErr)
+			},
+		},
+		{
+			name:   "directory entry nested not exist error",
+			newErr: func() error { return os.ErrNotExist },
+			walkErr: func(root string, fn fs.WalkDirFunc, wantErr error) error {
+				return fn(filepath.Join(root, "missing.tgz"), infoErrorDirEntry{err: wantErr}, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wantErr := tt.newErr()
+			fileSystem := &injectedWalkFileSystem{MapFileSystem: NewMapFileSystem()}
+			fileSystem.AddDir(cachePath)
+			fileSystem.AddDir(secondCachePath)
+			fileSystem.walkDir = func(root string, fn fs.WalkDirFunc) error {
+				if root == cachePath {
+					return tt.walkErr(root, fn, wantErr)
+				}
+				info, err := fileSystem.Stat(root)
+				if err != nil {
+					return fn(root, nil, err)
+				}
+				return fn(root, fs.FileInfoToDirEntry(info), nil)
+			}
+			scanner := NewCacheScanner(
+				WithFileSystem(fileSystem),
+				WithHomeDir(home),
+				WithGOOS("linux"),
+				WithEnvLookup(func(string) string { return "" }),
+				WithKnownPaths([]KnownCachePath{
+					{ManagerID: managerID, RelPath: ".npm"},
+					{ManagerID: secondManager, RelPath: ".cache/pip"},
+				}),
+				WithCacheRepository(nil),
+			)
+
+			if _, err := scanner.Scan(context.Background(), managerID); !errors.Is(err, wantErr) {
+				t.Fatalf("Scan() error = %v, want wrapped %v", err, wantErr)
+			}
+			if _, err := scanner.Clean(context.Background(), "", false); !errors.Is(err, wantErr) {
+				t.Fatalf("Clean() error = %v, want wrapped %v", err, wantErr)
+			}
+			if fileSystem.removeAllCalls != 0 {
+				t.Fatalf("Clean() RemoveAll calls = %d, want 0 after scan failure", fileSystem.removeAllCalls)
+			}
+		})
 	}
 }
 
