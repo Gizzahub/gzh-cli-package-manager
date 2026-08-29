@@ -99,10 +99,10 @@ func (m *MapFileSystem) AddDir(path string) {
 }
 
 type mapFileInfo struct {
+	modTime time.Time
 	name    string
 	size    int64
 	mode    fs.FileMode
-	modTime time.Time
 	isDir   bool
 }
 

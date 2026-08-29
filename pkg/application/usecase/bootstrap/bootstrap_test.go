@@ -16,8 +16,8 @@ import (
 
 // mockManagerRepository is a test double for manager.Repository
 type mockManagerRepository struct {
-	managers []*manager.Manager
 	findErr  error
+	managers []*manager.Manager
 }
 
 func (m *mockManagerRepository) FindAll(ctx context.Context) ([]*manager.Manager, error) {

@@ -9,8 +9,8 @@ import (
 )
 
 type recordingUninstaller struct {
-	calls  []uninstallCall
 	failOn string
+	calls  []uninstallCall
 }
 
 type uninstallCall struct {

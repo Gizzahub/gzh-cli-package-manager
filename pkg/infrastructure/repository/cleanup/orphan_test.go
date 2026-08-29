@@ -9,8 +9,8 @@ import (
 )
 
 type stubLister struct {
-	packages []manager.Package
 	err      error
+	packages []manager.Package
 }
 
 func (s *stubLister) ListPackages(_ context.Context) ([]manager.Package, error) {
