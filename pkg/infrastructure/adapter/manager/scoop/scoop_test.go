@@ -19,6 +19,7 @@ const (
 	testScoopStatusCommand  = "status"
 	testScoopVersionFlag    = "--version"
 	testScoopListSubcommand = "list"
+	testExtrasBucketName    = "extras"
 )
 
 func TestNewAdapter(t *testing.T) {
@@ -582,7 +583,7 @@ extras https://github.com/ScoopInstaller/Extras 2024-01-01 00:00:00 567
 	if len(buckets) != 2 {
 		t.Fatalf("count = %d, want 2", len(buckets))
 	}
-	if buckets[0].Name != "main" || buckets[1].Name != "extras" {
+	if buckets[0].Name != "main" || buckets[1].Name != testExtrasBucketName {
 		t.Errorf("buckets = %+v", buckets)
 	}
 }
@@ -595,26 +596,26 @@ func TestAdapter_AddRemoveBucket(t *testing.T) {
 		return testutil.SuccessResult("ok"), nil
 	}), testutil.NewMockLogger())
 
-	if err := adapter.AddBucket(context.Background(), "extras", ""); err != nil {
+	if err := adapter.AddBucket(context.Background(), testExtrasBucketName, ""); err != nil {
 		t.Fatalf("AddBucket: %v", err)
 	}
 	if err := adapter.AddBucket(context.Background(), "custom", "https://example.com/bucket"); err != nil {
 		t.Fatalf("AddBucket with url: %v", err)
 	}
-	if err := adapter.RemoveBucket(context.Background(), "extras"); err != nil {
+	if err := adapter.RemoveBucket(context.Background(), testExtrasBucketName); err != nil {
 		t.Fatalf("RemoveBucket: %v", err)
 	}
 
 	if len(calls) != 3 {
 		t.Fatalf("calls = %d, want 3", len(calls))
 	}
-	if calls[0][0] != "bucket" || calls[0][1] != "add" || calls[0][2] != "extras" {
+	if calls[0][0] != "bucket" || calls[0][1] != "add" || calls[0][2] != testExtrasBucketName {
 		t.Errorf("add known = %v", calls[0])
 	}
 	if len(calls[1]) != 4 || calls[1][3] != "https://example.com/bucket" {
 		t.Errorf("add custom = %v", calls[1])
 	}
-	if calls[2][1] != "rm" || calls[2][2] != "extras" {
+	if calls[2][1] != "rm" || calls[2][2] != testExtrasBucketName {
 		t.Errorf("rm = %v", calls[2])
 	}
 
