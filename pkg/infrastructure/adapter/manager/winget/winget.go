@@ -18,6 +18,7 @@ import (
 const (
 	wingetCommand  = "winget"
 	dryRunFieldKey = "dry_run"
+	errorFieldKey  = "error"
 	// Default config path on Windows.
 	defaultConfigPath = `%LOCALAPPDATA%\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\settings.json`
 )
@@ -105,7 +106,7 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 	packages, err := a.parseListOutput(result)
 	if err != nil {
 		a.logger.Warn(ctx, "Failed to parse winget JSON output, falling back to text parsing",
-			output.Field{Key: "error", Value: err.Error()})
+			output.Field{Key: errorFieldKey, Value: err.Error()})
 		return a.parseListOutputText(result)
 	}
 	return packages, nil
@@ -182,7 +183,7 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	result, err := a.executor.Execute(ctx, wingetCommand, "source", "list")
 	if err != nil {
 		a.logger.Warn(ctx, "Failed to check winget sources",
-			output.Field{Key: "error", Value: err.Error()})
+			output.Field{Key: errorFieldKey, Value: err.Error()})
 		return manager.StatusDegraded, nil //nolint:nilerr // CheckHealth reports probe failures as degraded status.
 	}
 
@@ -208,7 +209,7 @@ func (a *Adapter) Search(ctx context.Context, query string) ([]manager.Package, 
 	packages, err := a.parseSearchJSON(result)
 	if err != nil {
 		a.logger.Warn(ctx, "Failed to parse winget search JSON, falling back to text parsing",
-			output.Field{Key: "error", Value: err.Error()})
+			output.Field{Key: errorFieldKey, Value: err.Error()})
 		return a.parseSearchText(result), nil //nolint:nilerr // JSON is optional; a text parse is a successful fallback.
 	}
 	return packages, nil
