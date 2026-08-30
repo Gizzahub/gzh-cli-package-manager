@@ -8,6 +8,8 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
 
+const testLinuxGOOS = "linux"
+
 func TestManagerRepository_NewManagerRepository(t *testing.T) {
 	repo := NewManagerRepository()
 
@@ -235,7 +237,7 @@ func TestGetCurrentPlatform(t *testing.T) {
 		if platform != manager.PlatformDarwin {
 			t.Errorf("Expected PlatformDarwin on darwin, got %s", platform)
 		}
-	case "linux":
+	case testLinuxGOOS:
 		if platform != manager.PlatformLinux {
 			t.Errorf("Expected PlatformLinux on linux, got %s", platform)
 		}
@@ -281,7 +283,7 @@ func TestManagerRepository_InitializeDefaultManagers(t *testing.T) {
 	}
 
 	// On Linux, apt and pacman should also be present
-	if runtime.GOOS == "linux" {
+	if runtime.GOOS == testLinuxGOOS {
 		linuxManagers := []manager.ManagerID{
 			manager.ManagerApt,
 			manager.ManagerPacman,
