@@ -254,7 +254,7 @@ func (a *Adapter) parseSearchOutput(result *output.ExecutionResult) []manager.Pa
 }
 
 // parseScoopQuotedResult extracts name and version from "'name' (version) ..." lines.
-func parseScoopQuotedResult(line string) (string, string) {
+func parseScoopQuotedResult(line string) (packageName, packageVersion string) {
 	// 'git' (2.43.0)
 	start := strings.Index(line, "'")
 	if start < 0 {
