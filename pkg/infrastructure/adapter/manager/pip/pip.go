@@ -23,6 +23,11 @@ const (
 	formatFlag   = "--format=json"
 	outdatedFlag = "--outdated"
 	checkCommand = "check"
+	freezeFormat = "--format=freeze"
+	installArg   = "install"
+	upgradeFlag  = "--upgrade"
+
+	noOutdatedPackagesMessage = "No outdated pip packages found"
 )
 
 // Adapter implements the manager.Adapter interface for Pip.
@@ -203,27 +208,15 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 
 	packages := opts.Packages
 	if len(packages) == 0 {
-		listRes, err := a.executor.Execute(ctx, "pip", "list", "--outdated", "--format=freeze")
-		if err == nil && listRes.ExitCode == 0 && strings.TrimSpace(listRes.Stdout) != "" {
-			for _, line := range strings.Split(listRes.Stdout, "\n") {
-				line = strings.TrimSpace(line)
-				if line == "" {
-					continue
-				}
-				name := strings.Split(line, "==")[0]
-				if name != "" {
-					packages = append(packages, name)
-				}
-			}
-		}
+		packages = a.discoverOutdatedPackages(ctx)
 	}
 	if len(packages) == 0 {
-		result.Message = "No outdated pip packages found"
+		result.Message = noOutdatedPackagesMessage
 		return result, nil
 	}
 
-	args := append([]string{"install", "--upgrade"}, packages...)
-	execResult, err := a.executor.Execute(ctx, "pip", args...)
+	args := append([]string{installArg, upgradeFlag}, packages...)
+	execResult, err := a.executor.Execute(ctx, pipCommand, args...)
 	if err != nil {
 		result.Success = false
 		result.Message = fmt.Sprintf("pip install --upgrade failed: %v", err)
@@ -237,4 +230,24 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 	result.UpdatedPackages = packages
 	result.Message = "pip packages upgraded"
 	return result, nil
+}
+
+func (a *Adapter) discoverOutdatedPackages(ctx context.Context) []string {
+	listRes, err := a.executor.Execute(ctx, pipCommand, listArg, outdatedFlag, freezeFormat)
+	if err != nil || listRes.ExitCode != 0 || strings.TrimSpace(listRes.Stdout) == "" {
+		return nil
+	}
+
+	packages := make([]string, 0)
+	for _, line := range strings.Split(listRes.Stdout, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		name := strings.Split(line, "==")[0]
+		if name != "" {
+			packages = append(packages, name)
+		}
+	}
+	return packages
 }

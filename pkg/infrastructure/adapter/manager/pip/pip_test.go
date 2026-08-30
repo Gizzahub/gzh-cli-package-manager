@@ -3,6 +3,7 @@ package pip
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
@@ -15,7 +16,69 @@ import (
 const (
 	pipConfigPath      = "~/.pip/pip.conf"
 	testPip3BinaryPath = "/usr/bin/pip3"
+	testPipPackage     = "requests"
 )
+
+type pipUpdateCall struct {
+	args    []string
+	command string
+	err     error
+	result  *output.ExecutionResult
+}
+
+type pipUpdateExpectation struct {
+	err     error
+	message string
+	success bool
+	updated []string
+}
+
+func newPipUpdateExecutor(t *testing.T, calls []pipUpdateCall) (executor testutil.ExecutorFunc, verify func()) {
+	t.Helper()
+	callIndex := 0
+	executor = func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		t.Helper()
+		if callIndex == len(calls) {
+			t.Fatalf("unexpected command %q %v", command, args)
+		}
+		call := calls[callIndex]
+		callIndex++
+		if command != call.command || !slices.Equal(args, call.args) {
+			t.Errorf("command = %q %v, want %q %v", command, args, call.command, call.args)
+		}
+		return call.result, call.err
+	}
+	verify = func() {
+		t.Helper()
+		if callIndex != len(calls) {
+			t.Errorf("command calls = %d, want %d", callIndex, len(calls))
+		}
+	}
+	return executor, verify
+}
+
+func assertPipUpdateResult(t *testing.T, result *adapterm.UpdateResult, err error, want pipUpdateExpectation) {
+	t.Helper()
+	if want.err == nil {
+		if err != nil {
+			t.Fatalf("Update() error = %v, want nil", err)
+		}
+	} else if !errors.Is(err, want.err) {
+		t.Fatalf("Update() error = %v, want errors.Is(..., %v)", err, want.err)
+	}
+	if result == nil {
+		t.Fatal("Update() result = nil")
+	}
+	if result.Success != want.success {
+		t.Errorf("Success = %v, want %v", result.Success, want.success)
+	}
+	if result.Message != want.message {
+		t.Errorf("Message = %q, want %q", result.Message, want.message)
+	}
+	if !slices.Equal(result.UpdatedPackages, want.updated) {
+		t.Errorf("UpdatedPackages = %v, want %v", result.UpdatedPackages, want.updated)
+	}
+}
 
 func TestAdapter_Detect(t *testing.T) {
 	tests := []struct {
@@ -220,7 +283,7 @@ func TestAdapter_ListPackages(t *testing.T) {
 					}, nil
 				}
 				// pip3 list --outdated --format=json
-				if command == pip3Command && len(args) == 3 && args[0] == listArg && args[1] == "--outdated" {
+				if command == pip3Command && len(args) == 3 && args[0] == listArg && args[1] == outdatedFlag {
 					return &output.ExecutionResult{
 						Stdout: `[
 							{"name": "requests", "version": "2.28.0", "latest_version": "2.31.0", "latest_filetype": "wheel"},
@@ -247,7 +310,7 @@ func TestAdapter_ListPackages(t *testing.T) {
 						ExitCode: 0,
 					}, nil
 				}
-				if command == pip3Command && args[0] == listArg && args[1] == "--outdated" {
+				if command == pip3Command && args[0] == listArg && args[1] == outdatedFlag {
 					return &output.ExecutionResult{
 						Stdout:   "[]",
 						ExitCode: 0,
@@ -382,7 +445,7 @@ func TestAdapter_GetVersion_ParseError(t *testing.T) {
 		}
 		// Return output with less than 2 fields (only one word)
 		return &output.ExecutionResult{
-			Stdout:   "pip",
+			Stdout:   pipCommand,
 			ExitCode: 0,
 		}, nil
 	}
@@ -426,7 +489,7 @@ func TestAdapter_ListPackages_InvalidJSON(t *testing.T) {
 		if command == whichCommand {
 			return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
 		}
-		if command == pip3Command && args[0] == "list" {
+		if command == pip3Command && args[0] == listArg {
 			return &output.ExecutionResult{
 				Stdout:   "not valid json",
 				ExitCode: 0,
@@ -471,6 +534,81 @@ func TestAdapter_Update(t *testing.T) {
 	}
 	if result == nil || !result.Success {
 		t.Fatalf("Update dry-run expected success result, got %#v", result)
+	}
+}
+
+func TestAdapter_UpdateNonDryRunContracts(t *testing.T) {
+	discoveryErr := errors.New("discovery failed")
+	installErr := errors.New("install failed")
+	tests := []struct {
+		calls []pipUpdateCall
+		name  string
+		opts  adapterm.UpdateOptions
+		want  pipUpdateExpectation
+	}{
+		{
+			name: "explicit packages skip discovery",
+			opts: adapterm.UpdateOptions{Packages: []string{testPipPackage}},
+			want: pipUpdateExpectation{success: true, updated: []string{testPipPackage}, message: "pip packages upgraded"},
+			calls: []pipUpdateCall{
+				{command: pipCommand, args: []string{installArg, upgradeFlag, testPipPackage}, result: testutil.SuccessResult("")},
+			},
+		},
+		{
+			name: "discovered packages preserve order",
+			want: pipUpdateExpectation{success: true, updated: []string{testPipPackage, "flask"}, message: "pip packages upgraded"},
+			calls: []pipUpdateCall{
+				{command: pipCommand, args: []string{listArg, outdatedFlag, freezeFormat}, result: testutil.SuccessResult(testPipPackage + "==2.28.0\n flask==3.0.0 \n\n")},
+				{command: pipCommand, args: []string{installArg, upgradeFlag, testPipPackage, "flask"}, result: testutil.SuccessResult("")},
+			},
+		},
+		{
+			name: "empty discovery has no install",
+			want: pipUpdateExpectation{success: true, updated: []string{}, message: noOutdatedPackagesMessage},
+			calls: []pipUpdateCall{
+				{command: pipCommand, args: []string{listArg, outdatedFlag, freezeFormat}, result: testutil.SuccessResult(" \n")},
+			},
+		},
+		{
+			name: "discovery error has no install",
+			want: pipUpdateExpectation{success: true, updated: []string{}, message: noOutdatedPackagesMessage},
+			calls: []pipUpdateCall{
+				{command: pipCommand, args: []string{listArg, outdatedFlag, freezeFormat}, err: discoveryErr},
+			},
+		},
+		{
+			name: "nonzero discovery has no install",
+			want: pipUpdateExpectation{success: true, updated: []string{}, message: noOutdatedPackagesMessage},
+			calls: []pipUpdateCall{
+				{command: pipCommand, args: []string{listArg, outdatedFlag, freezeFormat}, result: &output.ExecutionResult{ExitCode: 1}},
+			},
+		},
+		{
+			name: "install error preserves cause",
+			opts: adapterm.UpdateOptions{Packages: []string{testPipPackage}},
+			want: pipUpdateExpectation{err: installErr, success: false, updated: []string{}, message: "pip install --upgrade failed: install failed"},
+			calls: []pipUpdateCall{
+				{command: pipCommand, args: []string{installArg, upgradeFlag, testPipPackage}, err: installErr},
+			},
+		},
+		{
+			name: "nonzero install reports stderr",
+			opts: adapterm.UpdateOptions{Packages: []string{testPipPackage}},
+			want: pipUpdateExpectation{success: false, updated: []string{}, message: "pip upgrade failed: permission denied"},
+			calls: []pipUpdateCall{
+				{command: pipCommand, args: []string{installArg, upgradeFlag, testPipPackage}, result: &output.ExecutionResult{ExitCode: 1, Stderr: "permission denied"}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			executor, verify := newPipUpdateExecutor(t, tt.calls)
+			result, err := NewAdapter(testutil.NewMockExecutor(executor), testutil.NewMockLogger()).Update(context.Background(), tt.opts)
+			verify()
+
+			assertPipUpdateResult(t, result, err, tt.want)
+		})
 	}
 }
 
