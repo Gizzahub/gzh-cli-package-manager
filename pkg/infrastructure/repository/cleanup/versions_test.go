@@ -52,14 +52,14 @@ func TestScanVersionsFromPackages_SingleNoReport(t *testing.T) {
 func TestHeuristicVersionScanner_Scan(t *testing.T) {
 	s := NewHeuristicVersionScanner(map[string]PackageLister{
 		"asdf": &stubLister{packages: []manager.Package{
-			{Name: "node", CurrentVersion: "18.0.0"},
-			{Name: "node", CurrentVersion: "20.0.0"},
+			{Name: testNodePackageName, CurrentVersion: "18.0.0"},
+			{Name: testNodePackageName, CurrentVersion: "20.0.0"},
 			{Name: "python", CurrentVersion: "3.12.0"},
 			{Name: "python", CurrentVersion: "3.11.0"},
 		}},
 	})
 
-	got, err := s.Scan(context.Background(), "node", "asdf")
+	got, err := s.Scan(context.Background(), testNodePackageName, "asdf")
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
