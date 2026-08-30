@@ -48,18 +48,19 @@ func (uc *UseCase) Bootstrap(ctx context.Context, req *dto.BootstrapRequest) (*d
 	var config *dto.BootstrapConfig
 	var err error
 
-	if req.Interactive {
+	switch {
+	case req.Interactive:
 		// Interactive mode: use minimal default config
 		config = uc.generateDefaultConfig()
 		uc.logger.Info(ctx, "Using interactive mode with default configuration")
-	} else if req.ConfigPath != "" {
+	case req.ConfigPath != "":
 		// Load from file
 		config, err = uc.loadConfig(req.ConfigPath)
 		if err != nil {
 			uc.logger.Error(ctx, "Failed to load config file", err, output.Field{Key: "path", Value: req.ConfigPath})
 			return nil, fmt.Errorf("failed to load config from %s: %w", req.ConfigPath, err)
 		}
-	} else {
+	default:
 		return nil, fmt.Errorf("either --config or --interactive must be specified")
 	}
 

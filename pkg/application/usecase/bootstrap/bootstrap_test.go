@@ -14,7 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testBrewManagerName = "brew"
+const (
+	testBrewManagerName   = "brew"
+	testMissingConfigPath = "/nonexistent/file.yaml"
+)
 
 // mockManagerRepository is a test double for manager.Repository.
 type mockManagerRepository struct {
@@ -59,7 +62,7 @@ func (m *mockManagerRepository) Delete(ctx context.Context, id manager.ManagerID
 	return nil
 }
 
-func TestBootstrap_InteractiveMode(t *testing.T) {
+func TestBootstrap_InteractiveModePrefersDefaultConfig(t *testing.T) {
 	// Setup
 	mockRepo := &mockManagerRepository{
 		managers: []*manager.Manager{
@@ -71,6 +74,7 @@ func TestBootstrap_InteractiveMode(t *testing.T) {
 
 	// Execute
 	req := &dto.BootstrapRequest{
+		ConfigPath:  testMissingConfigPath,
 		Interactive: true,
 		DryRun:      true,
 	}
@@ -276,7 +280,7 @@ func TestBootstrap_InvalidConfigFile(t *testing.T) {
 
 	// Execute with non-existent file
 	req := &dto.BootstrapRequest{
-		ConfigPath: "/nonexistent/file.yaml",
+		ConfigPath: testMissingConfigPath,
 	}
 	_, err := uc.Bootstrap(context.Background(), req)
 
