@@ -3,6 +3,7 @@ package pacman
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
@@ -15,7 +16,90 @@ const (
 	pacmanCommand = "pacman"
 	whichCommand  = "which"
 	queryFlag     = "-Qq"
+	queryAllFlag  = "-Q"
+	queryUpdates  = "-Qu"
+
+	testPacmanGitPackage      = "git"
+	testPacmanFirefoxPackage  = "firefox"
+	testPacmanChromiumPackage = "chromium"
 )
+
+var errPacmanListPackages = errors.New("pacman list executor failed")
+
+type pacmanListPackagesCall struct {
+	args   []string
+	result *output.ExecutionResult
+	err    error
+}
+
+type pacmanListPackagesExpectation struct {
+	packages []manager.Package
+	err      error
+	wantErr  bool
+}
+
+func newPacmanListPackagesExecutor(t *testing.T, calls []pacmanListPackagesCall) (executor testutil.ExecutorFunc, verify func()) {
+	t.Helper()
+
+	callIndex := 0
+	executor = func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		t.Helper()
+		if callIndex == len(calls) {
+			t.Fatalf("unexpected command %q %v", command, args)
+		}
+
+		call := calls[callIndex]
+		callIndex++
+		if command != pacmanCommand || !slices.Equal(args, call.args) {
+			t.Errorf("command = %q %v, want %q %v", command, args, pacmanCommand, call.args)
+		}
+
+		return call.result, call.err
+	}
+	verify = func() {
+		t.Helper()
+		if callIndex != len(calls) {
+			t.Errorf("command calls = %d, want %d", callIndex, len(calls))
+		}
+	}
+	return executor, verify
+}
+
+func assertPacmanListPackages(t *testing.T, packages []manager.Package, err error, want pacmanListPackagesExpectation) {
+	t.Helper()
+
+	switch {
+	case want.err != nil:
+		if !errors.Is(err, want.err) {
+			t.Fatalf("ListPackages() error = %v, want errors.Is(..., %v)", err, want.err)
+		}
+		return
+	case want.wantErr:
+		if err == nil {
+			t.Fatal("ListPackages() error = nil, want an error")
+		}
+		return
+	case err != nil:
+		t.Fatalf("ListPackages() error = %v, want nil", err)
+	}
+
+	if packages == nil {
+		t.Fatal("ListPackages() packages = nil")
+	}
+	if !slices.Equal(packages, want.packages) {
+		t.Errorf("ListPackages() packages = %#v, want %#v", packages, want.packages)
+	}
+}
+
+func testPacmanPackage(name, currentVersion, availableVersion string, updateType manager.UpdateType) manager.Package {
+	return manager.Package{
+		Name:             name,
+		CurrentVersion:   currentVersion,
+		AvailableVersion: availableVersion,
+		IsGlobal:         true,
+		UpdateType:       updateType,
+	}
+}
 
 func TestAdapter_Detect(t *testing.T) {
 	tests := []struct {
@@ -176,82 +260,107 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 
 func TestAdapter_ListPackages(t *testing.T) {
 	tests := []struct {
-		name        string
-		execFunc    func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-		wantLen     int
-		wantUpdates int
-		wantErr     bool
+		name  string
+		calls []pacmanListPackagesCall
+		want  pacmanListPackagesExpectation
 	}{
 		{
-			name: "packages with updates",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == pacmanCommand && len(args) == 1 && args[0] == "-Q" {
-					return &output.ExecutionResult{
-						ExitCode: 0,
-						Stdout: `git 2.51.0-1
-firefox 143.0.3-1
-chromium 142.0.7444.162-1`,
-					}, nil
-				}
-				if command == pacmanCommand && len(args) == 1 && args[0] == "-Qu" {
-					return &output.ExecutionResult{
-						ExitCode: 0,
-						Stdout: `firefox 143.0.3-1 -> 145.0-1
-chromium 142.0.7444.162-1 -> 142.0.7444.175-1`,
-					}, nil
-				}
-				return nil, errors.New("unexpected command")
+			name: "preserves installed order and complete update mapping",
+			calls: []pacmanListPackagesCall{
+				{
+					args:   []string{queryAllFlag},
+					result: testutil.SuccessResult("git 2.51.0-1\nincomplete\nfirefox 143.0.3-1\nchromium 142.0.7444.162-1"),
+				},
+				{
+					args:   []string{queryUpdates},
+					result: testutil.SuccessResult("firefox 143.0.3-1 -> 145.0-1\nchromium 142.0.7444.162-1 -> 142.0.7444.175-1\nnot-installed 1.0.0 -> 2.0.0\nmalformed update line"),
+				},
 			},
-			wantLen:     3, // 3 packages total
-			wantUpdates: 2, // 2 with updates
-			wantErr:     false,
+			want: pacmanListPackagesExpectation{packages: []manager.Package{
+				testPacmanPackage(testPacmanGitPackage, "2.51.0-1", "", manager.UpdateNone),
+				testPacmanPackage(testPacmanFirefoxPackage, "143.0.3-1", "145.0-1", manager.UpdateMajor),
+				testPacmanPackage(testPacmanChromiumPackage, "142.0.7444.162-1", "142.0.7444.175-1", manager.UpdatePatch),
+			}},
 		},
 		{
-			name: "packages without updates",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == pacmanCommand && len(args) == 1 && args[0] == "-Q" {
-					return &output.ExecutionResult{
-						ExitCode: 0,
-						Stdout:   `git 2.51.0-1`,
-					}, nil
-				}
-				if command == pacmanCommand && len(args) == 1 && args[0] == "-Qu" {
-					return &output.ExecutionResult{
-						ExitCode: 1, // No updates available
-						Stdout:   "",
-					}, errors.New("exit code 1")
-				}
-				return nil, errors.New("unexpected command")
+			name: "ignores an update executor error",
+			calls: []pacmanListPackagesCall{
+				{
+					args:   []string{queryAllFlag},
+					result: testutil.SuccessResult("git 2.51.0-1"),
+				},
+				{
+					args: []string{queryUpdates},
+					err:  errors.New("pacman update query failed"),
+				},
 			},
-			wantLen:     1,
-			wantUpdates: 0,
-			wantErr:     false,
+			want: pacmanListPackagesExpectation{packages: []manager.Package{
+				testPacmanPackage(testPacmanGitPackage, "2.51.0-1", "", manager.UpdateNone),
+			}},
+		},
+		{
+			name: "ignores a non-zero update result",
+			calls: []pacmanListPackagesCall{
+				{
+					args:   []string{queryAllFlag},
+					result: testutil.SuccessResult("git 2.51.0-1"),
+				},
+				{
+					args: []string{queryUpdates},
+					result: &output.ExecutionResult{
+						ExitCode: 2,
+						Stdout:   "git 2.51.0-1 -> 2.52.0-1",
+					},
+				},
+			},
+			want: pacmanListPackagesExpectation{packages: []manager.Package{
+				testPacmanPackage(testPacmanGitPackage, "2.51.0-1", "", manager.UpdateNone),
+			}},
+		},
+		{
+			name: "returns a non-nil empty slice for no installed packages",
+			calls: []pacmanListPackagesCall{
+				{
+					args:   []string{queryAllFlag},
+					result: testutil.SuccessResult(""),
+				},
+				{
+					args:   []string{queryUpdates},
+					result: testutil.SuccessResult(""),
+				},
+			},
+			want: pacmanListPackagesExpectation{packages: []manager.Package{}},
+		},
+		{
+			name: "wraps the installed-list executor error without querying updates",
+			calls: []pacmanListPackagesCall{
+				{
+					args: []string{queryAllFlag},
+					err:  errPacmanListPackages,
+				},
+			},
+			want: pacmanListPackagesExpectation{err: errPacmanListPackages},
+		},
+		{
+			name: "rejects a non-zero installed-list result without querying updates",
+			calls: []pacmanListPackagesCall{
+				{
+					args:   []string{queryAllFlag},
+					result: testutil.FailureResult(1, "pacman list failed"),
+				},
+			},
+			want: pacmanListPackagesExpectation{wantErr: true},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
+			executor, verify := newPacmanListPackagesExecutor(t, tt.calls)
+			defer verify()
+			adapter := NewAdapter(testutil.NewMockExecutor(executor), testutil.NewMockLogger())
 
 			got, err := adapter.ListPackages(context.Background())
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ListPackages() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if len(got) != tt.wantLen {
-				t.Errorf("ListPackages() returned %d packages, want %d", len(got), tt.wantLen)
-			}
-
-			// Count packages with updates
-			updatesCount := 0
-			for _, pkg := range got {
-				if pkg.IsUpdateAvailable() {
-					updatesCount++
-				}
-			}
-			if updatesCount != tt.wantUpdates {
-				t.Errorf("ListPackages() has %d packages with updates, want %d", updatesCount, tt.wantUpdates)
-			}
+			assertPacmanListPackages(t, got, err, tt.want)
 		})
 	}
 }
@@ -367,18 +476,6 @@ func TestAdapter_GetBinaryPath_Error(t *testing.T) {
 	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 
 	_, err := adapter.GetBinaryPath(context.Background())
-	if err == nil {
-		t.Error("Expected error for executor failure")
-	}
-}
-
-func TestAdapter_ListPackages_Error(t *testing.T) {
-	execFunc := func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-		return nil, errors.New("execution failed")
-	}
-	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
-
-	_, err := adapter.ListPackages(context.Background())
 	if err == nil {
 		t.Error("Expected error for executor failure")
 	}
