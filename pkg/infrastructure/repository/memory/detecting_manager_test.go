@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"runtime"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
@@ -19,6 +21,8 @@ const (
 	versionFlag  = "--version"
 	listCommand  = "list"
 )
+
+var errFindAllDetect = errors.New("manager probe failed")
 
 // mockExecutor implements output.CommandExecutor for testing.
 type mockExecutor struct {
@@ -40,6 +44,37 @@ func (m *mockExecutor) ExecuteWithInput(_ context.Context, _ string, _ string, _
 	return &output.ExecutionResult{ExitCode: 0}, nil
 }
 
+type scriptedCommandResult struct {
+	result *output.ExecutionResult
+	err    error
+}
+
+type scriptedExecutor struct {
+	responses map[string]scriptedCommandResult
+	calls     []string
+}
+
+func newScriptedExecutor(responses map[string]scriptedCommandResult) *scriptedExecutor {
+	return &scriptedExecutor{responses: responses}
+}
+
+func scriptCommand(command string, args ...string) string {
+	return command + "\x00" + strings.Join(args, "\x00")
+}
+
+func (e *scriptedExecutor) Execute(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+	key := scriptCommand(command, args...)
+	e.calls = append(e.calls, key)
+	if response, found := e.responses[key]; found {
+		return response.result, response.err
+	}
+	return &output.ExecutionResult{ExitCode: 1}, nil
+}
+
+func (e *scriptedExecutor) ExecuteWithInput(_ context.Context, _ string, _ string, _ ...string) (*output.ExecutionResult, error) {
+	return &output.ExecutionResult{ExitCode: 0}, nil
+}
+
 // mockLogger implements output.Logger for testing.
 type mockLogger struct{}
 
@@ -48,102 +83,203 @@ func (m *mockLogger) Info(_ context.Context, _ string, _ ...output.Field)       
 func (m *mockLogger) Warn(_ context.Context, _ string, _ ...output.Field)           {}
 func (m *mockLogger) Error(_ context.Context, _ string, _ error, _ ...output.Field) {}
 
-func TestDetectingManagerRepository_FindAll(t *testing.T) {
-	// Expected manager count varies by platform
-	// Darwin/macOS: 5 (homebrew, asdf, npm, pip, cargo)
-	// Linux: 7 (+ apt, pacman)
-	expectedManagerCount := 5
+type findAllManagerExpectation struct {
+	installed  bool
+	status     manager.Status
+	version    string
+	binaryPath string
+	configPath string
+	packages   []manager.Package
+}
+
+type findAllExpectation struct {
+	managerCount   int
+	installedCount int
+	npm            findAllManagerExpectation
+	commandSet     []string
+	npmSequence    []string
+}
+
+func currentPlatformManagerCount() int {
 	if runtime.GOOS == "linux" {
-		expectedManagerCount = 7
+		return 7
+	}
+	return 5
+}
+
+func assertFindAllManager(t *testing.T, got *manager.Manager, want *findAllManagerExpectation) {
+	t.Helper()
+	if got.Installed != want.installed {
+		t.Errorf("NPM installed = %t, want %t", got.Installed, want.installed)
+	}
+	if got.Status != want.status {
+		t.Errorf("NPM status = %q, want %q", got.Status, want.status)
+	}
+	if got.Version != want.version || got.BinaryPath != want.binaryPath || got.ConfigPath != want.configPath {
+		t.Errorf("NPM details = version %q, binary %q, config %q", got.Version, got.BinaryPath, got.ConfigPath)
+	}
+	if !slices.Equal(got.Packages, want.packages) {
+		t.Errorf("NPM packages = %#v, want %#v", got.Packages, want.packages)
+	}
+	if got.LastChecked.IsZero() {
+		t.Error("NPM LastChecked is zero")
+	}
+}
+
+func assertExecutedCommands(t *testing.T, calls, want []string) {
+	t.Helper()
+	for _, expected := range want {
+		if !slices.Contains(calls, expected) {
+			t.Errorf("Execute() calls = %q, missing %q", calls, expected)
+		}
+	}
+}
+
+func assertCommandSubsequence(t *testing.T, calls, want []string) {
+	t.Helper()
+
+	matched := 0
+	for _, call := range calls {
+		if matched < len(want) && call == want[matched] {
+			matched++
+		}
+	}
+	if matched != len(want) {
+		t.Errorf("Execute() calls = %q, want subsequence %q", calls, want)
+	}
+}
+
+func assertFindAll(t *testing.T, managers []*manager.Manager, err error, executor *scriptedExecutor, want *findAllExpectation) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("FindAll() error = %v", err)
+	}
+	if len(managers) != want.managerCount {
+		t.Errorf("FindAll() manager count = %d, want %d", len(managers), want.managerCount)
 	}
 
+	installedCount := 0
+	var npmManager *manager.Manager
+	for _, mgr := range managers {
+		if mgr.Installed {
+			installedCount++
+		}
+		if mgr.ID == manager.ManagerNPM {
+			npmManager = mgr
+		}
+	}
+	if installedCount != want.installedCount {
+		t.Errorf("FindAll() installed count = %d, want %d", installedCount, want.installedCount)
+	}
+	if npmManager == nil {
+		t.Fatal("FindAll() did not return NPM")
+	}
+
+	assertFindAllManager(t, npmManager, &want.npm)
+	assertExecutedCommands(t, executor.calls, want.commandSet)
+	assertCommandSubsequence(t, executor.calls, want.npmSequence)
+}
+
+func TestDetectingManagerRepository_FindAll(t *testing.T) {
 	tests := []struct {
-		name              string
-		execFunc          func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-		wantTotalManagers int
-		wantInstalled     int
+		name      string
+		executor  *scriptedExecutor
+		configure func(*DetectingManagerRepository)
+		want      findAllExpectation
 	}{
 		{
-			name: "no managers detected",
-			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				// All 'which' commands fail
-				return &output.ExecutionResult{ExitCode: 1}, nil
+			name:     "leaves every manager unavailable when all probes fail",
+			executor: newScriptedExecutor(nil),
+			want: findAllExpectation{
+				managerCount:   currentPlatformManagerCount(),
+				installedCount: 0,
+				npm: findAllManagerExpectation{
+					status: manager.StatusUnavailable,
+				},
+				commandSet: []string{
+					scriptCommand(whichCommand, npmCommand),
+				},
 			},
-			wantTotalManagers: expectedManagerCount,
-			wantInstalled:     0,
 		},
 		{
-			name: "npm detected",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == whichCommand && len(args) == 1 && args[0] == npmCommand {
-					return &output.ExecutionResult{
-						Stdout:   "/usr/bin/npm\n",
-						ExitCode: 0,
-					}, nil
-				}
-				if command == npmCommand && args[0] == versionFlag {
-					return &output.ExecutionResult{
-						Stdout:   "10.0.0\n",
-						ExitCode: 0,
-					}, nil
-				}
-				if command == npmCommand && args[0] == "config" {
-					return &output.ExecutionResult{
-						Stdout:   "/usr/local\n",
-						ExitCode: 0,
-					}, nil
-				}
-				if command == npmCommand && args[0] == listCommand {
-					return &output.ExecutionResult{
-						Stdout:   `{"dependencies": {}}`,
-						ExitCode: 0,
-					}, nil
-				}
-				if command == npmCommand && args[0] == "outdated" {
-					return &output.ExecutionResult{
-						Stdout:   "{}",
-						ExitCode: 0,
-					}, nil
-				}
-				if command == npmCommand && args[0] == "doctor" {
-					return &output.ExecutionResult{
-						Stdout:   "ok\n",
-						ExitCode: 0,
-					}, nil
-				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+			name: "persists complete NPM details without assuming manager order",
+			executor: newScriptedExecutor(map[string]scriptedCommandResult{
+				scriptCommand(whichCommand, npmCommand): {
+					result: &output.ExecutionResult{Stdout: "/usr/bin/npm\n"},
+				},
+				scriptCommand(npmCommand, versionFlag): {
+					result: &output.ExecutionResult{Stdout: "10.0.0\n"},
+				},
+				scriptCommand(npmCommand, "config", "get", "prefix"): {
+					result: &output.ExecutionResult{Stdout: "/usr/local\n"},
+				},
+				scriptCommand(npmCommand, listCommand, "-g", "--depth=0", "--json"): {
+					result: &output.ExecutionResult{Stdout: `{"dependencies":{"typescript":{"version":"5.0.0"}}}`},
+				},
+				scriptCommand(npmCommand, "outdated", "-g", "--json"): {
+					result: &output.ExecutionResult{Stdout: "{}"},
+				},
+				scriptCommand(npmCommand, "doctor"): {
+					result: &output.ExecutionResult{Stdout: "ok\n"},
+				},
+			}),
+			want: findAllExpectation{
+				managerCount:   currentPlatformManagerCount(),
+				installedCount: 1,
+				npm: findAllManagerExpectation{
+					installed:  true,
+					status:     manager.StatusHealthy,
+					version:    "10.0.0",
+					binaryPath: "/usr/bin/npm",
+					configPath: "/usr/local",
+					packages: []manager.Package{
+						{
+							Name:           "typescript",
+							CurrentVersion: "5.0.0",
+							Manager:        manager.ManagerNPM,
+							IsGlobal:       true,
+							UpdateType:     manager.UpdateNone,
+						},
+					},
+				},
+				npmSequence: []string{
+					scriptCommand(whichCommand, npmCommand),
+					scriptCommand(npmCommand, versionFlag),
+					scriptCommand(whichCommand, npmCommand),
+					scriptCommand(npmCommand, "config", "get", "prefix"),
+					scriptCommand(npmCommand, listCommand, "-g", "--depth=0", "--json"),
+					scriptCommand(npmCommand, "outdated", "-g", "--json"),
+					scriptCommand(npmCommand, "doctor"),
+				},
 			},
-			wantTotalManagers: expectedManagerCount,
-			wantInstalled:     1,
+		},
+		{
+			name:     "continues after a manager detection error",
+			executor: newScriptedExecutor(nil),
+			configure: func(repo *DetectingManagerRepository) {
+				repo.adapters[manager.ManagerNPM] = detectErrorAdapter{err: errFindAllDetect}
+			},
+			want: findAllExpectation{
+				managerCount:   currentPlatformManagerCount(),
+				installedCount: 0,
+				npm: findAllManagerExpectation{
+					status: manager.StatusError,
+				},
+				commandSet: []string{
+					scriptCommand(whichCommand, pip3Command),
+				},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			executor := &mockExecutor{execFunc: tt.execFunc}
-			logger := &mockLogger{}
-			repo := NewDetectingManagerRepository(executor, logger)
-
+			repo := NewDetectingManagerRepository(tt.executor, &mockLogger{})
+			if tt.configure != nil {
+				tt.configure(repo)
+			}
 			managers, err := repo.FindAll(context.Background())
-			if err != nil {
-				t.Errorf("FindAll() error = %v", err)
-				return
-			}
-
-			if len(managers) != tt.wantTotalManagers {
-				t.Errorf("FindAll() total managers = %d, want %d", len(managers), tt.wantTotalManagers)
-			}
-
-			installedCount := 0
-			for _, mgr := range managers {
-				if mgr.Installed {
-					installedCount++
-				}
-			}
-
-			if installedCount != tt.wantInstalled {
-				t.Errorf("FindAll() installed count = %d, want %d", installedCount, tt.wantInstalled)
-			}
+			assertFindAll(t, managers, err, tt.executor, &tt.want)
 		})
 	}
 }
