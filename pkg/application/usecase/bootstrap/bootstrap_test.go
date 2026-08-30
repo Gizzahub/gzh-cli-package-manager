@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testBrewManagerName = "brew"
+
 // mockManagerRepository is a test double for manager.Repository
 type mockManagerRepository struct {
 	findErr  error
@@ -61,7 +63,7 @@ func TestBootstrap_InteractiveMode(t *testing.T) {
 	// Setup
 	mockRepo := &mockManagerRepository{
 		managers: []*manager.Manager{
-			{ID: manager.ManagerHomebrew, Name: "brew", Installed: true},
+			{ID: manager.ManagerHomebrew, Name: testBrewManagerName, Installed: true},
 		},
 	}
 	log := logger.NewStructuredLogger("test")
@@ -85,7 +87,7 @@ func TestBootstrap_WithConfigFile(t *testing.T) {
 	// Setup
 	mockRepo := &mockManagerRepository{
 		managers: []*manager.Manager{
-			{ID: manager.ManagerHomebrew, Name: "brew", Installed: false},
+			{ID: manager.ManagerHomebrew, Name: testBrewManagerName, Installed: false},
 			{ID: manager.ManagerNPM, Name: "npm", Installed: true},
 		},
 	}
@@ -174,7 +176,7 @@ func TestBootstrap_AlreadyInstalledWithoutSkip(t *testing.T) {
 	// Setup
 	mockRepo := &mockManagerRepository{
 		managers: []*manager.Manager{
-			{ID: manager.ManagerHomebrew, Name: "brew", Installed: true},
+			{ID: manager.ManagerHomebrew, Name: testBrewManagerName, Installed: true},
 		},
 	}
 	log := logger.NewStructuredLogger("test")
@@ -333,7 +335,7 @@ func TestBootstrap_Summary(t *testing.T) {
 	// Setup
 	mockRepo := &mockManagerRepository{
 		managers: []*manager.Manager{
-			{ID: manager.ManagerHomebrew, Name: "brew", Installed: true},
+			{ID: manager.ManagerHomebrew, Name: testBrewManagerName, Installed: true},
 			{ID: manager.ManagerNPM, Name: "npm", Installed: false},
 		},
 	}
