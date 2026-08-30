@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	testScoopStatusCommand = "status"
-	testScoopVersionFlag   = "--version"
+	testScoopStatusCommand  = "status"
+	testScoopVersionFlag    = "--version"
+	testScoopListSubcommand = "list"
 )
 
 func TestNewAdapter(t *testing.T) {
@@ -214,7 +215,7 @@ nodejs   20.10.0   main    2024-01-02  Update available
 `
 
 	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == scoopCommand && len(args) > 0 && args[0] == "list" {
+		if command == scoopCommand && len(args) > 0 && args[0] == testScoopListSubcommand {
 			return testutil.SuccessResult(listOutput), nil
 		}
 		return nil, errors.New("unexpected command")
@@ -241,7 +242,7 @@ nodejs   20.10.0   main    2024-01-02  Update available
 
 func TestAdapter_ListPackages_Empty(t *testing.T) {
 	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == scoopCommand && len(args) > 0 && args[0] == "list" {
+		if command == scoopCommand && len(args) > 0 && args[0] == testScoopListSubcommand {
 			return testutil.SuccessResult("Name     Version   Source\n----     -------   ------\n"), nil
 		}
 		return nil, errors.New("unexpected command")
@@ -568,7 +569,7 @@ extras https://github.com/ScoopInstaller/Extras 2024-01-01 00:00:00 567
 `
 
 	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == scoopCommand && len(args) == 2 && args[0] == "bucket" && args[1] == "list" {
+		if command == scoopCommand && len(args) == 2 && args[0] == "bucket" && args[1] == testScoopListSubcommand {
 			return testutil.SuccessResult(bucketOutput), nil
 		}
 		return nil, errors.New("unexpected")
