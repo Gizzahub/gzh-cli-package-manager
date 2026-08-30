@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
@@ -18,6 +19,70 @@ const (
 	versionFlag                       = "--version"
 	testCommandExecutionErrorCaseName = "command execution error"
 )
+
+var errCargoListPackages = errors.New("command failed")
+
+type cargoListPackagesCall struct {
+	err    error
+	result *output.ExecutionResult
+}
+
+type cargoListPackagesExpectation struct {
+	err      error
+	packages []manager.Package
+}
+
+func newCargoListPackagesExecutor(t *testing.T, calls []cargoListPackagesCall) (executor testutil.ExecutorFunc, verify func()) {
+	t.Helper()
+	callIndex := 0
+	executor = func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		t.Helper()
+		if callIndex == len(calls) {
+			t.Fatalf("unexpected command %q %v", command, args)
+		}
+		call := calls[callIndex]
+		callIndex++
+		if command != cargoCommand || !slices.Equal(args, []string{installFlag, listFlag}) {
+			t.Errorf("command = %q %v, want %q %v", command, args, cargoCommand, []string{installFlag, listFlag})
+		}
+		return call.result, call.err
+	}
+	verify = func() {
+		t.Helper()
+		if callIndex != len(calls) {
+			t.Errorf("command calls = %d, want %d", callIndex, len(calls))
+		}
+	}
+	return executor, verify
+}
+
+func assertCargoListPackages(t *testing.T, packages []manager.Package, err error, want cargoListPackagesExpectation) {
+	t.Helper()
+	if want.err != nil {
+		if !errors.Is(err, want.err) {
+			t.Fatalf("ListPackages() error = %v, want errors.Is(..., %v)", err, want.err)
+		}
+		return
+	}
+	if err != nil {
+		t.Fatalf("ListPackages() error = %v, want nil", err)
+	}
+	if packages == nil {
+		t.Fatal("ListPackages() packages = nil")
+	}
+	if !slices.Equal(packages, want.packages) {
+		t.Errorf("ListPackages() packages = %#v, want %#v", packages, want.packages)
+	}
+}
+
+func testCargoPackage(name, version string, isGlobal bool) manager.Package {
+	return manager.Package{
+		Name:           name,
+		CurrentVersion: version,
+		IsGlobal:       isGlobal,
+		UpdateType:     manager.UpdateNone,
+	}
+}
 
 func TestAdapter_Detect(t *testing.T) {
 	tests := []struct {
@@ -153,89 +218,57 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 
 func TestAdapter_ListPackages(t *testing.T) {
 	tests := []struct {
-		name      string
-		execFunc  testutil.ExecutorFunc
-		wantCount int
-		wantErr   bool
+		name  string
+		calls []cargoListPackagesCall
+		want  cargoListPackagesExpectation
 	}{
 		{
-			name: "multiple installed packages",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == cargoCommand && len(args) == 2 && args[0] == installFlag && args[1] == listFlag {
-					return testutil.SuccessResult(`ripgrep v14.0.3:
-    rg
-cargo-watch v8.4.1:
-    cargo-watch
-bat v0.24.0:
-    bat
-`), nil
-				}
-				return testutil.FailureResult(1, ""), nil
-			},
-			wantCount: 3,
-			wantErr:   false,
+			name:  "multiple installed packages",
+			calls: []cargoListPackagesCall{{result: testutil.SuccessResult("ripgrep v14.0.3:\n    rg\ncargo-watch v8.4.1:\n    cargo-watch\nbat v0.24.0:\n    bat\n")}},
+			want: cargoListPackagesExpectation{packages: []manager.Package{
+				testCargoPackage("ripgrep", "14.0.3", true),
+				testCargoPackage("cargo-watch", "8.4.1", true),
+				testCargoPackage("bat", "0.24.0", true),
+			}},
 		},
 		{
-			name: "package with local path",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == cargoCommand && args[0] == installFlag && args[1] == listFlag {
-					return testutil.SuccessResult(`ripgrep v14.0.3:
-    rg
-my-tool v0.1.0 (/home/user/projects/my-tool):
-    my-tool
-`), nil
-				}
-				return testutil.FailureResult(1, ""), nil
-			},
-			wantCount: 2,
-			wantErr:   false,
+			name:  "package with local path",
+			calls: []cargoListPackagesCall{{result: testutil.SuccessResult("ripgrep v14.0.3:\n    rg\nmy-tool v0.1.0 (/home/user/projects/my-tool):\n    my-tool\n")}},
+			want: cargoListPackagesExpectation{packages: []manager.Package{
+				testCargoPackage("ripgrep", "14.0.3", true),
+				testCargoPackage("my-tool", "0.1.0", false),
+			}},
 		},
 		{
-			name: "no packages installed",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == cargoCommand && args[0] == installFlag && args[1] == listFlag {
-					return testutil.SuccessResult(""), nil
-				}
-				return testutil.FailureResult(1, ""), nil
-			},
-			wantCount: 0,
-			wantErr:   false,
+			name:  "no packages installed",
+			calls: []cargoListPackagesCall{{result: testutil.SuccessResult("")}},
+			want:  cargoListPackagesExpectation{packages: []manager.Package{}},
+		},
+		{
+			name:  testCommandExecutionErrorCaseName,
+			calls: []cargoListPackagesCall{{err: errCargoListPackages}},
+			want:  cargoListPackagesExpectation{err: errCargoListPackages},
+		},
+		{
+			name: "nonzero result still parses stdout",
+			calls: []cargoListPackagesCall{{result: &output.ExecutionResult{
+				ExitCode: 1,
+				Stderr:   "cargo install --list failed",
+				Stdout:   "ripgrep v14.0.3:\n    rg\n",
+			}}},
+			want: cargoListPackagesExpectation{packages: []manager.Package{
+				testCargoPackage("ripgrep", "14.0.3", true),
+			}},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
-			packages, err := adapter.ListPackages(context.Background())
+			executor, verify := newCargoListPackagesExecutor(t, tt.calls)
+			packages, err := NewAdapter(testutil.NewMockExecutor(executor), testutil.NewMockLogger()).ListPackages(context.Background())
+			verify()
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ListPackages() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if len(packages) != tt.wantCount {
-				t.Errorf("ListPackages() package count = %d, want %d", len(packages), tt.wantCount)
-			}
-
-			// Verify package properties
-			if len(packages) > 0 {
-				pkg := packages[0]
-				if pkg.Name == "" {
-					t.Error("Package name is empty")
-				}
-				if pkg.CurrentVersion == "" {
-					t.Error("Package current version is empty")
-				}
-			}
-
-			// Verify local package detection if present
-			for _, pkg := range packages {
-				if pkg.Name == "my-tool" {
-					if pkg.IsGlobal {
-						t.Error("Local path package should not be marked as global")
-					}
-				}
-			}
+			assertCargoListPackages(t, packages, err, tt.want)
 		})
 	}
 }
@@ -449,46 +482,6 @@ func TestAdapter_GetBinaryPath_EdgeCases(t *testing.T) {
 			_, err := adapter.GetBinaryPath(context.Background())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBinaryPath() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestAdapter_ListPackages_EdgeCases(t *testing.T) {
-	tests := []struct {
-		name     string
-		execFunc testutil.ExecutorFunc
-		wantErr  bool
-	}{
-		{
-			name: testCommandExecutionErrorCaseName,
-			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return nil, errors.New("command failed")
-			},
-			wantErr: true,
-		},
-		{
-			name: "non-zero exit code - returns empty list",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == cargoCommand && args[0] == installFlag && args[1] == listFlag {
-					return &output.ExecutionResult{
-						ExitCode: 1,
-						Stderr:   "cargo install --list failed",
-						Stdout:   "",
-					}, nil
-				}
-				return testutil.SuccessResult(""), nil
-			},
-			wantErr: false, // Current implementation doesn't check exit code
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
-			_, err := adapter.ListPackages(context.Background())
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ListPackages() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
