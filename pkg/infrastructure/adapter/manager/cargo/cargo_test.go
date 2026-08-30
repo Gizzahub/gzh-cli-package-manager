@@ -15,7 +15,8 @@ import (
 
 // Test-specific constants.
 const (
-	versionFlag = "--version"
+	versionFlag                       = "--version"
+	testCommandExecutionErrorCaseName = "command execution error"
 )
 
 func TestAdapter_Detect(t *testing.T) {
@@ -364,7 +365,7 @@ func TestAdapter_GetVersion_EdgeCases(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "command execution error",
+			name: testCommandExecutionErrorCaseName,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("command failed")
 			},
@@ -420,7 +421,7 @@ func TestAdapter_GetBinaryPath_EdgeCases(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "command execution error",
+			name: testCommandExecutionErrorCaseName,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("command failed")
 			},
@@ -460,7 +461,7 @@ func TestAdapter_ListPackages_EdgeCases(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "command execution error",
+			name: testCommandExecutionErrorCaseName,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("command failed")
 			},
