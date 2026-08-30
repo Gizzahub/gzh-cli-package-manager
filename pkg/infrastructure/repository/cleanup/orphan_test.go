@@ -18,21 +18,49 @@ func (s *stubLister) ListPackages(_ context.Context) ([]manager.Package, error) 
 }
 
 func TestDetectOrphansFromPackages(t *testing.T) {
-	pkgs := []manager.Package{
+	pkgs := make([]manager.Package, 0, 6)
+	pkgs = append(pkgs, []manager.Package{
 		{Name: testGitPackageName, CurrentVersion: testGitCurrentVersion},
-		{Name: "", CurrentVersion: testVersionOne},
-		{Name: "unknown", CurrentVersion: "0.1"},
-		{Name: "broken", CurrentVersion: ""},
-		{Name: "-", CurrentVersion: "1"},
-	}
+		{Name: "", CurrentVersion: testVersionOne, SizeMB: 1.5},
+		{Name: "unknown", CurrentVersion: "0.1", SizeMB: 2.5},
+		{Name: "broken", CurrentVersion: "", SizeMB: 3.5},
+		{Name: "-", CurrentVersion: "1", SizeMB: 4.5},
+	}...)
+	before := append([]manager.Package(nil), pkgs[:cap(pkgs)]...)
+	wantLength := len(pkgs)
+	wantCapacity := cap(pkgs)
 
 	orphans := DetectOrphansFromPackages(testNPMManagerID, pkgs)
 	if len(orphans) != 4 {
 		t.Fatalf("orphans = %d, want 4", len(orphans))
 	}
+	if len(pkgs) != wantLength || cap(pkgs) != wantCapacity {
+		t.Fatalf("packages shape = len %d cap %d, want len %d cap %d", len(pkgs), cap(pkgs), wantLength, wantCapacity)
+	}
+	for i, want := range before {
+		if got := pkgs[:cap(pkgs)][i]; got != want {
+			t.Errorf("packages[%d] = %#v, want %#v", i, got, want)
+		}
+	}
 
+	wantNames := []string{
+		displayName(pkgs[1].Name),
+		pkgs[2].Name,
+		pkgs[3].Name,
+		pkgs[4].Name,
+	}
 	reasons := map[string]string{}
-	for _, o := range orphans {
+	for i, o := range orphans {
+		if o.Name != wantNames[i] {
+			t.Errorf("orphans[%d].Name = %q, want %q", i, o.Name, wantNames[i])
+		}
+		source := pkgs[i+1]
+		if o.Version != source.CurrentVersion {
+			t.Errorf("orphans[%d].Version = %q, want %q", i, o.Version, source.CurrentVersion)
+		}
+		if o.SizeMB != source.SizeMB {
+			t.Errorf("orphans[%d].SizeMB = %v, want %v", i, o.SizeMB, source.SizeMB)
+		}
 		reasons[o.Name] = o.Reason
 		if o.ManagerID != testNPMManagerID {
 			t.Errorf("ManagerID = %q, want npm", o.ManagerID)

@@ -66,7 +66,8 @@ func (d *HeuristicOrphanDetector) DetectAll(ctx context.Context) ([]*domainclean
 // DetectOrphansFromPackages is a pure helper: mark packages matching heuristics.
 func DetectOrphansFromPackages(managerID string, packages []manager.Package) []*domaincleanup.OrphanPackage {
 	var orphans []*domaincleanup.OrphanPackage
-	for _, p := range packages {
+	for i := range packages {
+		p := &packages[i]
 		reason := orphanReason(p)
 		if reason == "" {
 			continue
@@ -83,7 +84,7 @@ func DetectOrphansFromPackages(managerID string, packages []manager.Package) []*
 	return orphans
 }
 
-func orphanReason(p manager.Package) string {
+func orphanReason(p *manager.Package) string {
 	name := strings.TrimSpace(p.Name)
 	if name == "" {
 		return "empty package name"
