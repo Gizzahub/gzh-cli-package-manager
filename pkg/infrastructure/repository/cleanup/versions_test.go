@@ -9,10 +9,10 @@ import (
 
 func TestScanVersionsFromPackages_MultiVersion(t *testing.T) {
 	pkgs := []manager.Package{
-		{Name: "python", CurrentVersion: "3.11.0"},
-		{Name: "python", CurrentVersion: "3.12.0"},
+		{Name: testPythonPackageName, CurrentVersion: "3.11.0"},
+		{Name: testPythonPackageName, CurrentVersion: "3.12.0"},
 		{Name: testGitPackageName, CurrentVersion: "2.43.0"},
-		{Name: "python", CurrentVersion: "3.11.0"}, // duplicate ignored
+		{Name: testPythonPackageName, CurrentVersion: "3.11.0"}, // duplicate ignored
 	}
 
 	got := ScanVersionsFromPackages("asdf", pkgs)
@@ -22,7 +22,7 @@ func TestScanVersionsFromPackages_MultiVersion(t *testing.T) {
 
 	currentCount := 0
 	for _, v := range got {
-		if v.Name != "python" {
+		if v.Name != testPythonPackageName {
 			t.Errorf("unexpected name %q", v.Name)
 		}
 		if v.ManagerID != "asdf" {
@@ -54,8 +54,8 @@ func TestHeuristicVersionScanner_Scan(t *testing.T) {
 		"asdf": &stubLister{packages: []manager.Package{
 			{Name: testNodePackageName, CurrentVersion: "18.0.0"},
 			{Name: testNodePackageName, CurrentVersion: "20.0.0"},
-			{Name: "python", CurrentVersion: "3.12.0"},
-			{Name: "python", CurrentVersion: "3.11.0"},
+			{Name: testPythonPackageName, CurrentVersion: "3.12.0"},
+			{Name: testPythonPackageName, CurrentVersion: "3.11.0"},
 		}},
 	})
 
