@@ -27,7 +27,7 @@ func (p *QuarantinePurger) PurgeExpired(ctx context.Context, retentionDays int, 
 	start := time.Now()
 	expired, err := p.repo.FindExpired(ctx, retentionDays)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("find expired quarantined packages: %w", err)
 	}
 
 	summary := &cleanup.Summary{

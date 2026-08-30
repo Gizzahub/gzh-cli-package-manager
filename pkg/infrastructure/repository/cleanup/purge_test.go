@@ -2,6 +2,8 @@ package cleanup
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -65,5 +67,11 @@ func TestQuarantinePurger_InvalidRetention(t *testing.T) {
 	_, err := purger.PurgeExpired(context.Background(), 0, false)
 	if err == nil {
 		t.Fatal("expected invalid retention error")
+	}
+	if !errors.Is(err, cleanup.ErrInvalidRetentionDays) {
+		t.Errorf("got %v, want ErrInvalidRetentionDays", err)
+	}
+	if !strings.Contains(err.Error(), "find expired quarantined packages") {
+		t.Errorf("got error %q, want repository boundary context", err)
 	}
 }
