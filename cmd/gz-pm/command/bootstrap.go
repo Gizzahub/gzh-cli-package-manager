@@ -97,13 +97,14 @@ func displayBootstrapText(resp *dto.BootstrapResponse) {
 	// Display individual manager results
 	for _, result := range resp.Results {
 		var statusIcon string
-		if result.Skipped {
+		switch {
+		case result.Skipped:
 			statusIcon = "⏭️ "
-		} else if result.AlreadyInstalled {
+		case result.AlreadyInstalled:
 			statusIcon = "✓"
-		} else if result.Success {
+		case result.Success:
 			statusIcon = "✅"
-		} else {
+		default:
 			statusIcon = "❌"
 		}
 
