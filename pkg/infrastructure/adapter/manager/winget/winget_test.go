@@ -261,6 +261,19 @@ Visual Studio Code  Microsoft.VSCode     1.85.0              winget
 	}
 }
 
+func TestAdapter_parseListOutput_wrapsJSONError(t *testing.T) {
+	adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
+	_, err := adapter.parseListOutput(&output.ExecutionResult{Stdout: "not-json"})
+	if err == nil {
+		t.Fatal("expected parse error")
+	}
+	const prefix = "parse winget package list: failed to parse output: "
+	got := err.Error()
+	if len(got) < len(prefix) || got[:len(prefix)] != prefix {
+		t.Errorf("error = %q, want prefix %q", got, prefix)
+	}
+}
+
 func TestAdapter_CheckHealth(t *testing.T) {
 	tests := []struct {
 		name     string

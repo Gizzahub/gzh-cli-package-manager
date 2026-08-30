@@ -2,11 +2,13 @@ package memory
 
 import (
 	"context"
+	"errors"
 	"runtime"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+	adapterpkg "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 )
 
 // Test-specific constants
@@ -342,5 +344,56 @@ func TestDetectingManagerRepository_AdapterRegistration(t *testing.T) {
 	// Verify adapter count
 	if len(repo.adapters) != len(expectedAdapters) {
 		t.Errorf("Adapter count = %d, want %d", len(repo.adapters), len(expectedAdapters))
+	}
+}
+
+type detectErrorAdapter struct {
+	err error
+}
+
+func (a detectErrorAdapter) Detect(context.Context) (bool, error) { return false, a.err }
+func (a detectErrorAdapter) GetVersion(context.Context) (string, error) {
+	return "", nil
+}
+
+func (a detectErrorAdapter) GetBinaryPath(context.Context) (string, error) {
+	return "", nil
+}
+
+func (a detectErrorAdapter) GetConfigPath(context.Context) (string, error) {
+	return "", nil
+}
+
+func (a detectErrorAdapter) ListPackages(context.Context) ([]manager.Package, error) {
+	return nil, nil
+}
+
+func (a detectErrorAdapter) CheckHealth(context.Context) (manager.Status, error) {
+	return "", nil
+}
+
+func (a detectErrorAdapter) Update(context.Context, adapterpkg.UpdateOptions) (*adapterpkg.UpdateResult, error) {
+	return nil, nil
+}
+
+func TestDetectingManagerRepository_detectAndUpdate_wrapsDetectError(t *testing.T) {
+	sentinel := errors.New("probe failed")
+	repo := NewDetectingManagerRepository(&mockExecutor{}, &mockLogger{})
+	repo.adapters[manager.ManagerNPM] = detectErrorAdapter{err: sentinel}
+
+	mgr := &manager.Manager{ID: manager.ManagerNPM}
+	err := repo.detectAndUpdate(context.Background(), mgr)
+	if err == nil {
+		t.Fatal("expected detect error")
+	}
+	if !errors.Is(err, sentinel) {
+		t.Errorf("errors.Is(sentinel) = false, err=%v", err)
+	}
+	const want = "detect npm: probe failed"
+	if err.Error() != want {
+		t.Errorf("error = %q, want %q", err.Error(), want)
+	}
+	if mgr.Status != manager.StatusError {
+		t.Errorf("status = %v, want %v", mgr.Status, manager.StatusError)
 	}
 }

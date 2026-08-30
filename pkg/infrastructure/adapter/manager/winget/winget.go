@@ -5,7 +5,6 @@ package winget
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -115,7 +114,7 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 // parseListOutput parses JSON output from winget list.
 func (a *Adapter) parseListOutput(result *output.ExecutionResult) ([]manager.Package, error) {
 	var listOutput wingetListOutput
-	if err := json.Unmarshal([]byte(result.Stdout), &listOutput); err != nil {
+	if err := cmdutil.UnmarshalJSON(result, &listOutput, "parse winget package list"); err != nil {
 		return nil, err
 	}
 
