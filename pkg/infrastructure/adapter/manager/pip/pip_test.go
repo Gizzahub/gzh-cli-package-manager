@@ -13,7 +13,8 @@ import (
 
 // Test-specific constants
 const (
-	pipConfigPath = "~/.pip/pip.conf"
+	pipConfigPath      = "~/.pip/pip.conf"
+	testPip3BinaryPath = "/usr/bin/pip3"
 )
 
 func TestAdapter_Detect(t *testing.T) {
@@ -93,7 +94,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 			name: "valid version output",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == whichCommand && args[0] == pip3Command {
-					return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+					return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
 				}
 				if command == pip3Command && args[0] == "--version" {
 					return &output.ExecutionResult{
@@ -161,7 +162,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 				}
 				return &output.ExecutionResult{ExitCode: 1}, nil
 			},
-			want:    "/usr/bin/pip3",
+			want:    testPip3BinaryPath,
 			wantErr: false,
 		},
 	}
@@ -205,7 +206,7 @@ func TestAdapter_ListPackages(t *testing.T) {
 			name: "packages with updates",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == whichCommand && args[0] == pip3Command {
-					return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+					return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
 				}
 				// pip3 list --format=json
 				if command == pip3Command && len(args) == 2 && args[0] == listArg && args[1] == "--format=json" {
@@ -238,7 +239,7 @@ func TestAdapter_ListPackages(t *testing.T) {
 			name: "no updates available",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == whichCommand && args[0] == pip3Command {
-					return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+					return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
 				}
 				if command == pip3Command && args[0] == listArg && args[1] == "--format=json" {
 					return &output.ExecutionResult{
@@ -314,7 +315,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			name: "healthy system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == whichCommand && args[0] == pip3Command {
-					return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+					return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
 				}
 				if command == pip3Command && len(args) == 1 && args[0] == "check" {
 					return &output.ExecutionResult{
@@ -331,7 +332,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			name: "degraded with dependency issues",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == whichCommand && args[0] == pip3Command {
-					return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+					return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
 				}
 				if command == pip3Command && args[0] == "check" {
 					return &output.ExecutionResult{
@@ -377,7 +378,7 @@ func TestAdapter_GetVersion_Error(t *testing.T) {
 func TestAdapter_GetVersion_ParseError(t *testing.T) {
 	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		if command == whichCommand {
-			return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+			return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
 		}
 		// Return output with less than 2 fields (only one word)
 		return &output.ExecutionResult{
@@ -408,7 +409,7 @@ func TestAdapter_GetBinaryPath_Error(t *testing.T) {
 func TestAdapter_ListPackages_Error(t *testing.T) {
 	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		if command == whichCommand {
-			return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+			return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
 		}
 		return nil, errors.New("execution failed")
 	}
@@ -423,7 +424,7 @@ func TestAdapter_ListPackages_Error(t *testing.T) {
 func TestAdapter_ListPackages_InvalidJSON(t *testing.T) {
 	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		if command == whichCommand {
-			return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+			return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
 		}
 		if command == pip3Command && args[0] == "list" {
 			return &output.ExecutionResult{
@@ -444,7 +445,7 @@ func TestAdapter_ListPackages_InvalidJSON(t *testing.T) {
 func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
 	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		if command == whichCommand {
-			return &output.ExecutionResult{Stdout: "/usr/bin/pip3", ExitCode: 0}, nil
+			return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
 		}
 		return nil, errors.New("execution failed")
 	}
