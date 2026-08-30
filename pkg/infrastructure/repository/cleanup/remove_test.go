@@ -31,7 +31,7 @@ func TestRemoveOrphans_DryRun(t *testing.T) {
 	u := &recordingUninstaller{}
 	ex := NewAdapterCleanupExecutor(u)
 	summary, err := ex.RemoveOrphans(context.Background(), []*domaincleanup.OrphanPackage{
-		{Name: "git", Version: "1.0", ManagerID: "scoop", Reason: "missing version metadata"},
+		{Name: testGitPackageName, Version: "1.0", ManagerID: "scoop", Reason: "missing version metadata"},
 		{Name: "(unnamed)", ManagerID: "scoop", Reason: "empty package name"},
 		{Name: "unknown", ManagerID: "scoop", Reason: "placeholder"},
 	}, true)
@@ -41,7 +41,7 @@ func TestRemoveOrphans_DryRun(t *testing.T) {
 	if summary.PackagesRemoved != 1 {
 		t.Fatalf("removed=%d want 1 (only actionable name)", summary.PackagesRemoved)
 	}
-	if len(u.calls) != 1 || !u.calls[0].dryRun || u.calls[0].pkgID != "git" {
+	if len(u.calls) != 1 || !u.calls[0].dryRun || u.calls[0].pkgID != testGitPackageName {
 		t.Fatalf("calls=%+v", u.calls)
 	}
 	if len(summary.Errors) != 2 {
@@ -85,7 +85,7 @@ func TestRemoveOldVersions_RetryBareName(t *testing.T) {
 	u := &recordingUninstaller{failOn: "git@2.0.0"}
 	ex := NewAdapterCleanupExecutor(u)
 	summary, err := ex.RemoveOldVersions(context.Background(), []*domaincleanup.OldVersion{
-		{Name: "git", Version: "2.0.0", ManagerID: "winget", IsCurrent: false},
+		{Name: testGitPackageName, Version: "2.0.0", ManagerID: "winget", IsCurrent: false},
 	}, false)
 	if err != nil {
 		t.Fatal(err)
@@ -93,7 +93,7 @@ func TestRemoveOldVersions_RetryBareName(t *testing.T) {
 	if summary.PackagesRemoved != 1 {
 		t.Fatalf("removed=%d errors=%v", summary.PackagesRemoved, summary.Errors)
 	}
-	if len(u.calls) != 2 || u.calls[1].pkgID != "git" {
+	if len(u.calls) != 2 || u.calls[1].pkgID != testGitPackageName {
 		t.Fatalf("expected retry with bare name: %+v", u.calls)
 	}
 }

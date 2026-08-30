@@ -19,7 +19,7 @@ func (s *stubLister) ListPackages(_ context.Context) ([]manager.Package, error) 
 
 func TestDetectOrphansFromPackages(t *testing.T) {
 	pkgs := []manager.Package{
-		{Name: "git", CurrentVersion: "2.43.0"},
+		{Name: testGitPackageName, CurrentVersion: "2.43.0"},
 		{Name: "", CurrentVersion: "1.0"},
 		{Name: "unknown", CurrentVersion: "0.1"},
 		{Name: "broken", CurrentVersion: ""},
@@ -55,7 +55,7 @@ func TestDetectOrphansFromPackages(t *testing.T) {
 func TestHeuristicOrphanDetector_Detect(t *testing.T) {
 	d := NewHeuristicOrphanDetector(map[string]PackageLister{
 		"scoop": &stubLister{packages: []manager.Package{
-			{Name: "git", CurrentVersion: "2.43.0"},
+			{Name: testGitPackageName, CurrentVersion: "2.43.0"},
 			{Name: "", CurrentVersion: "1"},
 		}},
 	})
