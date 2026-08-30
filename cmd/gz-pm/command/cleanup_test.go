@@ -226,8 +226,8 @@ func TestCleanupOrphansList(t *testing.T) {
 func TestCleanupVersionsList(t *testing.T) {
 	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{
 		manager.ManagerWinget: &stubListAdapter{packages: []manager.Package{
-			{Name: "python", CurrentVersion: "3.11.0"},
-			{Name: "python", CurrentVersion: "3.12.0"},
+			{Name: testPythonPackageName, CurrentVersion: "3.11.0"},
+			{Name: testPythonPackageName, CurrentVersion: "3.12.0"},
 			{Name: testGitPackageName, CurrentVersion: "2.43.0"},
 		}},
 	})
@@ -246,7 +246,7 @@ func TestCleanupVersionsList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("versions list: %v", err)
 	}
-	if !strings.Contains(out, "python") {
+	if !strings.Contains(out, testPythonPackageName) {
 		t.Fatalf("expected python multi-version: %q", out)
 	}
 	if !strings.Contains(out, "Dry-run: would remove old version") {
@@ -500,8 +500,8 @@ func TestCleanupOrphansRemove_Live(t *testing.T) {
 
 func TestCleanupVersionsRemove_DryRun(t *testing.T) {
 	stub := &stubListAdapter{packages: []manager.Package{
-		{Name: "python", CurrentVersion: "3.11.0"},
-		{Name: "python", CurrentVersion: "3.12.0"},
+		{Name: testPythonPackageName, CurrentVersion: "3.11.0"},
+		{Name: testPythonPackageName, CurrentVersion: "3.12.0"},
 	}}
 	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{
 		manager.ManagerWinget: stub,
@@ -527,7 +527,7 @@ func TestCleanupVersionsRemove_DryRun(t *testing.T) {
 	// old version 3.11.0 should be targeted (lexicographic last 3.12.0 is current)
 	found := false
 	for _, c := range stub.uninstalled {
-		if strings.Contains(c, "3.11.0") || strings.Contains(c, "python") {
+		if strings.Contains(c, "3.11.0") || strings.Contains(c, testPythonPackageName) {
 			found = true
 		}
 	}
