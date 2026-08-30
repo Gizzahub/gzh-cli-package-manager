@@ -139,7 +139,7 @@ func newPerManagerListCmd(spec perManagerSpec) *cobra.Command {
 	var outputFormat string
 
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:   listCommand,
 		Short: fmt.Sprintf("List packages installed via %s", spec.Use),
 		Long:  fmt.Sprintf("List packages managed by %s on this system.", spec.Use),
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -245,7 +245,7 @@ func newWingetSourceListCmd(spec perManagerSpec) *cobra.Command {
 	var outputFormat string
 
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:   listCommand,
 		Short: "List winget package sources",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runWingetSourceList(cmd.Context(), spec, outputFormat, cmd.OutOrStdout())
@@ -271,7 +271,7 @@ func newScoopBucketListCmd(spec perManagerSpec) *cobra.Command {
 	var outputFormat string
 
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:   listCommand,
 		Short: "List Scoop buckets",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runScoopBucketList(cmd.Context(), spec, outputFormat, cmd.OutOrStdout())

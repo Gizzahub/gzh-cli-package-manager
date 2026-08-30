@@ -100,7 +100,7 @@ Quarantined packages are moved to a holding area and can be restored if needed.`
 
 // quarantineListCmd lists quarantined packages.
 var quarantineListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   listCommand,
 	Short: "List quarantined packages",
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx := context.Background()
@@ -344,7 +344,7 @@ Use --dry-run to print dry-run remove messages (no packages are removed).`,
 
 // orphansListCmd lists orphan candidates from registered adapters.
 var orphansListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   listCommand,
 	Short: "List orphan package candidates",
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx := context.Background()
@@ -399,7 +399,7 @@ Reports names that appear with more than one distinct CurrentVersion.`,
 
 // versionsListCmd lists multi-version packages from registered adapters.
 var versionsListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   listCommand,
 	Short: "List packages with multiple installed versions",
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx := context.Background()
