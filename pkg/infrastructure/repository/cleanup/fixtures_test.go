@@ -8,5 +8,6 @@ const (
 	testNPMManagerID      = "npm"
 	testNodePackageName   = "node"
 	testPythonPackageName = "python"
+	testScoopManagerID    = "scoop"
 	testVersionOne        = "1.0"
 )

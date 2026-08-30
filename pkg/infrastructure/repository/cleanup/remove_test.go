@@ -31,9 +31,9 @@ func TestRemoveOrphans_DryRun(t *testing.T) {
 	u := &recordingUninstaller{}
 	ex := NewAdapterCleanupExecutor(u)
 	summary, err := ex.RemoveOrphans(context.Background(), []*domaincleanup.OrphanPackage{
-		{Name: testGitPackageName, Version: testVersionOne, ManagerID: "scoop", Reason: "missing version metadata"},
-		{Name: "(unnamed)", ManagerID: "scoop", Reason: "empty package name"},
-		{Name: "unknown", ManagerID: "scoop", Reason: "placeholder"},
+		{Name: testGitPackageName, Version: testVersionOne, ManagerID: testScoopManagerID, Reason: "missing version metadata"},
+		{Name: "(unnamed)", ManagerID: testScoopManagerID, Reason: "empty package name"},
+		{Name: "unknown", ManagerID: testScoopManagerID, Reason: "placeholder"},
 	}, true)
 	if err != nil {
 		t.Fatal(err)

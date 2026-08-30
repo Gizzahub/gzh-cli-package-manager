@@ -54,13 +54,13 @@ func TestDetectOrphansFromPackages(t *testing.T) {
 
 func TestHeuristicOrphanDetector_Detect(t *testing.T) {
 	d := NewHeuristicOrphanDetector(map[string]PackageLister{
-		"scoop": &stubLister{packages: []manager.Package{
+		testScoopManagerID: &stubLister{packages: []manager.Package{
 			{Name: testGitPackageName, CurrentVersion: testGitCurrentVersion},
 			{Name: "", CurrentVersion: "1"},
 		}},
 	})
 
-	orphans, err := d.Detect(context.Background(), "scoop")
+	orphans, err := d.Detect(context.Background(), testScoopManagerID)
 	if err != nil {
 		t.Fatalf("Detect: %v", err)
 	}
