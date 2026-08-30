@@ -134,8 +134,8 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 	}
 
 	// npm doctor returns non-zero on warnings or errors
-	output := strings.ToLower(result.Stdout + result.Stderr)
-	if strings.Contains(output, "error") {
+	doctorOutput := strings.ToLower(result.Stdout + result.Stderr)
+	if strings.Contains(doctorOutput, "error") {
 		return manager.StatusError, nil
 	}
 
