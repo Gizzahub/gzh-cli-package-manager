@@ -12,11 +12,12 @@ import (
 )
 
 const (
-	brewCommand            = "brew"
-	brewVersionFlag        = "--version"
-	brewWhichCommand       = "which"
-	testBrewDoctorCommand  = "doctor"
-	testBrewUpgradeCommand = "upgrade"
+	brewCommand                 = "brew"
+	brewVersionFlag             = "--version"
+	brewWhichCommand            = "which"
+	testBrewDoctorCommand       = "doctor"
+	testBrewUpgradeCommand      = "upgrade"
+	testNonZeroExitCodeCaseName = "non-zero exit code"
 )
 
 func TestAdapter_GetConfigPath(t *testing.T) {
@@ -359,7 +360,7 @@ func TestAdapter_GetVersion_EdgeCases(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "non-zero exit code",
+			name: testNonZeroExitCodeCaseName,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == brewCommand && len(args) == 1 && args[0] == brewVersionFlag {
 					return &output.ExecutionResult{
@@ -425,7 +426,7 @@ func TestAdapter_GetConfigPath_EdgeCases(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "non-zero exit code",
+			name: testNonZeroExitCodeCaseName,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == brewCommand && args[0] == "--prefix" {
 					return &output.ExecutionResult{
@@ -465,7 +466,7 @@ func TestAdapter_ListPackages_EdgeCases(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "non-zero exit code",
+			name: testNonZeroExitCodeCaseName,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == brewCommand && len(args) == 3 {
 					return &output.ExecutionResult{
