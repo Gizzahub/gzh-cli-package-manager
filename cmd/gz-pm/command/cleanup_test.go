@@ -157,11 +157,11 @@ func TestCleanupQuarantinePurge(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 	_ = qrepo.Save(ctx, &cleanup.QuarantinedPackage{
-		Name: "stale", Version: "1.0", ManagerID: testNPMManagerID,
+		Name: "stale", Version: testQuarantineVersion, ManagerID: testNPMManagerID,
 		QuarantinedAt: now.AddDate(0, 0, -60), Status: cleanup.StatusQuarantined, SizeMB: 5,
 	})
 	_ = qrepo.Save(ctx, &cleanup.QuarantinedPackage{
-		Name: "fresh", Version: "1.0", ManagerID: testNPMManagerID,
+		Name: "fresh", Version: testQuarantineVersion, ManagerID: testNPMManagerID,
 		QuarantinedAt: now.AddDate(0, 0, -1), Status: cleanup.StatusQuarantined, SizeMB: 1,
 	})
 
@@ -181,10 +181,10 @@ func TestCleanupQuarantinePurge(t *testing.T) {
 		t.Fatalf("unexpected purge output: %q", out)
 	}
 
-	if _, err := qrepo.Get(ctx, "stale", "1.0", testNPMManagerID); err == nil {
+	if _, err := qrepo.Get(ctx, "stale", testQuarantineVersion, testNPMManagerID); err == nil {
 		t.Fatal("stale package should be purged")
 	}
-	if _, err := qrepo.Get(ctx, "fresh", "1.0", testNPMManagerID); err != nil {
+	if _, err := qrepo.Get(ctx, "fresh", testQuarantineVersion, testNPMManagerID); err != nil {
 		t.Fatalf("fresh package should remain: %v", err)
 	}
 }
