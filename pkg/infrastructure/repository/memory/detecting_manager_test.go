@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
@@ -98,6 +99,7 @@ type findAllExpectation struct {
 	npm            findAllManagerExpectation
 	commandSet     []string
 	npmSequence    []string
+	allChecked     bool
 }
 
 func currentPlatformManagerCount() int {
@@ -171,6 +173,9 @@ func assertFindAll(t *testing.T, managers []*manager.Manager, err error, executo
 		if mgr.ID == manager.ManagerNPM {
 			npmManager = mgr
 		}
+		if want.allChecked && mgr.LastChecked.IsZero() {
+			t.Errorf("FindAll() left %s unchecked after a detection failure", mgr.ID)
+		}
 	}
 	if installedCount != want.installedCount {
 		t.Errorf("FindAll() installed count = %d, want %d", installedCount, want.installedCount)
@@ -185,12 +190,10 @@ func assertFindAll(t *testing.T, managers []*manager.Manager, err error, executo
 }
 
 func TestDetectingManagerRepository_FindAll(t *testing.T) {
-	pipDetectCalls := 0
 	tests := []struct {
 		name      string
 		executor  *scriptedExecutor
 		configure func(*DetectingManagerRepository)
-		verify    func(*testing.T)
 		want      findAllExpectation
 	}{
 		{
@@ -263,14 +266,10 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 			name:     "continues after a manager detection error",
 			executor: newScriptedExecutor(nil),
 			configure: func(repo *DetectingManagerRepository) {
-				repo.adapters[manager.ManagerNPM] = detectErrorAdapter{err: errFindAllDetect}
-				repo.adapters[manager.ManagerPip] = detectErrorAdapter{detectCalls: &pipDetectCalls}
-			},
-			verify: func(t *testing.T) {
-				t.Helper()
-				if pipDetectCalls != 1 {
-					t.Errorf("Pip Detect() calls = %d, want 1 after NPM detection error", pipDetectCalls)
+				for _, mgr := range repo.managers {
+					mgr.LastChecked = time.Time{}
 				}
+				repo.adapters[manager.ManagerNPM] = detectErrorAdapter{err: errFindAllDetect}
 			},
 			want: findAllExpectation{
 				managerCount:   currentPlatformManagerCount(),
@@ -278,6 +277,7 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 				npm: findAllManagerExpectation{
 					status: manager.StatusError,
 				},
+				allChecked: true,
 			},
 		},
 	}
@@ -290,9 +290,6 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 			}
 			managers, err := repo.FindAll(context.Background())
 			assertFindAll(t, managers, err, tt.executor, &tt.want)
-			if tt.verify != nil {
-				tt.verify(t)
-			}
 		})
 	}
 }
@@ -498,16 +495,10 @@ func TestDetectingManagerRepository_AdapterRegistration(t *testing.T) {
 }
 
 type detectErrorAdapter struct {
-	err         error
-	detectCalls *int
+	err error
 }
 
-func (a detectErrorAdapter) Detect(context.Context) (bool, error) {
-	if a.detectCalls != nil {
-		*a.detectCalls++
-	}
-	return false, a.err
-}
+func (a detectErrorAdapter) Detect(context.Context) (bool, error) { return false, a.err }
 func (a detectErrorAdapter) GetVersion(context.Context) (string, error) {
 	return "", nil
 }
