@@ -19,8 +19,10 @@ import (
 )
 
 const (
-	chocoCommand   = "choco"
-	dryRunFieldKey = "dry_run"
+	chocoCommand           = "choco"
+	dryRunFieldKey         = "dry_run"
+	installPackageAction   = "install"
+	uninstallPackageAction = "uninstall"
 )
 
 // Adapter implements the manager.Adapter interface for Chocolatey.
@@ -147,35 +149,23 @@ func (a *Adapter) Search(ctx context.Context, query string) ([]manager.Package, 
 // dryRun skips the native install. Elevation-related errors are wrapped with
 // a clear message suggesting the user re-run as administrator.
 func (a *Adapter) Install(ctx context.Context, pkgID string, dryRun bool) error {
-	pkgID = strings.TrimSpace(pkgID)
-	if pkgID == "" {
-		return fmt.Errorf("install chocolatey package: package id is required")
-	}
-
-	a.logger.Info(ctx, "Chocolatey install",
-		output.Field{Key: "package", Value: pkgID},
-		output.Field{Key: dryRunFieldKey, Value: dryRun})
-
-	if dryRun {
-		return nil
-	}
-
-	result, err := a.executor.Execute(ctx, chocoCommand, "install", pkgID, "-y")
-	if resultErr := cmdutil.CheckResult(result, err, "install chocolatey package "+pkgID); resultErr != nil {
-		return wrapElevationError(resultErr)
-	}
-	return nil
+	return a.runPackageAction(ctx, installPackageAction, pkgID, dryRun)
 }
 
 // Uninstall removes a package by Chocolatey package ID.
 // dryRun skips the native uninstall. Elevation-related errors are wrapped.
 func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) error {
+	return a.runPackageAction(ctx, uninstallPackageAction, pkgID, dryRun)
+}
+
+// runPackageAction executes an install or uninstall while preserving its action-specific contract.
+func (a *Adapter) runPackageAction(ctx context.Context, action, pkgID string, dryRun bool) error {
 	pkgID = strings.TrimSpace(pkgID)
 	if pkgID == "" {
-		return fmt.Errorf("uninstall chocolatey package: package id is required")
+		return fmt.Errorf("%s chocolatey package: package id is required", action)
 	}
 
-	a.logger.Info(ctx, "Chocolatey uninstall",
+	a.logger.Info(ctx, "Chocolatey "+action,
 		output.Field{Key: "package", Value: pkgID},
 		output.Field{Key: dryRunFieldKey, Value: dryRun})
 
@@ -183,8 +173,8 @@ func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) erro
 		return nil
 	}
 
-	result, err := a.executor.Execute(ctx, chocoCommand, "uninstall", pkgID, "-y")
-	if resultErr := cmdutil.CheckResult(result, err, "uninstall chocolatey package "+pkgID); resultErr != nil {
+	result, err := a.executor.Execute(ctx, chocoCommand, action, pkgID, "-y")
+	if resultErr := cmdutil.CheckResult(result, err, action+" chocolatey package "+pkgID); resultErr != nil {
 		return wrapElevationError(resultErr)
 	}
 	return nil

@@ -549,6 +549,17 @@ func TestAdapter_Install(t *testing.T) {
 		}
 	})
 
+	t.Run("empty id keeps install context", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
+		err := adapter.Install(context.Background(), " ", false)
+		if err == nil {
+			t.Fatal("expected empty id error")
+		}
+		if got, want := err.Error(), "install chocolatey package: package id is required"; got != want {
+			t.Errorf("error = %q, want %q", got, want)
+		}
+	})
+
 	t.Run("elevation error wrapped", func(t *testing.T) {
 		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 			return testutil.FailureResult(1, "Access is denied. This operation requires elevation."), nil
@@ -560,25 +571,49 @@ func TestAdapter_Install(t *testing.T) {
 		if !strings.Contains(err.Error(), "Administrator") {
 			t.Errorf("error should suggest admin: %v", err)
 		}
+		if !strings.Contains(err.Error(), "install chocolatey package "+testPackageGit) {
+			t.Errorf("error should retain install context: %v", err)
+		}
 	})
 }
 
 func TestAdapter_Uninstall(t *testing.T) {
-	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, args ...string) (*output.ExecutionResult, error) {
-		if args[0] == "uninstall" {
+	t.Run("uninstall success", func(t *testing.T) {
+		var gotArgs []string
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			if command != chocoCommand {
+				return nil, errors.New("unexpected command")
+			}
+			gotArgs = args
 			return testutil.SuccessResult("Chocolatey uninstalled git"), nil
+		}), testutil.NewMockLogger())
+		if err := adapter.Uninstall(context.Background(), testPackageGit, false); err != nil {
+			t.Fatalf("Uninstall: %v", err)
 		}
-		return nil, errors.New("unexpected")
-	}), testutil.NewMockLogger())
-	if err := adapter.Uninstall(context.Background(), testPackageGit, false); err != nil {
-		t.Fatalf("Uninstall: %v", err)
-	}
-	if err := adapter.Uninstall(context.Background(), testPackageGit, true); err != nil {
-		t.Fatalf("Uninstall dry-run: %v", err)
-	}
-	if err := adapter.Uninstall(context.Background(), "", false); err == nil {
-		t.Fatal("expected empty id error")
-	}
+		if len(gotArgs) != 3 || gotArgs[0] != "uninstall" || gotArgs[1] != testPackageGit || gotArgs[2] != "-y" {
+			t.Fatalf("args = %v", gotArgs)
+		}
+	})
+
+	t.Run("dry-run skips executor", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("should not be called")
+		}), testutil.NewMockLogger())
+		if err := adapter.Uninstall(context.Background(), testPackageGit, true); err != nil {
+			t.Fatalf("Uninstall dry-run: %v", err)
+		}
+	})
+
+	t.Run("empty id keeps uninstall context", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
+		err := adapter.Uninstall(context.Background(), "", false)
+		if err == nil {
+			t.Fatal("expected empty id error")
+		}
+		if got, want := err.Error(), "uninstall chocolatey package: package id is required"; got != want {
+			t.Errorf("error = %q, want %q", got, want)
+		}
+	})
 }
 
 func TestWrapElevationError(t *testing.T) {
