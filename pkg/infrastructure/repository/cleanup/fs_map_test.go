@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -58,5 +59,40 @@ func TestMapFileSystemWalkDirSkipsDescendantsForExactSkipDir(t *testing.T) {
 	}
 	if visitedDescendant {
 		t.Fatal("WalkDir() visited a descendant after exact fs.SkipDir")
+	}
+}
+
+func TestOSFileSystemMissingPathPreservesNotExistSemantics(t *testing.T) {
+	t.Parallel()
+
+	fileSystem := NewOSFileSystem()
+	missingPath := filepath.Join(t.TempDir(), "missing")
+
+	assertNotExist := func(name string, err error) {
+		t.Helper()
+		if !errors.Is(err, fs.ErrNotExist) {
+			t.Fatalf("%s() error = %v, want errors.Is(err, fs.ErrNotExist)", name, err)
+		}
+		if !os.IsNotExist(err) {
+			t.Fatalf("%s() error = %v, want os.IsNotExist(err)", name, err)
+		}
+	}
+
+	_, err := fileSystem.Stat(missingPath)
+	assertNotExist("Stat", err)
+
+	err = fileSystem.WalkDir(missingPath, func(_ string, _ fs.DirEntry, walkErr error) error { return walkErr })
+	assertNotExist("WalkDir", err)
+
+	_, err = fileSystem.ReadDir(missingPath)
+	assertNotExist("ReadDir", err)
+}
+
+func TestOSFileSystemRemoveAllMissingPathMatchesOS(t *testing.T) {
+	t.Parallel()
+
+	err := NewOSFileSystem().RemoveAll(filepath.Join(t.TempDir(), "missing"))
+	if err != nil {
+		t.Fatalf("RemoveAll() error = %v, want nil for a missing path", err)
 	}
 }

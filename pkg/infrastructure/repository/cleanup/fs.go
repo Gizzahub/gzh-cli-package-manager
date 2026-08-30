@@ -31,22 +31,22 @@ func NewOSFileSystem() *OSFileSystem {
 
 // Stat implements FileSystem.
 func (OSFileSystem) Stat(path string) (fs.FileInfo, error) {
-	return os.Stat(path)
+	return os.Stat(path) //nolint:wrapcheck // FileSystem deliberately preserves native OS error identity for callers.
 }
 
 // WalkDir implements FileSystem.
 func (OSFileSystem) WalkDir(root string, fn fs.WalkDirFunc) error {
-	return filepath.WalkDir(root, fn)
+	return filepath.WalkDir(root, fn) //nolint:wrapcheck // FileSystem deliberately preserves native OS error identity for callers.
 }
 
 // RemoveAll implements FileSystem.
 func (OSFileSystem) RemoveAll(path string) error {
-	return os.RemoveAll(path)
+	return os.RemoveAll(path) //nolint:wrapcheck // FileSystem deliberately preserves native OS error identity for callers.
 }
 
 // ReadDir implements FileSystem.
 func (OSFileSystem) ReadDir(path string) ([]fs.DirEntry, error) {
-	return os.ReadDir(path)
+	return os.ReadDir(path) //nolint:wrapcheck // FileSystem deliberately preserves native OS error identity for callers.
 }
 
 // Ensure OSFileSystem implements FileSystem.
