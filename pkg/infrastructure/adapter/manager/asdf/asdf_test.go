@@ -178,7 +178,7 @@ ruby
 					}, nil
 				}
 				// asdf list nodejs
-				if command == asdfCommand && args[0] == "list" && args[1] == "nodejs" {
+				if command == asdfCommand && args[0] == listArg && args[1] == "nodejs" {
 					return &output.ExecutionResult{
 						Stdout: ` 18.0.0
 *20.11.0
@@ -188,7 +188,7 @@ ruby
 					}, nil
 				}
 				// asdf list python
-				if command == asdfCommand && args[0] == "list" && args[1] == "python" {
+				if command == asdfCommand && args[0] == listArg && args[1] == "python" {
 					return &output.ExecutionResult{
 						Stdout: `*3.11.7
  3.12.0
@@ -197,7 +197,7 @@ ruby
 					}, nil
 				}
 				// asdf list ruby
-				if command == asdfCommand && args[0] == "list" && args[1] == "ruby" {
+				if command == asdfCommand && args[0] == listArg && args[1] == "ruby" {
 					return &output.ExecutionResult{
 						Stdout: `*3.2.2
 `,
@@ -468,7 +468,7 @@ func TestAdapter_ListPackages_Error(t *testing.T) {
 					}, nil
 				}
 				// Version list fails
-				if command == asdfCommand && args[0] == "list" {
+				if command == asdfCommand && args[0] == listArg {
 					return nil, errMockExecution
 				}
 				return &output.ExecutionResult{ExitCode: 0}, nil
@@ -485,7 +485,7 @@ func TestAdapter_ListPackages_Error(t *testing.T) {
 						ExitCode: 0,
 					}, nil
 				}
-				if command == asdfCommand && args[0] == "list" {
+				if command == asdfCommand && args[0] == listArg {
 					return &output.ExecutionResult{
 						Stdout:   "",
 						ExitCode: 0,
