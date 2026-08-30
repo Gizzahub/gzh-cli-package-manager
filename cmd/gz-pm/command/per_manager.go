@@ -352,35 +352,26 @@ func runPerManagerSearch(ctx context.Context, spec perManagerSpec, query, format
 
 // runPerManagerInstall installs a package after Detect succeeds.
 func runPerManagerInstall(ctx context.Context, spec perManagerSpec, pkgID string, dryRun bool, out io.Writer) error {
-	adapter, err := requireAdapter(spec)
-	if err != nil {
-		return err
-	}
-	if err := ensureDetected(ctx, adapter, spec.Use); err != nil {
-		return err
-	}
-
-	installer, ok := adapter.(adapterm.Installer)
-	if !ok {
-		return fmt.Errorf("%s does not support install", spec.Use)
-	}
-
-	if dryRun {
-		_, _ = fmt.Fprintf(out, "Dry-run: would install %q via %s\n", pkgID, spec.Use)
-	}
-
-	if err := installer.Install(ctx, pkgID, dryRun); err != nil {
-		return fmt.Errorf("%s install failed: %w", spec.Use, err)
-	}
-
-	if !dryRun {
-		_, _ = fmt.Fprintf(out, "Installed %q via %s\n", pkgID, spec.Use)
-	}
-	return nil
+	return runPerManagerPackageAction(ctx, spec, pkgID, dryRun, out, perManagerInstallAction, "Installed", adapterm.Installer.Install)
 }
 
 // runPerManagerUninstall uninstalls a package after Detect succeeds.
 func runPerManagerUninstall(ctx context.Context, spec perManagerSpec, pkgID string, dryRun bool, out io.Writer) error {
+	return runPerManagerPackageAction(ctx, spec, pkgID, dryRun, out, perManagerUninstallAction, "Uninstalled", adapterm.Installer.Uninstall)
+}
+
+type perManagerPackageActionInvoker func(adapterm.Installer, context.Context, string, bool) error
+
+func runPerManagerPackageAction(
+	ctx context.Context,
+	spec perManagerSpec,
+	pkgID string,
+	dryRun bool,
+	out io.Writer,
+	action string,
+	completedAction string,
+	invoke perManagerPackageActionInvoker,
+) error {
 	adapter, err := requireAdapter(spec)
 	if err != nil {
 		return err
@@ -391,19 +382,19 @@ func runPerManagerUninstall(ctx context.Context, spec perManagerSpec, pkgID stri
 
 	installer, ok := adapter.(adapterm.Installer)
 	if !ok {
-		return fmt.Errorf("%s does not support uninstall", spec.Use)
+		return fmt.Errorf("%s does not support %s", spec.Use, action)
 	}
 
 	if dryRun {
-		_, _ = fmt.Fprintf(out, "Dry-run: would uninstall %q via %s\n", pkgID, spec.Use)
+		_, _ = fmt.Fprintf(out, "Dry-run: would %s %q via %s\n", action, pkgID, spec.Use)
 	}
 
-	if err := installer.Uninstall(ctx, pkgID, dryRun); err != nil {
-		return fmt.Errorf("%s uninstall failed: %w", spec.Use, err)
+	if err := invoke(installer, ctx, pkgID, dryRun); err != nil {
+		return fmt.Errorf("%s %s failed: %w", spec.Use, action, err)
 	}
 
 	if !dryRun {
-		_, _ = fmt.Fprintf(out, "Uninstalled %q via %s\n", pkgID, spec.Use)
+		_, _ = fmt.Fprintf(out, "%s %q via %s\n", completedAction, pkgID, spec.Use)
 	}
 	return nil
 }

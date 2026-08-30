@@ -336,8 +336,8 @@ func TestPerManager_WingetInstallDryRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("winget install dry-run: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "Dry-run") || !strings.Contains(out, "Git.Git") {
-		t.Errorf("output = %q", out)
+	if want := "Dry-run: would install \"Git.Git\" via winget\n"; out != want {
+		t.Errorf("output = %q, want %q", out, want)
 	}
 }
 
@@ -362,8 +362,40 @@ func TestPerManager_WingetUninstall(t *testing.T) {
 	if !uninstallCalled {
 		t.Fatal("expected uninstall native call")
 	}
-	if !strings.Contains(out, "Uninstalled") {
-		t.Errorf("output = %q", out)
+	if want := "Uninstalled \"Git.Git\" via winget\n"; out != want {
+		t.Errorf("output = %q, want %q", out, want)
+	}
+}
+
+func TestPerManager_PackageActionErrorsPreserveCause(t *testing.T) {
+	sentinel := errors.New("native package action failed")
+	tests := []struct {
+		action string
+	}{
+		{action: perManagerInstallAction},
+		{action: perManagerUninstallAction},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.action, func(t *testing.T) {
+			installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+				if command == testWingetExecutable && len(args) == 1 && args[0] == testVersionFlag {
+					return testutil.SuccessResult("v1.6.0\n"), nil
+				}
+				if command == testWingetExecutable && len(args) > 0 && args[0] == tt.action {
+					return nil, sentinel
+				}
+				return nil, errors.New("unexpected: " + strings.Join(args, " "))
+			})
+
+			_, err := executePerManagerCmd(t, testWingetCLICommand, tt.action, "Git.Git")
+			if !errors.Is(err, sentinel) {
+				t.Errorf("error = %v, want cause %v", err, sentinel)
+			}
+			if want := "winget " + tt.action + " failed"; !strings.Contains(err.Error(), want) {
+				t.Errorf("error = %q, want context %q", err, want)
+			}
+		})
 	}
 }
 
@@ -427,6 +459,9 @@ func TestPerManager_ScoopInstall(t *testing.T) {
 	if err != nil {
 		t.Fatalf("scoop install: %v\n%s", err, out)
 	}
+	if want := "Installed \"git\" via scoop\n"; out != want {
+		t.Errorf("output = %q, want %q", out, want)
+	}
 }
 
 func TestPerManager_ScoopUninstallDryRun(t *testing.T) {
@@ -441,8 +476,8 @@ func TestPerManager_ScoopUninstallDryRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("scoop uninstall dry-run: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "Dry-run") {
-		t.Errorf("output = %q", out)
+	if want := "Dry-run: would uninstall \"git\" via scoop\n"; out != want {
+		t.Errorf("output = %q, want %q", out, want)
 	}
 }
 
