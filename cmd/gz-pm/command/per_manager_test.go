@@ -99,14 +99,14 @@ Git        Git.Git   2.43.0  winget
 		switch {
 		case command == "winget" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v1.6.0\n"), nil
-		case command == "winget" && len(args) >= 2 && args[0] == "search" && args[1] == testGitPackageName:
+		case command == "winget" && len(args) >= 2 && args[0] == testSearchCommand && args[1] == testGitPackageName:
 			return testutil.SuccessResult(searchOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "winget", "search", testGitPackageName, "--output", "json")
+	out, err := executePerManagerCmd(t, "winget", testSearchCommand, testGitPackageName, "--output", "json")
 	if err != nil {
 		t.Fatalf("winget search failed: %v\noutput: %s", err, out)
 	}
@@ -160,14 +160,14 @@ git  2.43.0  main
 		switch {
 		case command == "scoop" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v0.3.1\n"), nil
-		case command == "scoop" && len(args) == 2 && args[0] == "search" && args[1] == testGitPackageName:
+		case command == "scoop" && len(args) == 2 && args[0] == testSearchCommand && args[1] == testGitPackageName:
 			return testutil.SuccessResult(searchOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "scoop", "search", testGitPackageName)
+	out, err := executePerManagerCmd(t, "scoop", testSearchCommand, testGitPackageName)
 	if err != nil {
 		t.Fatalf("scoop search failed: %v\noutput: %s", err, out)
 	}
@@ -214,14 +214,14 @@ func TestPerManager_ChocolateySearch(t *testing.T) {
 		switch {
 		case command == "choco" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("2.2.2\n"), nil
-		case command == "choco" && len(args) == 3 && args[0] == "search" && args[1] == testGitPackageName && args[2] == "-r":
+		case command == "choco" && len(args) == 3 && args[0] == testSearchCommand && args[1] == testGitPackageName && args[2] == "-r":
 			return testutil.SuccessResult(searchOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "chocolatey", "search", testGitPackageName)
+	out, err := executePerManagerCmd(t, "chocolatey", testSearchCommand, testGitPackageName)
 	if err != nil {
 		t.Fatalf("chocolatey search failed: %v\noutput: %s", err, out)
 	}
