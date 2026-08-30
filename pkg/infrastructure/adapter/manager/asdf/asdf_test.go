@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
@@ -15,7 +16,9 @@ import (
 
 // Test-specific constants.
 const (
-	versionArg = "version"
+	versionArg       = "version"
+	testNodeJSPlugin = "nodejs"
+	testPythonPlugin = "python"
 )
 
 // errMockExecution is a sentinel error for testing executor failures.
@@ -178,7 +181,7 @@ ruby
 					}, nil
 				}
 				// asdf list nodejs
-				if command == asdfCommand && args[0] == listArg && args[1] == "nodejs" {
+				if command == asdfCommand && args[0] == listArg && args[1] == testNodeJSPlugin {
 					return &output.ExecutionResult{
 						Stdout: ` 18.0.0
 *20.11.0
@@ -188,7 +191,7 @@ ruby
 					}, nil
 				}
 				// asdf list python
-				if command == asdfCommand && args[0] == listArg && args[1] == "python" {
+				if command == asdfCommand && args[0] == listArg && args[1] == testPythonPlugin {
 					return &output.ExecutionResult{
 						Stdout: `*3.11.7
  3.12.0
@@ -443,76 +446,76 @@ func TestAdapter_GetConfigPath_ZeroValue(t *testing.T) {
 	}
 }
 
-func TestAdapter_ListPackages_Error(t *testing.T) {
-	tests := []struct {
-		name      string
-		execFunc  func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-		wantCount int
-		wantErr   bool
-	}{
-		{
-			name: "plugin list error",
-			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return nil, errMockExecution
-			},
-			wantCount: 0,
-			wantErr:   true,
-		},
-		{
-			name: "version list error for one plugin",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == asdfCommand && len(args) == 2 && args[0] == pluginArg && args[1] == listArg {
-					return &output.ExecutionResult{
-						Stdout:   "nodejs\npython\n",
-						ExitCode: 0,
-					}, nil
-				}
-				// Version list fails
-				if command == asdfCommand && args[0] == listArg {
-					return nil, errMockExecution
-				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
-			},
-			wantCount: 0, // No packages because version listing failed
-			wantErr:   false,
-		},
-		{
-			name: "empty version output",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == asdfCommand && len(args) == 2 && args[0] == pluginArg && args[1] == listArg {
-					return &output.ExecutionResult{
-						Stdout:   "nodejs\n",
-						ExitCode: 0,
-					}, nil
-				}
-				if command == asdfCommand && args[0] == listArg {
-					return &output.ExecutionResult{
-						Stdout:   "",
-						ExitCode: 0,
-					}, nil
-				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
-			},
-			wantCount: 0,
-			wantErr:   false,
-		},
+func TestAdapter_ListPackages_PluginListError(t *testing.T) {
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+		return nil, errMockExecution
+	}), testutil.NewMockLogger())
+
+	_, err := adapter.ListPackages(context.Background())
+	if !errors.Is(err, errMockExecution) {
+		t.Errorf("ListPackages() error = %v, want cause %v", err, errMockExecution)
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
-			packages, err := adapter.ListPackages(context.Background())
+func TestAdapter_ListPackages_VersionListErrorSkipsPlugin(t *testing.T) {
+	adapter := NewAdapter(testutil.NewMockExecutor(testListPackagesExecutor(map[string]testExecutionResponse{
+		testCommandKey(asdfCommand, pluginArg, listArg): {
+			result: &output.ExecutionResult{Stdout: testNodeJSPlugin + "\n" + testPythonPlugin + "\n", ExitCode: 0},
+		},
+		testCommandKey(asdfCommand, listArg, testNodeJSPlugin): {err: errMockExecution},
+		testCommandKey(asdfCommand, listArg, testPythonPlugin): {
+			result: &output.ExecutionResult{Stdout: "*3.12.0\n", ExitCode: 0},
+		},
+	})), testutil.NewMockLogger())
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ListPackages() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if len(packages) != tt.wantCount {
-				t.Errorf("ListPackages() package count = %d, want %d", len(packages), tt.wantCount)
-			}
-		})
+	packages, err := adapter.ListPackages(context.Background())
+	if err != nil {
+		t.Fatalf("ListPackages() error = %v", err)
 	}
+	if len(packages) != 1 {
+		t.Fatalf("ListPackages() package count = %d, want 1", len(packages))
+	}
+	if got := packages[0]; got.Name != testPythonPlugin+"@3.12.0" || !got.IsGlobal {
+		t.Errorf("ListPackages() package = %+v, want current %s@3.12.0", got, testPythonPlugin)
+	}
+}
+
+func TestAdapter_ListPackages_EmptyVersionOutput(t *testing.T) {
+	adapter := NewAdapter(testutil.NewMockExecutor(testListPackagesExecutor(map[string]testExecutionResponse{
+		testCommandKey(asdfCommand, pluginArg, listArg): {
+			result: &output.ExecutionResult{Stdout: testNodeJSPlugin + "\n", ExitCode: 0},
+		},
+		testCommandKey(asdfCommand, listArg, testNodeJSPlugin): {
+			result: &output.ExecutionResult{ExitCode: 0},
+		},
+	})), testutil.NewMockLogger())
+
+	packages, err := adapter.ListPackages(context.Background())
+	if err != nil {
+		t.Fatalf("ListPackages() error = %v", err)
+	}
+	if len(packages) != 0 {
+		t.Errorf("ListPackages() package count = %d, want 0", len(packages))
+	}
+}
+
+type testExecutionResponse struct {
+	result *output.ExecutionResult
+	err    error
+}
+
+func testListPackagesExecutor(responses map[string]testExecutionResponse) func(context.Context, string, ...string) (*output.ExecutionResult, error) {
+	return func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		response, ok := responses[testCommandKey(command, args...)]
+		if !ok {
+			return nil, errors.New("unexpected command")
+		}
+		return response.result, response.err
+	}
+}
+
+func testCommandKey(command string, args ...string) string {
+	return strings.Join(append([]string{command}, args...), " ")
 }
 
 func TestAdapter_Update(t *testing.T) {
