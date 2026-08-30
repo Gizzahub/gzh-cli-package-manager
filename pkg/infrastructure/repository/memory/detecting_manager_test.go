@@ -101,10 +101,14 @@ type findAllExpectation struct {
 }
 
 func currentPlatformManagerCount() int {
-	if runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "darwin":
+		return 5
+	case "windows":
+		return 8
+	default:
 		return 7
 	}
-	return 5
 }
 
 func assertFindAllManager(t *testing.T, got *manager.Manager, want *findAllManagerExpectation) {
@@ -181,10 +185,12 @@ func assertFindAll(t *testing.T, managers []*manager.Manager, err error, executo
 }
 
 func TestDetectingManagerRepository_FindAll(t *testing.T) {
+	pipDetectCalls := 0
 	tests := []struct {
 		name      string
 		executor  *scriptedExecutor
 		configure func(*DetectingManagerRepository)
+		verify    func(*testing.T)
 		want      findAllExpectation
 	}{
 		{
@@ -258,15 +264,19 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 			executor: newScriptedExecutor(nil),
 			configure: func(repo *DetectingManagerRepository) {
 				repo.adapters[manager.ManagerNPM] = detectErrorAdapter{err: errFindAllDetect}
+				repo.adapters[manager.ManagerPip] = detectErrorAdapter{detectCalls: &pipDetectCalls}
+			},
+			verify: func(t *testing.T) {
+				t.Helper()
+				if pipDetectCalls != 1 {
+					t.Errorf("Pip Detect() calls = %d, want 1 after NPM detection error", pipDetectCalls)
+				}
 			},
 			want: findAllExpectation{
 				managerCount:   currentPlatformManagerCount(),
 				installedCount: 0,
 				npm: findAllManagerExpectation{
 					status: manager.StatusError,
-				},
-				commandSet: []string{
-					scriptCommand(whichCommand, pip3Command),
 				},
 			},
 		},
@@ -280,6 +290,9 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 			}
 			managers, err := repo.FindAll(context.Background())
 			assertFindAll(t, managers, err, tt.executor, &tt.want)
+			if tt.verify != nil {
+				tt.verify(t)
+			}
 		})
 	}
 }
@@ -485,10 +498,16 @@ func TestDetectingManagerRepository_AdapterRegistration(t *testing.T) {
 }
 
 type detectErrorAdapter struct {
-	err error
+	err         error
+	detectCalls *int
 }
 
-func (a detectErrorAdapter) Detect(context.Context) (bool, error) { return false, a.err }
+func (a detectErrorAdapter) Detect(context.Context) (bool, error) {
+	if a.detectCalls != nil {
+		*a.detectCalls++
+	}
+	return false, a.err
+}
 func (a detectErrorAdapter) GetVersion(context.Context) (string, error) {
 	return "", nil
 }
