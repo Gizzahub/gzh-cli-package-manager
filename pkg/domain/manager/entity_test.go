@@ -9,6 +9,8 @@ const (
 	fixtureVersion100 = "1.0.0"
 	fixtureVersion200 = "2.0.0"
 	fixtureVersion101 = "1.0.1"
+	fixturePackageOne = "pkg1"
+	fixturePackageTwo = "pkg2"
 )
 
 func TestManager_IsHealthy(t *testing.T) {
@@ -102,24 +104,24 @@ func TestManager_UpdatableCount(t *testing.T) {
 		{
 			name: "no updates available",
 			packages: []Package{
-				{Name: "pkg1", CurrentVersion: fixtureVersion100, AvailableVersion: fixtureVersion100, UpdateType: UpdateNone},
-				{Name: "pkg2", CurrentVersion: fixtureVersion200, AvailableVersion: fixtureVersion200, UpdateType: UpdateNone},
+				{Name: fixturePackageOne, CurrentVersion: fixtureVersion100, AvailableVersion: fixtureVersion100, UpdateType: UpdateNone},
+				{Name: fixturePackageTwo, CurrentVersion: fixtureVersion200, AvailableVersion: fixtureVersion200, UpdateType: UpdateNone},
 			},
 			want: 0,
 		},
 		{
 			name: "all packages have updates",
 			packages: []Package{
-				{Name: "pkg1", CurrentVersion: fixtureVersion100, AvailableVersion: fixtureVersion101, UpdateType: UpdatePatch},
-				{Name: "pkg2", CurrentVersion: fixtureVersion100, AvailableVersion: "1.1.0", UpdateType: UpdateMinor},
+				{Name: fixturePackageOne, CurrentVersion: fixtureVersion100, AvailableVersion: fixtureVersion101, UpdateType: UpdatePatch},
+				{Name: fixturePackageTwo, CurrentVersion: fixtureVersion100, AvailableVersion: "1.1.0", UpdateType: UpdateMinor},
 			},
 			want: 2,
 		},
 		{
 			name: "mixed update availability",
 			packages: []Package{
-				{Name: "pkg1", CurrentVersion: fixtureVersion100, AvailableVersion: fixtureVersion101, UpdateType: UpdatePatch},
-				{Name: "pkg2", CurrentVersion: fixtureVersion200, AvailableVersion: fixtureVersion200, UpdateType: UpdateNone},
+				{Name: fixturePackageOne, CurrentVersion: fixtureVersion100, AvailableVersion: fixtureVersion101, UpdateType: UpdatePatch},
+				{Name: fixturePackageTwo, CurrentVersion: fixtureVersion200, AvailableVersion: fixtureVersion200, UpdateType: UpdateNone},
 				{Name: "pkg3", CurrentVersion: fixtureVersion100, AvailableVersion: fixtureVersion200, UpdateType: UpdateMajor},
 			},
 			want: 2,
