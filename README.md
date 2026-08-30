@@ -36,7 +36,7 @@ gz-pm update --all
 - **Dry-Run Support** - Preview changes before executing
 - **Multiple Output Formats** - Human-readable (default), JSON (for scripts), simple (for CI/CD)
 - **Cross-Platform** - macOS, Linux (Ubuntu, Arch, Debian), Windows (planned)
-- **Configuration Management** - Bootstrap systems, sync packages, export/import configs
+- **Configuration Management** - Bootstrap package-manager setups from configuration
 
 ## 📦 Installation
 
@@ -123,15 +123,10 @@ gz-pm bootstrap --config mysetup.yaml
 gz-pm bootstrap --interactive
 ```
 
-### Export Configuration
+### Configuration Export
 
-```bash
-# Export current setup to YAML
-gz-pm export --output mysetup.yaml
-
-# Include specific managers only
-gz-pm export --managers brew,asdf --output brew-asdf.yaml
-```
+Configuration export/import and package synchronization are planned for a future
+release; they are not current `gz-pm` commands.
 
 ## 📋 Supported Package Managers
 
@@ -359,10 +354,9 @@ Apache License 2.0 - see [LICENSE](LICENSE) file.
 
 ## 📊 Project Status
 
-- **Status**: Active Development (Documentation Phase - Week 2)
-- **Version**: v0.1.0 (pre-release)
-- **Next Release**: v1.0.0 (Week 9)
-- **Test Coverage**: Target 90%+ (currently in setup phase)
+- **Status**: Active implementation and quality hardening
+- **Release Readiness**: The project is not yet declared v1.0-ready; automated checks, platform coverage, and release controls require verification before release
+- **Test Coverage**: Target 90%+; generate a current report with `make test-coverage`
 
 ---
 

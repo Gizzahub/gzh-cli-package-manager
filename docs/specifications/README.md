@@ -12,14 +12,9 @@ specifications/
 ├── use-cases/                   # Functional specifications
 │   ├── UC-001-update.md        # Basic update command spec
 │   ├── UC-001-update-enhanced.md # Enhanced update spec (95% compliance target)
-│   ├── UC-002-bootstrap.md     # Bootstrap/setup command
-│   ├── UC-003-sync.md          # Sync command (config-driven updates)
-│   ├── UC-004-status.md        # Status/check command
-│   └── UC-005-export.md        # Export configuration
+│   └── UC-006-cleanup.md       # Cleanup command specification
 ├── test-scenarios.md           # Comprehensive test suite (120+ scenarios)
-├── per-manager-cli.md          # winget/scoop/chocolatey per-manager CLI (list|search)
-└── compliance/                  # Quality and compliance tracking
-    └── implementation-status.md # Current vs target compliance
+└── per-manager-cli.md          # winget/scoop/chocolatey per-manager CLI (list|search)
 ```
 
 ## 🎯 Specification Philosophy
@@ -47,15 +42,16 @@ Each use case specification includes:
 
 ## 📊 Specification Compliance
 
-### Current Status (v1.0 Target)
+### Planned Targets
 
 | Specification | Target | Description |
 |---------------|--------|-------------|
 | **UC-001-update** | 95% | Multi-manager update orchestration |
-| **UC-002-bootstrap** | 90% | System setup and manager installation |
-| **UC-003-sync** | 90% | Config-driven package synchronization |
-| **UC-004-status** | 95% | Health check and status reporting |
-| **UC-005-export** | 85% | Configuration export/backup |
+| **UC-001-update-enhanced** | 95% | Enhanced update behavior and output |
+| **UC-006-cleanup** | Not yet quantified | Cleanup behavior and safety constraints |
+
+These are specification targets, not measured implementation-compliance results. The
+repository does not currently include a dedicated compliance report or automation.
 
 ### Compliance Metrics
 
@@ -168,54 +164,14 @@ gz-pm update --all --output json        # Machine-readable output
 - Actionable error messages
 - Comprehensive summary with statistics
 
-### UC-002: Bootstrap Command
+### UC-006: Cleanup Command
 
-**Synopsis**: `gz-pm bootstrap [flags]`
+**Synopsis**: `gz-pm cleanup [flags]`
 
-**Purpose**: Set up development environment from configuration
+**Purpose**: Inspect and safely remove selected package-manager cleanup targets.
 
-**Key Features**:
-- Install missing package managers
-- Install packages from config file
-- Apply system preferences
-- Post-install validation
-
-### UC-003: Sync Command
-
-**Synopsis**: `gz-pm sync [flags]`
-
-**Purpose**: Synchronize packages with configuration file
-
-**Key Features**:
-- Read package list from YAML/JSON config
-- Install missing packages
-- Update existing packages
-- Remove unlisted packages (with confirmation)
-
-### UC-004: Status Command
-
-**Synopsis**: `gz-pm status [flags]`
-
-**Purpose**: Display package manager health and status
-
-**Key Features**:
-- Manager installation status
-- Version information
-- Package counts
-- Health checks
-- Duplicate detection
-
-### UC-005: Export Command
-
-**Synopsis**: `gz-pm export [flags]`
-
-**Purpose**: Export current configuration to file
-
-**Key Features**:
-- Generate YAML/JSON config
-- Include all or selected managers
-- Package versions (pinned/latest)
-- Metadata and comments
+See [`use-cases/UC-006-cleanup.md`](use-cases/UC-006-cleanup.md) for the maintained
+acceptance criteria and safety constraints.
 
 ## 🛠️ Using These Specifications
 
@@ -264,10 +220,12 @@ go test -json ./... > test-results.json
 ```
 
 **Test Framework** (from test-scenarios.md):
-- Docker-based test environments
+- Unit and package-level Go tests
 - CI/CD integration (GitHub Actions)
-- Automated validation scripts
-- Platform matrix testing
+
+Docker-based environments, automated specification-compliance scripts, and a verified
+platform matrix are future validation work unless separately evidenced by repository
+automation.
 
 ### For Product Managers
 
@@ -280,43 +238,38 @@ go test -json ./... > test-results.json
 
 **Compliance Tracking**:
 
-- Current implementation status vs target
-- Gap analysis with priority ranking
-- Estimated effort for remaining features
-- Release planning aligned with specs
+- Treat the targets in this document as planning inputs.
+- Record measured implementation status, gap analysis, and release evidence in a
+  maintained task or report before using them for release decisions.
 
 ## 📈 Quality Metrics
 
 ### Specification Coverage
 
-- ✅ All major commands specified (update, bootstrap, sync, status, export)
-- ✅ Edge cases documented comprehensively
-- ✅ Platform differences detailed
-- ✅ Error scenarios fully described
+- The maintained use-case specifications cover update and cleanup behavior.
+- `per-manager-cli.md` documents the supported per-manager list/search interface.
+- Additional command specifications should be added only when their maintained files and
+  acceptance criteria are available.
 
 ### Test Coverage
 
 - Target: 90%+ test coverage
 - 120+ test scenarios documented
-- Automated test framework established
-- Platform matrix coverage (macOS, Linux, Windows)
+- Run repository test commands to establish the current result.
+- Cross-platform coverage requires recorded evidence for each supported platform.
 
 ### Implementation Compliance
 
-From `compliance/implementation-status.md`:
-
-- **Output Formatting**: 95% target
-- **Functional Behavior**: 90% target
-- **Performance**: 90% target
-- **Cross-platform**: 95% target
+No current implementation-compliance report is maintained in this directory. Do not infer
+completion percentages from the targets above; establish them with traceable test and
+release-readiness evidence.
 
 ## 🔄 Specification Evolution
 
 ### Version History
 
-- **v1.0** (Week 2): Initial specification extraction from gzh-cli
-- **v1.1** (Week 5): Refinements from implementation feedback
-- **v1.2** (Week 8): Compliance adjustments based on testing
+Historical version and week labels are not maintained as release evidence. Record future
+specification changes with their date, rationale, and affected acceptance criteria.
 
 ### Change Process
 
@@ -372,7 +325,7 @@ A specification is considered complete when:
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-01-27
+**Document Version**: Maintained index
+**Last Updated**: 2026-08-30
 **Specification Methodology**: Specification-Driven Development (SDD)
-**Compliance Philosophy**: 95%+ target for core features, continuous improvement
+**Compliance Philosophy**: Target-driven, with completion claims supported by traceable evidence

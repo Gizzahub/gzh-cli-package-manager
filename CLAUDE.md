@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Quick Start (30s scan)
 
 **Binary**: `gz-pm` (Package Manager Control)
-**Status**: Documentation phase (Week 2) - implementation pending
+**Status**: Active implementation and quality hardening; v1.0 release readiness remains to be verified
 **Architecture**: Clean Architecture + Hexagonal (Ports & Adapters)
 **Go Version**: 1.24+ consumer baseline; Go 1.26.7 recommended for development
 
@@ -134,9 +134,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## Project Status
 
-- **Current Phase**: Week 2 - Documentation (Pre-implementation)
-- **Next Milestone**: v1.0 MVP (Week 9)
-- **Test Coverage**: Target 90%+ (setup phase)
+- **Current Phase**: Active implementation and quality hardening
+- **Release Readiness**: Unit tests, lint baseline, cross-platform behavior, and release controls must be verified before a v1.0 release
+- **Test Coverage**: Target 90%+; obtain the current value from the coverage report rather than this document
 - **Platforms**: macOS, Linux, Windows (native winget + WSL2)
 
 ---
@@ -153,5 +153,4 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-**Last Updated**: 2025-12-27
-**Previous**: 528 lines → **Current**: 138 lines (74% reduction)
+**Last Updated**: 2026-08-30
