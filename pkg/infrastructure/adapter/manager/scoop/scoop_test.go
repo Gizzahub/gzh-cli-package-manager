@@ -15,7 +15,10 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/testutil"
 )
 
-const testScoopVersionFlag = "--version"
+const (
+	testScoopStatusCommand = "status"
+	testScoopVersionFlag   = "--version"
+)
 
 func TestNewAdapter(t *testing.T) {
 	executor := testutil.NewMockExecutor(nil)
@@ -264,7 +267,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "healthy",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == scoopCommand && len(args) > 0 && args[0] == "status" {
+				if command == scoopCommand && len(args) > 0 && args[0] == testScoopStatusCommand {
 					return testutil.SuccessResult("Everything is ok!"), nil
 				}
 				return nil, errors.New("unexpected command")
@@ -274,7 +277,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "degraded with warnings",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == scoopCommand && len(args) > 0 && args[0] == "status" {
+				if command == scoopCommand && len(args) > 0 && args[0] == testScoopStatusCommand {
 					return testutil.SuccessResult("Some apps are outdated"), nil
 				}
 				return nil, errors.New("unexpected command")
@@ -284,7 +287,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "error status",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == scoopCommand && len(args) > 0 && args[0] == "status" {
+				if command == scoopCommand && len(args) > 0 && args[0] == testScoopStatusCommand {
 					return testutil.FailureResult(1, "Error occurred"), nil
 				}
 				return nil, errors.New("unexpected command")
