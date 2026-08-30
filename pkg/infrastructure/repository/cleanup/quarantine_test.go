@@ -15,7 +15,7 @@ func TestQuarantineRepository_SaveAndGet(t *testing.T) {
 
 	pkg := &cleanup.QuarantinedPackage{
 		Name:          "test-pkg",
-		Version:       "1.0.0",
+		Version:       testQuarantineVersion,
 		ManagerID:     testHomebrewManagerID,
 		QuarantinedAt: time.Now(),
 		Reason:        "unused",
@@ -44,7 +44,7 @@ func TestQuarantineRepository_GetNotFound(t *testing.T) {
 	repo := NewQuarantineRepository()
 	ctx := context.Background()
 
-	_, err := repo.Get(ctx, "nonexistent", "1.0.0", testHomebrewManagerID)
+	_, err := repo.Get(ctx, "nonexistent", testQuarantineVersion, testHomebrewManagerID)
 	if !errors.Is(err, cleanup.ErrPackageNotFound) {
 		t.Errorf("got %v, want ErrPackageNotFound", err)
 	}
@@ -105,7 +105,7 @@ func TestQuarantineRepository_Delete(t *testing.T) {
 
 	pkg := &cleanup.QuarantinedPackage{
 		Name:      "test-pkg",
-		Version:   "1.0.0",
+		Version:   testQuarantineVersion,
 		ManagerID: testHomebrewManagerID,
 		Status:    cleanup.StatusQuarantined,
 	}

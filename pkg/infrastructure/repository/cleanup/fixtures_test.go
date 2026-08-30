@@ -11,6 +11,7 @@ const (
 	testPythonCurrentVersion = "3.12.0"
 	testPythonOldVersion     = "3.11.0"
 	testPythonPackageName    = "python"
+	testQuarantineVersion    = "1.0.0"
 	testScoopManagerID       = "scoop"
 	testVersionOne           = "1.0"
 )
