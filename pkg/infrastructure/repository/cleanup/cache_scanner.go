@@ -123,7 +123,7 @@ func (s *CacheScanner) scanPath(_ context.Context, managerID, path string) (*cle
 		if os.IsNotExist(err) {
 			return nil, &missingCacheRootError{err: err}
 		}
-		return nil, err
+		return nil, fmt.Errorf("stat cache path %s: %w", path, err)
 	}
 	if !info.IsDir() {
 		return nil, fmt.Errorf("%s is not a directory", path)
@@ -159,7 +159,7 @@ func (s *CacheScanner) scanPath(_ context.Context, managerID, path string) (*cle
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("walk cache path %s: %w", path, err)
 	}
 
 	return &cleanup.CacheInfo{
@@ -224,7 +224,10 @@ func (s *CacheScanner) clearDir(path string) error {
 	entries, err := s.fs.ReadDir(path)
 	if err != nil {
 		// Fall back to RemoveAll on the directory itself.
-		return s.fs.RemoveAll(path)
+		if removeErr := s.fs.RemoveAll(path); removeErr != nil {
+			return fmt.Errorf("clear cache path %s after ReadDir failure: %w", path, removeErr)
+		}
+		return nil
 	}
 	var firstErr error
 	for _, e := range entries {

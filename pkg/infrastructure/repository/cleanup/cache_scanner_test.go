@@ -34,6 +34,36 @@ func (f *injectedWalkFileSystem) RemoveAll(path string) error {
 	return f.MapFileSystem.RemoveAll(path)
 }
 
+type injectedCacheFileSystem struct {
+	*MapFileSystem
+	statErr        error
+	readDirErr     error
+	removeAllErr   error
+	removeAllCalls int
+}
+
+func (f *injectedCacheFileSystem) Stat(path string) (fs.FileInfo, error) {
+	if f.statErr != nil {
+		return nil, f.statErr
+	}
+	return f.MapFileSystem.Stat(path)
+}
+
+func (f *injectedCacheFileSystem) ReadDir(path string) ([]fs.DirEntry, error) {
+	if f.readDirErr != nil {
+		return nil, f.readDirErr
+	}
+	return f.MapFileSystem.ReadDir(path)
+}
+
+func (f *injectedCacheFileSystem) RemoveAll(path string) error {
+	f.removeAllCalls++
+	if f.removeAllErr != nil {
+		return f.removeAllErr
+	}
+	return f.MapFileSystem.RemoveAll(path)
+}
+
 type infoErrorDirEntry struct {
 	err error
 }
@@ -179,6 +209,60 @@ func TestCacheScanner_ScanManagerFilter(t *testing.T) {
 	}
 }
 
+func TestCacheScanner_ScanWrapsStatErrorAndSkipsMissingRoot(t *testing.T) {
+	t.Parallel()
+
+	const (
+		home      = "/home/user"
+		managerID = "npm"
+		relPath   = ".npm"
+	)
+	cachePath := filepath.Join(home, relPath)
+
+	t.Run("stat error retains sentinel", func(t *testing.T) {
+		wantErr := errors.New("stat unavailable")
+		fileSystem := &injectedCacheFileSystem{
+			MapFileSystem: NewMapFileSystem(),
+			statErr:       wantErr,
+		}
+		scanner := NewCacheScanner(
+			WithFileSystem(fileSystem),
+			WithHomeDir(home),
+			WithGOOS("linux"),
+			WithEnvLookup(func(string) string { return "" }),
+			WithKnownPaths([]KnownCachePath{{ManagerID: managerID, RelPath: relPath}}),
+			WithCacheRepository(nil),
+		)
+
+		_, err := scanner.Scan(context.Background(), managerID)
+		if !errors.Is(err, wantErr) {
+			t.Fatalf("Scan() error = %v, want wrapped %v", err, wantErr)
+		}
+		if !strings.Contains(err.Error(), "stat cache path "+cachePath) {
+			t.Fatalf("Scan() error = %q, want stat cache path context", err)
+		}
+	})
+
+	t.Run("missing root is skipped", func(t *testing.T) {
+		scanner := NewCacheScanner(
+			WithFileSystem(NewMapFileSystem()),
+			WithHomeDir(home),
+			WithGOOS("linux"),
+			WithEnvLookup(func(string) string { return "" }),
+			WithKnownPaths([]KnownCachePath{{ManagerID: managerID, RelPath: relPath}}),
+			WithCacheRepository(nil),
+		)
+
+		results, err := scanner.Scan(context.Background(), managerID)
+		if err != nil {
+			t.Fatalf("Scan() error = %v, want missing root to be skipped", err)
+		}
+		if len(results) != 0 {
+			t.Fatalf("Scan() results = %+v, want no missing-root result", results)
+		}
+	})
+}
+
 func TestCacheScanner_PropagatesWalkErrorsAndPreventsClean(t *testing.T) {
 	t.Parallel()
 
@@ -255,6 +339,8 @@ func TestCacheScanner_PropagatesWalkErrorsAndPreventsClean(t *testing.T) {
 
 			if _, err := scanner.Scan(context.Background(), managerID); !errors.Is(err, wantErr) {
 				t.Fatalf("Scan() error = %v, want wrapped %v", err, wantErr)
+			} else if !strings.Contains(err.Error(), "walk cache path "+cachePath) {
+				t.Fatalf("Scan() error = %q, want walk cache path context", err)
 			}
 			if _, err := scanner.Clean(context.Background(), "", false); !errors.Is(err, wantErr) {
 				t.Fatalf("Clean() error = %v, want wrapped %v", err, wantErr)
@@ -264,6 +350,123 @@ func TestCacheScanner_PropagatesWalkErrorsAndPreventsClean(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCacheScanner_ClearDirFallbackUsesRemoveAllError(t *testing.T) {
+	t.Parallel()
+
+	const cachePath = "/home/user/.npm"
+
+	t.Run("success remains success", func(t *testing.T) {
+		fileSystem := &injectedCacheFileSystem{
+			MapFileSystem: NewMapFileSystem(),
+			readDirErr:    errors.New("cannot read directory"),
+		}
+		scanner := NewCacheScanner(WithFileSystem(fileSystem))
+
+		if err := scanner.clearDir(cachePath); err != nil {
+			t.Fatalf("clearDir() error = %v, want successful RemoveAll fallback", err)
+		}
+		if fileSystem.removeAllCalls != 1 {
+			t.Fatalf("RemoveAll calls = %d, want 1", fileSystem.removeAllCalls)
+		}
+	})
+
+	t.Run("RemoveAll error replaces ReadDir error", func(t *testing.T) {
+		readDirErr := errors.New("cannot read directory")
+		removeAllErr := errors.New("cannot remove directory")
+		fileSystem := &injectedCacheFileSystem{
+			MapFileSystem: NewMapFileSystem(),
+			readDirErr:    readDirErr,
+			removeAllErr:  removeAllErr,
+		}
+		scanner := NewCacheScanner(WithFileSystem(fileSystem))
+
+		err := scanner.clearDir(cachePath)
+		if !errors.Is(err, removeAllErr) {
+			t.Fatalf("clearDir() error = %v, want wrapped RemoveAll error %v", err, removeAllErr)
+		}
+		if errors.Is(err, readDirErr) {
+			t.Fatalf("clearDir() error = %v, must not retain ReadDir error %v", err, readDirErr)
+		}
+		if !strings.Contains(err.Error(), "clear cache path "+cachePath+" after ReadDir failure") {
+			t.Fatalf("clearDir() error = %q, want fallback clear context", err)
+		}
+		if fileSystem.removeAllCalls != 1 {
+			t.Fatalf("RemoveAll calls = %d, want 1", fileSystem.removeAllCalls)
+		}
+	})
+}
+
+func TestCacheScanner_CleanFallbackReportsOnlyRemoveAllResult(t *testing.T) {
+	t.Parallel()
+
+	const (
+		home      = "/home/user"
+		managerID = "npm"
+		relPath   = ".npm"
+	)
+	cachePath := filepath.Join(home, relPath)
+	newScanner := func(fileSystem FileSystem) *CacheScanner {
+		return NewCacheScanner(
+			WithFileSystem(fileSystem),
+			WithHomeDir(home),
+			WithGOOS("linux"),
+			WithEnvLookup(func(string) string { return "" }),
+			WithKnownPaths([]KnownCachePath{{ManagerID: managerID, RelPath: relPath}}),
+			WithCacheRepository(nil),
+		)
+	}
+
+	t.Run("successful fallback leaves no summary error", func(t *testing.T) {
+		fileSystem := &injectedCacheFileSystem{
+			MapFileSystem: NewMapFileSystem(),
+			readDirErr:    errors.New("cannot read directory"),
+		}
+		fileSystem.AddFile(filepath.Join(cachePath, "package.tgz"), 1024, time.Now())
+
+		summary, err := newScanner(fileSystem).Clean(context.Background(), managerID, false)
+		if err != nil {
+			t.Fatalf("Clean() error = %v, want successful RemoveAll fallback", err)
+		}
+		if summary == nil || len(summary.Errors) != 0 {
+			t.Fatalf("Clean() summary = %#v, want no fallback error", summary)
+		}
+		if fileSystem.removeAllCalls != 1 {
+			t.Fatalf("RemoveAll calls = %d, want 1", fileSystem.removeAllCalls)
+		}
+	})
+
+	t.Run("failed fallback reports only RemoveAll error", func(t *testing.T) {
+		readDirErr := errors.New("cannot read directory")
+		removeAllErr := errors.New("cannot remove directory")
+		fileSystem := &injectedCacheFileSystem{
+			MapFileSystem: NewMapFileSystem(),
+			readDirErr:    readDirErr,
+			removeAllErr:  removeAllErr,
+		}
+		fileSystem.AddFile(filepath.Join(cachePath, "package.tgz"), 1024, time.Now())
+
+		summary, err := newScanner(fileSystem).Clean(context.Background(), managerID, false)
+		if !errors.Is(err, domaincleanup.ErrCacheClearFailed) {
+			t.Fatalf("Clean() error = %v, want ErrCacheClearFailed", err)
+		}
+		if errors.Is(err, readDirErr) {
+			t.Fatalf("Clean() error = %v, must not retain ReadDir error %v", err, readDirErr)
+		}
+		if summary == nil || len(summary.Errors) != 1 {
+			t.Fatalf("Clean() summary = %#v, want one fallback error", summary)
+		}
+		if !strings.Contains(summary.Errors[0], "clear cache path "+cachePath+" after ReadDir failure: "+removeAllErr.Error()) {
+			t.Fatalf("summary error = %q, want RemoveAll context", summary.Errors[0])
+		}
+		if strings.Contains(summary.Errors[0], readDirErr.Error()) {
+			t.Fatalf("summary error = %q, must not expose ReadDir error", summary.Errors[0])
+		}
+		if fileSystem.removeAllCalls != 1 {
+			t.Fatalf("RemoveAll calls = %d, want 1", fileSystem.removeAllCalls)
+		}
+	})
 }
 
 func TestCacheScanner_CleanDryRun(t *testing.T) {
