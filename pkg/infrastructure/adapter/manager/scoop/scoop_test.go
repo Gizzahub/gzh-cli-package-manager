@@ -15,6 +15,8 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/testutil"
 )
 
+const testScoopVersionFlag = "--version"
+
 func TestNewAdapter(t *testing.T) {
 	executor := testutil.NewMockExecutor(nil)
 	logger := testutil.NewMockLogger()
@@ -41,7 +43,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "scoop installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == scoopCommand && len(args) == 1 && args[0] == "--version" {
+				if command == scoopCommand && len(args) == 1 && args[0] == testScoopVersionFlag {
 					return testutil.SuccessResult("Current Scoop version:\nv0.3.1\n"), nil
 				}
 				return nil, errors.New("unexpected command")
@@ -52,7 +54,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "scoop not installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == scoopCommand && len(args) == 1 && args[0] == "--version" {
+				if command == scoopCommand && len(args) == 1 && args[0] == testScoopVersionFlag {
 					return testutil.FailureResult(1, "scoop: command not found"), errors.New("command not found")
 				}
 				return nil, errors.New("unexpected command")
@@ -88,7 +90,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "version with prefix",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == scoopCommand && len(args) == 1 && args[0] == "--version" {
+				if command == scoopCommand && len(args) == 1 && args[0] == testScoopVersionFlag {
 					return testutil.SuccessResult("Current Scoop version:\nv0.3.1\n"), nil
 				}
 				return nil, errors.New("unexpected command")
@@ -99,7 +101,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "simple version",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == scoopCommand && len(args) == 1 && args[0] == "--version" {
+				if command == scoopCommand && len(args) == 1 && args[0] == testScoopVersionFlag {
 					return testutil.SuccessResult("v0.4.0\n"), nil
 				}
 				return nil, errors.New("unexpected command")
