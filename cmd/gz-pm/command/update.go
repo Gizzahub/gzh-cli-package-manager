@@ -157,22 +157,26 @@ func displayUpdateText(resp *dto.UpdateResponse) {
 		fmt.Println()
 	}
 
-	// Display summary
+	displayUpdateSummary(resp.Summary)
+}
+
+// displayUpdateSummary prints the aggregate update results.
+func displayUpdateSummary(summary *dto.UpdateSummary) {
 	fmt.Println("📊 Summary")
-	fmt.Printf("   Total Managers: %d\n", resp.Summary.TotalManagers)
-	fmt.Printf("   Successful: %d\n", resp.Summary.SuccessfulManagers)
-	fmt.Printf("   Failed: %d\n", resp.Summary.FailedManagers)
-	if resp.Summary.SkippedManagers > 0 {
-		fmt.Printf("   Skipped: %d\n", resp.Summary.SkippedManagers)
+	fmt.Printf("   Total Managers: %d\n", summary.TotalManagers)
+	fmt.Printf("   Successful: %d\n", summary.SuccessfulManagers)
+	fmt.Printf("   Failed: %d\n", summary.FailedManagers)
+	if summary.SkippedManagers > 0 {
+		fmt.Printf("   Skipped: %d\n", summary.SkippedManagers)
 	}
-	fmt.Printf("   Total Packages Updated: %d\n", resp.Summary.TotalPackagesUpdated)
-	if resp.Summary.TotalBytesDownloaded > 0 {
-		fmt.Printf("   Total Downloaded: %.1f MB\n", float64(resp.Summary.TotalBytesDownloaded)/(1024*1024))
+	fmt.Printf("   Total Packages Updated: %d\n", summary.TotalPackagesUpdated)
+	if summary.TotalBytesDownloaded > 0 {
+		fmt.Printf("   Total Downloaded: %.1f MB\n", float64(summary.TotalBytesDownloaded)/(1024*1024))
 	}
-	if resp.Summary.TotalSpaceFreed > 0 {
-		fmt.Printf("   Total Space Freed: %.1f MB\n", float64(resp.Summary.TotalSpaceFreed)/(1024*1024))
+	if summary.TotalSpaceFreed > 0 {
+		fmt.Printf("   Total Space Freed: %.1f MB\n", float64(summary.TotalSpaceFreed)/(1024*1024))
 	}
-	fmt.Printf("   Total Duration: %.1fs\n", resp.Summary.TotalDuration)
+	fmt.Printf("   Total Duration: %.1fs\n", summary.TotalDuration)
 }
 
 func displayUpdateJSON(resp *dto.UpdateResponse) {

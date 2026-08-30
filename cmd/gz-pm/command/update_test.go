@@ -11,6 +11,38 @@ const (
 	testUpdateManagerName       = "Test Manager"
 	testUpdateErrorPrefix       = "   Error:"
 	testUpdateNoPackagesMessage = "   No packages updated"
+	testUpdateMixedOutput       = `🧪 Package Manager Update (DRY-RUN)
+
+⚠️ Skipped Manager
+   Skipped: conda environment
+
+✅ Updated Manager
+   Duration: 1.5s
+   Updated: 2 packages
+      • alpha
+      • beta
+   Space freed: 3.0 MB
+
+❌ Failed Manager
+   Error: permission denied
+
+📊 Summary
+   Total Managers: 3
+   Successful: 1
+   Failed: 1
+   Skipped: 1
+   Total Packages Updated: 2
+   Total Downloaded: 4.0 MB
+   Total Space Freed: 3.0 MB
+   Total Duration: 2.5s`
+	testUpdateEmptyOutput = `📦 Package Manager Update
+
+📊 Summary
+   Total Managers: 0
+   Successful: 0
+   Failed: 0
+   Total Packages Updated: 0
+   Total Duration: 0.0s`
 )
 
 func TestDisplayUpdateText(t *testing.T) {
@@ -137,6 +169,65 @@ func TestDisplayUpdateText(t *testing.T) {
 				}
 			}
 			assertOutputOrder(t, got, tt.inOrder)
+		})
+	}
+}
+
+func TestDisplayUpdateText_HeaderAndSummary(t *testing.T) {
+	tests := []struct {
+		name     string
+		response *dto.UpdateResponse
+		want     string
+	}{
+		{
+			name: "dry run preserves ordered manager results and complete summary",
+			response: &dto.UpdateResponse{
+				Results: []*dto.ManagerUpdateResult{
+					{Name: "Skipped Manager", Success: true, Skipped: true, SkipReason: "conda environment"},
+					{
+						Name:            "Updated Manager",
+						Success:         true,
+						Duration:        1.5,
+						UpdatedPackages: []dto.PackageUpdate{{Name: "alpha"}, {Name: "beta"}},
+						SpaceFreed:      3 * 1024 * 1024,
+					},
+					{Name: "Failed Manager", Error: "permission denied"},
+				},
+				Summary: &dto.UpdateSummary{
+					TotalManagers:        3,
+					SuccessfulManagers:   1,
+					FailedManagers:       1,
+					SkippedManagers:      1,
+					TotalPackagesUpdated: 2,
+					TotalBytesDownloaded: 4 * 1024 * 1024,
+					TotalSpaceFreed:      3 * 1024 * 1024,
+					TotalDuration:        2.5,
+				},
+				DryRun: true,
+			},
+			want: testUpdateMixedOutput,
+		},
+		{
+			name: "normal header omits empty optional summary fields",
+			response: &dto.UpdateResponse{
+				Summary: &dto.UpdateSummary{},
+			},
+			want: testUpdateEmptyOutput,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := captureStdout(t, func() error {
+				displayUpdateText(tt.response)
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("capture stdout: %v", err)
+			}
+			if got != tt.want+"\n" {
+				t.Errorf("unexpected output (-want +got):\nwant:\n%s\ngot:\n%s", tt.want, got)
+			}
 		})
 	}
 }
