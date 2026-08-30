@@ -116,7 +116,7 @@ var quarantineListCmd = &cobra.Command{
 		}
 
 		if err != nil {
-			return err
+			return fmt.Errorf("list quarantined packages: %w", err)
 		}
 
 		if len(packages) == 0 {
@@ -148,7 +148,7 @@ var quarantineExpiredCmd = &cobra.Command{
 
 		packages, err := quarantineRepo.FindExpired(ctx, cleanupRetentionDays)
 		if err != nil {
-			return err
+			return fmt.Errorf("find expired quarantined packages: %w", err)
 		}
 
 		if len(packages) == 0 {
@@ -184,7 +184,7 @@ Use --dry-run to preview what would be removed without deleting.`,
 
 		summary, err := purger.PurgeExpired(ctx, cleanupRetentionDays, cleanupDryRun)
 		if err != nil {
-			return err
+			return fmt.Errorf("purge expired quarantined packages: %w", err)
 		}
 
 		if cleanupDryRun {
@@ -225,7 +225,7 @@ var cacheStatusCmd = &cobra.Command{
 
 		caches, err := cacheRepo.ListAll(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("list cache status: %w", err)
 		}
 
 		if len(caches) == 0 {
@@ -267,7 +267,7 @@ Use --manager to scan a single package manager.`,
 
 		results, err := scanner.Scan(ctx, cleanupManagerID)
 		if err != nil {
-			return err
+			return fmt.Errorf("scan caches: %w", err)
 		}
 
 		if len(results) == 0 {
@@ -311,7 +311,7 @@ Examples:
 
 		summary, err := scanner.Clean(ctx, cleanupManagerID, cleanupDryRun)
 		if err != nil {
-			return err
+			return fmt.Errorf("clean caches: %w", err)
 		}
 
 		if cleanupDryRun {
@@ -363,7 +363,7 @@ var orphansListCmd = &cobra.Command{
 			packages, err = detector.DetectAll(ctx)
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("detect orphan packages: %w", err)
 		}
 
 		if len(packages) == 0 {
@@ -414,14 +414,14 @@ var versionsListCmd = &cobra.Command{
 		if cleanupManagerID != "" {
 			versions, err := scanner.ScanAll(ctx, cleanupManagerID)
 			if err != nil {
-				return err
+				return fmt.Errorf("scan package versions for %s: %w", cleanupManagerID, err)
 			}
 			all = versions
 		} else {
 			for id := range listers {
 				versions, err := scanner.ScanAll(ctx, id)
 				if err != nil {
-					return err
+					return fmt.Errorf("scan package versions for %s: %w", id, err)
 				}
 				all = append(all, versions...)
 			}
@@ -534,7 +534,7 @@ Packages with empty or placeholder names are skipped.`,
 			packages, err = detector.DetectAll(ctx)
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("detect orphan packages for removal: %w", err)
 		}
 		if len(packages) == 0 {
 			fmt.Println("📦 No orphan candidates to remove")
@@ -544,7 +544,7 @@ Packages with empty or placeholder names are skipped.`,
 		ex := repo.NewAdapterCleanupExecutor(adapterUninstaller{})
 		summary, err := ex.RemoveOrphans(ctx, packages, removeDryRun)
 		if err != nil {
-			return err
+			return fmt.Errorf("remove orphan packages: %w", err)
 		}
 		printRemoveSummary("Orphan remove", summary, removeDryRun)
 		return nil
@@ -571,14 +571,14 @@ Current versions are never removed.`,
 		if cleanupManagerID != "" {
 			versions, err := scanner.ScanAll(ctx, cleanupManagerID)
 			if err != nil {
-				return err
+				return fmt.Errorf("scan package versions for removal from %s: %w", cleanupManagerID, err)
 			}
 			all = versions
 		} else {
 			for id := range listers {
 				versions, err := scanner.ScanAll(ctx, id)
 				if err != nil {
-					return err
+					return fmt.Errorf("scan package versions for removal from %s: %w", id, err)
 				}
 				all = append(all, versions...)
 			}
@@ -599,7 +599,7 @@ Current versions are never removed.`,
 		ex := repo.NewAdapterCleanupExecutor(adapterUninstaller{})
 		summary, err := ex.RemoveOldVersions(ctx, old, removeDryRun)
 		if err != nil {
-			return err
+			return fmt.Errorf("remove old package versions: %w", err)
 		}
 		printRemoveSummary("Version remove", summary, removeDryRun)
 		return nil

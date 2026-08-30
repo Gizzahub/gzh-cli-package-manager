@@ -3,7 +3,9 @@ package command
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 	repo "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/repository/cleanup"
+	"github.com/spf13/cobra"
 )
 
 func captureStdout(t *testing.T, fn func() error) (string, error) {
@@ -224,6 +227,82 @@ func TestCleanupVersionsList(t *testing.T) {
 	}
 }
 
+func TestCleanupRunEWrapsCacheScanAndCleanFailures(t *testing.T) {
+	sentinel := errors.New("cache filesystem unavailable")
+	scanner := repo.NewCacheScanner(
+		repo.WithFileSystem(failingCacheFileSystem{err: sentinel}),
+		repo.WithHomeDir("/home/test"),
+		repo.WithGOOS("linux"),
+		repo.WithKnownPaths([]repo.KnownCachePath{{ManagerID: "npm", RelPath: ".npm"}}),
+	)
+	SetCleanupDeps(nil, nil, scanner)
+	t.Cleanup(func() { SetCleanupDeps(nil, nil, nil) })
+
+	cleanupManagerID = "npm"
+	cleanupDryRun = true
+	t.Cleanup(func() {
+		cleanupManagerID = ""
+		cleanupDryRun = false
+	})
+
+	for name, command := range map[string]*cobra.Command{
+		"scan caches":  cacheScanCmd,
+		"clean caches": cacheCleanCmd,
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := command.RunE(command, nil)
+			if !errors.Is(err, sentinel) {
+				t.Fatalf("errors.Is(%v, sentinel) = false", err)
+			}
+			if !strings.Contains(err.Error(), name) {
+				t.Fatalf("error %q missing context %q", err, name)
+			}
+		})
+	}
+}
+
+func TestCleanupRunEWrapsPackageListFailures(t *testing.T) {
+	sentinel := errors.New("adapter list unavailable")
+	stub := &failingListAdapter{err: sentinel}
+	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{manager.ManagerScoop: stub})
+	t.Cleanup(func() { SetManagerAdapters(nil) })
+
+	cleanupManagerID = "scoop"
+	removeDryRun = true
+	t.Cleanup(func() {
+		cleanupManagerID = ""
+		removeDryRun = true
+	})
+
+	for name, command := range map[string]*cobra.Command{
+		"detect orphan packages":                       orphansListCmd,
+		"detect orphan packages for removal":           orphansRemoveCmd,
+		"scan package versions for removal from scoop": versionsRemoveCmd,
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := command.RunE(command, nil)
+			if !errors.Is(err, sentinel) {
+				t.Fatalf("errors.Is(%v, sentinel) = false", err)
+			}
+			if !strings.Contains(err.Error(), name) {
+				t.Fatalf("error %q missing context %q", err, name)
+			}
+		})
+	}
+}
+
+type failingCacheFileSystem struct {
+	err error
+}
+
+func (f failingCacheFileSystem) Stat(string) (fs.FileInfo, error) { return nil, f.err }
+
+func (f failingCacheFileSystem) WalkDir(string, fs.WalkDirFunc) error { return f.err }
+
+func (f failingCacheFileSystem) RemoveAll(string) error { return f.err }
+
+func (f failingCacheFileSystem) ReadDir(string) ([]fs.DirEntry, error) { return nil, f.err }
+
 // stubListAdapter implements adapterm.Adapter (+Installer) with fixed ListPackages.
 type stubListAdapter struct {
 	packages    []manager.Package
@@ -246,6 +325,15 @@ func (s *stubListAdapter) CheckHealth(context.Context) (manager.Status, error) {
 
 func (s *stubListAdapter) Update(context.Context, adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
 	return &adapterm.UpdateResult{Success: true}, nil
+}
+
+type failingListAdapter struct {
+	*stubListAdapter
+	err error
+}
+
+func (a *failingListAdapter) ListPackages(context.Context) ([]manager.Package, error) {
+	return nil, a.err
 }
 
 // Install/Uninstall satisfy adapterm.Installer for remove-path tests.
