@@ -170,19 +170,19 @@ func TestDetectingManagerRepository_FindInstalled(t *testing.T) {
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "pip3" && args[0] == versionFlag {
+				if command == pip3Command && args[0] == versionFlag {
 					return &output.ExecutionResult{
 						Stdout:   "pip 23.0.1 from /usr/lib/python3.11/site-packages/pip (python 3.11)\n",
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "pip3" && args[0] == listCommand {
+				if command == pip3Command && args[0] == listCommand {
 					return &output.ExecutionResult{
 						Stdout:   `[{"name": "pip", "version": "23.0.1"}]`,
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "pip3" && args[0] == "check" {
+				if command == pip3Command && args[0] == "check" {
 					return &output.ExecutionResult{
 						Stdout:   "No broken requirements found.\n",
 						ExitCode: 0,
