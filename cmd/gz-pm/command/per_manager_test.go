@@ -133,7 +133,7 @@ git   2.43.0  main   2024-01-01 00:00:00
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
 		case command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag:
-			return testutil.SuccessResult("v0.3.1\n"), nil
+			return testutil.SuccessResult(testScoopVersionOutput), nil
 		case command == testScoopExecutable && len(args) == 1 && args[0] == listCommand:
 			return testutil.SuccessResult(listOutput), nil
 		default:
@@ -159,7 +159,7 @@ git  2.43.0  main
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
 		case command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag:
-			return testutil.SuccessResult("v0.3.1\n"), nil
+			return testutil.SuccessResult(testScoopVersionOutput), nil
 		case command == testScoopExecutable && len(args) == 2 && args[0] == testSearchCommand && args[1] == testGitPackageName:
 			return testutil.SuccessResult(searchOutput), nil
 		default:
@@ -374,7 +374,7 @@ func TestPerManager_ScoopInstall(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
 		case command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag:
-			return testutil.SuccessResult("v0.3.1\n"), nil
+			return testutil.SuccessResult(testScoopVersionOutput), nil
 		case command == testScoopExecutable && len(args) == 2 && args[0] == "install" && args[1] == testGitPackageName:
 			return testutil.SuccessResult("Installing 'git'"), nil
 		default:
@@ -391,7 +391,7 @@ func TestPerManager_ScoopInstall(t *testing.T) {
 func TestPerManager_ScoopUninstallDryRun(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		if command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag {
-			return testutil.SuccessResult("v0.3.1\n"), nil
+			return testutil.SuccessResult(testScoopVersionOutput), nil
 		}
 		return nil, errors.New("unexpected: " + strings.Join(args, " "))
 	})
@@ -405,7 +405,7 @@ func TestPerManager_ScoopUninstallDryRun(t *testing.T) {
 	}
 }
 
-func TestPerManager_ScoopBucket(t *testing.T) {
+func TestPerManager_ScoopBucketList(t *testing.T) {
 	bucketOutput := `Name Source
 ---- ------
 main https://github.com/ScoopInstaller/Main
@@ -414,37 +414,63 @@ main https://github.com/ScoopInstaller/Main
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
 		case command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag:
-			return testutil.SuccessResult("v0.3.1\n"), nil
-		case command == testScoopExecutable && len(args) == 2 && args[0] == testBucketCommand && args[1] == "list":
+			return testutil.SuccessResult(testScoopVersionOutput), nil
+		case command == testScoopExecutable && len(args) == 2 && args[0] == testBucketCommand && args[1] == listCommand:
 			return testutil.SuccessResult(bucketOutput), nil
-		case command == testScoopExecutable && len(args) >= 3 && args[0] == testBucketCommand && args[1] == "add":
-			return testutil.SuccessResult("ok"), nil
-		case command == testScoopExecutable && len(args) == 3 && args[0] == testBucketCommand && args[1] == "rm":
+		default:
+			return nil, errors.New("unexpected: " + strings.Join(args, " "))
+		}
+	})
+
+	out, err := executePerManagerCmd(t, testScoopCLICommand, testBucketCommand, listCommand)
+	if err != nil {
+		t.Fatalf("bucket list: %v\n%s", err, out)
+	}
+	const want = "scoop buckets — 1\n  main  https://github.com/ScoopInstaller/Main\n"
+	if out != want {
+		t.Errorf("bucket list output = %q, want %q", out, want)
+	}
+}
+
+func TestPerManager_ScoopBucketAdd(t *testing.T) {
+	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		switch {
+		case command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag:
+			return testutil.SuccessResult(testScoopVersionOutput), nil
+		case command == testScoopExecutable && len(args) == 3 && args[0] == testBucketCommand && args[1] == "add" && args[2] == testExtrasBucketName:
 			return testutil.SuccessResult("ok"), nil
 		default:
 			return nil, errors.New("unexpected: " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, testScoopCLICommand, testBucketCommand, "list")
-	if err != nil {
-		t.Fatalf("bucket list: %v\n%s", err, out)
-	}
-	if !strings.Contains(out, "main") {
-		t.Errorf("output = %q", out)
-	}
-
-	out, err = executePerManagerCmd(t, testScoopCLICommand, testBucketCommand, "add", "extras")
+	out, err := executePerManagerCmd(t, testScoopCLICommand, testBucketCommand, "add", testExtrasBucketName)
 	if err != nil {
 		t.Fatalf("bucket add: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "extras") {
-		t.Errorf("output = %q", out)
+	if want := "Added scoop bucket \"extras\"\n"; out != want {
+		t.Errorf("bucket add output = %q, want %q", out, want)
 	}
+}
 
-	out, err = executePerManagerCmd(t, testScoopCLICommand, testBucketCommand, "remove", "extras")
+func TestPerManager_ScoopBucketRemove(t *testing.T) {
+	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		switch {
+		case command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag:
+			return testutil.SuccessResult(testScoopVersionOutput), nil
+		case command == testScoopExecutable && len(args) == 3 && args[0] == testBucketCommand && args[1] == "rm" && args[2] == testExtrasBucketName:
+			return testutil.SuccessResult("ok"), nil
+		default:
+			return nil, errors.New("unexpected: " + strings.Join(args, " "))
+		}
+	})
+
+	out, err := executePerManagerCmd(t, testScoopCLICommand, testBucketCommand, "remove", testExtrasBucketName)
 	if err != nil {
 		t.Fatalf("bucket remove: %v\n%s", err, out)
+	}
+	if want := "Removed scoop bucket \"extras\"\n"; out != want {
+		t.Errorf("bucket remove output = %q, want %q", out, want)
 	}
 }
 
