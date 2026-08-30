@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	npmCommand    = "npm"
-	whichCommand  = "which"
-	doctorCommand = "doctor"
+	npmCommand         = "npm"
+	whichCommand       = "which"
+	doctorCommand      = "doctor"
+	testNPMListCommand = "list"
 )
 
 func TestAdapter_Detect(t *testing.T) {
@@ -206,7 +207,7 @@ func TestAdapter_ListPackages(t *testing.T) {
 		{
 			name: "packages with updates",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == npmCommand && len(args) >= 2 && args[0] == "list" {
+				if command == npmCommand && len(args) >= 2 && args[0] == testNPMListCommand {
 					return &output.ExecutionResult{
 						ExitCode: 0,
 						Stdout: `{
@@ -244,7 +245,7 @@ func TestAdapter_ListPackages(t *testing.T) {
 		{
 			name: "packages without updates",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == npmCommand && len(args) >= 2 && args[0] == "list" {
+				if command == npmCommand && len(args) >= 2 && args[0] == testNPMListCommand {
 					return &output.ExecutionResult{
 						ExitCode: 0,
 						Stdout: `{
@@ -467,7 +468,7 @@ func TestAdapter_ListPackages_Error(t *testing.T) {
 		{
 			name: "list non-zero exit code",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "npm" && len(args) >= 1 && args[0] == "list" {
+				if command == "npm" && len(args) >= 1 && args[0] == testNPMListCommand {
 					return &output.ExecutionResult{
 						ExitCode: 1,
 						Stderr:   "npm list failed",
@@ -480,7 +481,7 @@ func TestAdapter_ListPackages_Error(t *testing.T) {
 		{
 			name: "invalid JSON",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "npm" && len(args) >= 1 && args[0] == "list" {
+				if command == "npm" && len(args) >= 1 && args[0] == testNPMListCommand {
 					return &output.ExecutionResult{
 						ExitCode: 0,
 						Stdout:   "not valid json",
