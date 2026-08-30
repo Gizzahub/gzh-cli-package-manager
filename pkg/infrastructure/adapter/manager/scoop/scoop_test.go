@@ -22,6 +22,8 @@ const (
 	testScoopListSubcommand = "list"
 	testExtrasBucketName    = "extras"
 	testGitPackageName      = "git"
+	testScoopSearchHeader   = "Name Version Source"
+	testScoopSearchGitRow   = "git 2.43.0 main"
 )
 
 func TestNewAdapter(t *testing.T) {
@@ -507,6 +509,130 @@ github 2.40.0  main
 			}
 			if packages[0].Name != tt.wantFirst {
 				t.Errorf("Search() first = %q, want %q", packages[0].Name, tt.wantFirst)
+			}
+		})
+	}
+}
+
+func TestScoopSearchOutputStartIndex(t *testing.T) {
+	tests := []struct {
+		name  string
+		lines []string
+		want  int
+	}{
+		{
+			name:  "dash separator",
+			lines: []string{testScoopSearchHeader, "---- ------- ------", testScoopSearchGitRow},
+			want:  2,
+		},
+		{
+			name:  "equals separator",
+			lines: []string{testScoopSearchHeader, "==== ======= ======", testScoopSearchGitRow},
+			want:  2,
+		},
+		{
+			name:  "header fallback",
+			lines: []string{testScoopSearchHeader, testScoopSearchGitRow},
+			want:  1,
+		},
+		{
+			name:  "no header",
+			lines: []string{"Results from other known buckets...", "'git' (2.43.0) main"},
+			want:  0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := scoopSearchOutputStartIndex(tt.lines); got != tt.want {
+				t.Errorf("scoopSearchOutputStartIndex() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAdapter_ParseSearchOutput(t *testing.T) {
+	adapter := &Adapter{}
+	tests := []struct {
+		name    string
+		stdout  string
+		want    []manager.Package
+		wantNil bool
+	}{
+		{
+			name: "keeps mixed result order and search package invariants",
+			stdout: `Name   Version Source
+----   ------- ------
+git    2.43.0  main
+git    2.43.0  main
+Results from other known buckets...
+'git' (2.43.0) main
+'git' (2.44.0) extras
+'nodejs'
+'unclosed
+`,
+			want: []manager.Package{
+				{
+					Name:           testGitPackageName,
+					CurrentVersion: "2.43.0",
+					IsGlobal:       false,
+					UpdateType:     manager.UpdateNone,
+					Manager:        manager.ManagerScoop,
+				},
+				{
+					Name:           testGitPackageName,
+					CurrentVersion: "2.44.0",
+					IsGlobal:       false,
+					UpdateType:     manager.UpdateNone,
+					Manager:        manager.ManagerScoop,
+				},
+				{
+					Name:       "nodejs",
+					IsGlobal:   false,
+					UpdateType: manager.UpdateNone,
+					Manager:    manager.ManagerScoop,
+				},
+			},
+		},
+		{
+			name: "uses header fallback and ignores incomplete rows",
+			stdout: `Name Version Source
+scoop 0.5.1 main
+incomplete
+`,
+			want: []manager.Package{
+				{
+					Name:           "scoop",
+					CurrentVersion: "0.5.1",
+					IsGlobal:       false,
+					UpdateType:     manager.UpdateNone,
+					Manager:        manager.ManagerScoop,
+				},
+			},
+		},
+		{
+			name: "returns nil when output has no package rows",
+			stdout: `Name Version Source
+---- ------- ------
+Results from other known buckets...
+`,
+			wantNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := adapter.parseSearchOutput(testutil.SuccessResult(tt.stdout))
+			if (got == nil) != tt.wantNil {
+				t.Fatalf("parseSearchOutput() nil = %v, wantNil %v", got == nil, tt.wantNil)
+			}
+			if len(got) != len(tt.want) {
+				t.Fatalf("parseSearchOutput() count = %d, want %d", len(got), len(tt.want))
+			}
+			for i := range tt.want {
+				if got[i] != tt.want[i] {
+					t.Errorf("parseSearchOutput()[%d] = %+v, want %+v", i, got[i], tt.want[i])
+				}
 			}
 		})
 	}

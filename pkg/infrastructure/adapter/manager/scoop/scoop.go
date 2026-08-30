@@ -186,21 +186,7 @@ func (a *Adapter) parseSearchOutput(result *output.ExecutionResult) []manager.Pa
 	var packages []manager.Package
 	seen := make(map[string]struct{})
 
-	startIdx := 0
-	for i, line := range lines {
-		if strings.Contains(line, "---") || strings.Contains(line, "===") {
-			startIdx = i + 1
-			break
-		}
-	}
-	if startIdx == 0 && len(lines) > 1 {
-		// Skip possible header "Name Version Source"
-		if strings.Contains(strings.ToLower(lines[0]), "name") {
-			startIdx = 1
-		}
-	}
-
-	for i := startIdx; i < len(lines); i++ {
+	for i := scoopSearchOutputStartIndex(lines); i < len(lines); i++ {
 		line := strings.TrimSpace(lines[i])
 		if line == "" {
 			continue
@@ -217,18 +203,7 @@ func (a *Adapter) parseSearchOutput(result *output.ExecutionResult) []manager.Pa
 			if name == "" {
 				continue
 			}
-			key := name + "@" + version
-			if _, ok := seen[key]; ok {
-				continue
-			}
-			seen[key] = struct{}{}
-			packages = append(packages, manager.Package{
-				Name:           name,
-				CurrentVersion: version,
-				IsGlobal:       false,
-				UpdateType:     manager.UpdateNone,
-				Manager:        manager.ManagerScoop,
-			})
+			packages = appendUniqueScoopSearchPackage(packages, seen, name, version)
 			continue
 		}
 
@@ -238,21 +213,44 @@ func (a *Adapter) parseSearchOutput(result *output.ExecutionResult) []manager.Pa
 		}
 		name := fields[0]
 		version := fields[1]
-		key := name + "@" + version
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		packages = append(packages, manager.Package{
-			Name:           name,
-			CurrentVersion: version,
-			IsGlobal:       false,
-			UpdateType:     manager.UpdateNone,
-			Manager:        manager.ManagerScoop,
-		})
+		packages = appendUniqueScoopSearchPackage(packages, seen, name, version)
 	}
 
 	return packages
+}
+
+func scoopSearchOutputStartIndex(lines []string) int {
+	for i, line := range lines {
+		if strings.Contains(line, "---") || strings.Contains(line, "===") {
+			return i + 1
+		}
+	}
+
+	if len(lines) > 1 && strings.Contains(strings.ToLower(lines[0]), "name") {
+		return 1
+	}
+
+	return 0
+}
+
+func appendUniqueScoopSearchPackage(
+	packages []manager.Package,
+	seen map[string]struct{},
+	name, version string,
+) []manager.Package {
+	key := name + "@" + version
+	if _, ok := seen[key]; ok {
+		return packages
+	}
+
+	seen[key] = struct{}{}
+	return append(packages, manager.Package{
+		Name:           name,
+		CurrentVersion: version,
+		IsGlobal:       false,
+		UpdateType:     manager.UpdateNone,
+		Manager:        manager.ManagerScoop,
+	})
 }
 
 // parseScoopQuotedResult extracts name and version from "'name' (version) ..." lines.
