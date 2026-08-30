@@ -17,11 +17,11 @@ func TestQuarantinePurger_DryRunAndPurge(t *testing.T) {
 	now := time.Now()
 
 	old := &cleanup.QuarantinedPackage{
-		Name: "old-pkg", Version: "1.0.0", ManagerID: "homebrew",
+		Name: "old-pkg", Version: "1.0.0", ManagerID: testHomebrewManagerID,
 		QuarantinedAt: now.AddDate(0, 0, -40), Status: cleanup.StatusQuarantined, SizeMB: 12.5,
 	}
 	recent := &cleanup.QuarantinedPackage{
-		Name: "new-pkg", Version: "2.0.0", ManagerID: "homebrew",
+		Name: "new-pkg", Version: "2.0.0", ManagerID: testHomebrewManagerID,
 		QuarantinedAt: now.AddDate(0, 0, -5), Status: cleanup.StatusQuarantined, SizeMB: 3.0,
 	}
 	if err := repo.Save(ctx, old); err != nil {
@@ -41,7 +41,7 @@ func TestQuarantinePurger_DryRunAndPurge(t *testing.T) {
 	if summary.PackagesRemoved != 1 || summary.SpaceFreedMB != 12.5 {
 		t.Fatalf("dry-run summary: %+v", summary)
 	}
-	if _, lookupErr := repo.Get(ctx, "old-pkg", "1.0.0", "homebrew"); lookupErr != nil {
+	if _, lookupErr := repo.Get(ctx, "old-pkg", "1.0.0", testHomebrewManagerID); lookupErr != nil {
 		t.Fatalf("dry-run should keep package: %v", lookupErr)
 	}
 
@@ -53,10 +53,10 @@ func TestQuarantinePurger_DryRunAndPurge(t *testing.T) {
 	if summary.PackagesRemoved != 1 {
 		t.Fatalf("purge count: %d", summary.PackagesRemoved)
 	}
-	if _, err := repo.Get(ctx, "old-pkg", "1.0.0", "homebrew"); err == nil {
+	if _, err := repo.Get(ctx, "old-pkg", "1.0.0", testHomebrewManagerID); err == nil {
 		t.Fatal("expected old package purged")
 	}
-	if _, err := repo.Get(ctx, "new-pkg", "2.0.0", "homebrew"); err != nil {
+	if _, err := repo.Get(ctx, "new-pkg", "2.0.0", testHomebrewManagerID); err != nil {
 		t.Fatalf("recent should remain: %v", err)
 	}
 }

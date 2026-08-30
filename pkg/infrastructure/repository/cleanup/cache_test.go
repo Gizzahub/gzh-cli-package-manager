@@ -13,12 +13,12 @@ func TestCacheRepository_GetInfo(t *testing.T) {
 	ctx := context.Background()
 
 	// Get non-existent manager returns empty info
-	info, err := repo.GetInfo(ctx, "homebrew")
+	info, err := repo.GetInfo(ctx, testHomebrewManagerID)
 	if err != nil {
 		t.Fatalf("GetInfo failed: %v", err)
 	}
 
-	if info.ManagerID != "homebrew" {
+	if info.ManagerID != testHomebrewManagerID {
 		t.Errorf("got ManagerID %s, want homebrew", info.ManagerID)
 	}
 }
@@ -28,7 +28,7 @@ func TestCacheRepository_UpdateAndGetInfo(t *testing.T) {
 	ctx := context.Background()
 
 	info := &cleanup.CacheInfo{
-		ManagerID:   "homebrew",
+		ManagerID:   testHomebrewManagerID,
 		CachePath:   "~/Library/Caches/Homebrew",
 		TotalSizeMB: 1024.5,
 		EntryCount:  150,
@@ -41,7 +41,7 @@ func TestCacheRepository_UpdateAndGetInfo(t *testing.T) {
 		t.Fatalf("UpdateInfo failed: %v", err)
 	}
 
-	got, err := repo.GetInfo(ctx, "homebrew")
+	got, err := repo.GetInfo(ctx, testHomebrewManagerID)
 	if err != nil {
 		t.Fatalf("GetInfo failed: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestCacheRepository_ListAll(t *testing.T) {
 	ctx := context.Background()
 
 	caches := []*cleanup.CacheInfo{
-		{ManagerID: "homebrew", TotalSizeMB: 100},
+		{ManagerID: testHomebrewManagerID, TotalSizeMB: 100},
 		{ManagerID: testNPMManagerID, TotalSizeMB: 200},
 		{ManagerID: "pip", TotalSizeMB: 50},
 	}

@@ -97,7 +97,7 @@ func TestResolveCachePaths(t *testing.T) {
 	if got := paths[testNPMManagerID]; got != filepath.Join(home, ".npm") {
 		t.Fatalf("npm path: got %q", got)
 	}
-	if got := paths["homebrew"]; got != filepath.Join(home, ".cache/Homebrew") {
+	if got := paths[testHomebrewManagerID]; got != filepath.Join(home, ".cache/Homebrew") {
 		t.Fatalf("homebrew linux: got %q", got)
 	}
 	if _, ok := paths["pnpm"]; !ok {
@@ -118,8 +118,8 @@ func TestResolveCachePaths(t *testing.T) {
 
 	// darwin homebrew
 	paths = ResolveCachePaths(home, "darwin", nil, DefaultKnownCachePaths())
-	if paths["homebrew"] != filepath.Join(home, "Library/Caches/Homebrew") {
-		t.Fatalf("homebrew darwin: got %q", paths["homebrew"])
+	if paths[testHomebrewManagerID] != filepath.Join(home, "Library/Caches/Homebrew") {
+		t.Fatalf("homebrew darwin: got %q", paths[testHomebrewManagerID])
 	}
 }
 

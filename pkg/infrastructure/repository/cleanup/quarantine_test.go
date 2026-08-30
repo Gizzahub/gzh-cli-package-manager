@@ -16,7 +16,7 @@ func TestQuarantineRepository_SaveAndGet(t *testing.T) {
 	pkg := &cleanup.QuarantinedPackage{
 		Name:          "test-pkg",
 		Version:       "1.0.0",
-		ManagerID:     "homebrew",
+		ManagerID:     testHomebrewManagerID,
 		QuarantinedAt: time.Now(),
 		Reason:        "unused",
 		Status:        cleanup.StatusQuarantined,
@@ -44,7 +44,7 @@ func TestQuarantineRepository_GetNotFound(t *testing.T) {
 	repo := NewQuarantineRepository()
 	ctx := context.Background()
 
-	_, err := repo.Get(ctx, "nonexistent", "1.0.0", "homebrew")
+	_, err := repo.Get(ctx, "nonexistent", "1.0.0", testHomebrewManagerID)
 	if !errors.Is(err, cleanup.ErrPackageNotFound) {
 		t.Errorf("got %v, want ErrPackageNotFound", err)
 	}
@@ -55,9 +55,9 @@ func TestQuarantineRepository_List(t *testing.T) {
 	ctx := context.Background()
 
 	packages := []*cleanup.QuarantinedPackage{
-		{Name: "pkg1", Version: "1.0", ManagerID: "homebrew", Status: cleanup.StatusQuarantined},
+		{Name: "pkg1", Version: "1.0", ManagerID: testHomebrewManagerID, Status: cleanup.StatusQuarantined},
 		{Name: "pkg2", Version: "2.0", ManagerID: testNPMManagerID, Status: cleanup.StatusQuarantined},
-		{Name: "pkg3", Version: "3.0", ManagerID: "homebrew", Status: cleanup.StatusRestored},
+		{Name: "pkg3", Version: "3.0", ManagerID: testHomebrewManagerID, Status: cleanup.StatusRestored},
 	}
 
 	for _, pkg := range packages {
@@ -80,16 +80,16 @@ func TestQuarantineRepository_ListByManager(t *testing.T) {
 	ctx := context.Background()
 
 	packages := []*cleanup.QuarantinedPackage{
-		{Name: "pkg1", Version: "1.0", ManagerID: "homebrew", Status: cleanup.StatusQuarantined},
+		{Name: "pkg1", Version: "1.0", ManagerID: testHomebrewManagerID, Status: cleanup.StatusQuarantined},
 		{Name: "pkg2", Version: "2.0", ManagerID: testNPMManagerID, Status: cleanup.StatusQuarantined},
-		{Name: "pkg3", Version: "3.0", ManagerID: "homebrew", Status: cleanup.StatusQuarantined},
+		{Name: "pkg3", Version: "3.0", ManagerID: testHomebrewManagerID, Status: cleanup.StatusQuarantined},
 	}
 
 	for _, pkg := range packages {
 		_ = repo.Save(ctx, pkg)
 	}
 
-	got, err := repo.ListByManager(ctx, "homebrew")
+	got, err := repo.ListByManager(ctx, testHomebrewManagerID)
 	if err != nil {
 		t.Fatalf("ListByManager failed: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestQuarantineRepository_Delete(t *testing.T) {
 	pkg := &cleanup.QuarantinedPackage{
 		Name:      "test-pkg",
 		Version:   "1.0.0",
-		ManagerID: "homebrew",
+		ManagerID: testHomebrewManagerID,
 		Status:    cleanup.StatusQuarantined,
 	}
 

@@ -1,6 +1,7 @@
 package cleanup
 
 const (
-	testGitPackageName = "git"
-	testNPMManagerID   = "npm"
+	testGitPackageName    = "git"
+	testHomebrewManagerID = "homebrew"
+	testNPMManagerID      = "npm"
 )
