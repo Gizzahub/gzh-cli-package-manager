@@ -3,6 +3,7 @@ package apt
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
@@ -13,8 +14,81 @@ import (
 
 // Test-specific constants.
 const (
-	testCommand = "test"
+	testCommand     = "test"
+	testFileFlag    = "-f"
+	testAPTLockFile = "/var/lib/dpkg/lock-frontend"
+	testVimPackage  = "vim"
 )
+
+type aptCommandResponse struct {
+	command string
+	args    []string
+	result  *output.ExecutionResult
+	err     error
+}
+
+func aptSequenceExecutor(t *testing.T, responses []aptCommandResponse) (execFunc testutil.ExecutorFunc, assertCalls func()) {
+	t.Helper()
+	index := 0
+	return func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			if index == len(responses) {
+				t.Errorf("unexpected command: %s %v", command, args)
+				return nil, errors.New("unexpected command")
+			}
+
+			response := responses[index]
+			index++
+			if command != response.command || !slices.Equal(args, response.args) {
+				t.Errorf("command = %s %v, want %s %v", command, args, response.command, response.args)
+			}
+			return response.result, response.err
+		}, func() {
+			if index != len(responses) {
+				t.Errorf("command count = %d, want %d", index, len(responses))
+			}
+		}
+}
+
+func testAPTPackage(name, currentVersion string) manager.Package {
+	return manager.Package{
+		Name:           name,
+		CurrentVersion: currentVersion,
+		IsGlobal:       true,
+		UpdateType:     manager.UpdateNone,
+	}
+}
+
+func testAPTUpdatablePackage(name, currentVersion, availableVersion string) manager.Package {
+	pkg := testAPTPackage(name, currentVersion)
+	pkg.AvailableVersion = availableVersion
+	pkg.UpdateType = manager.UpdateMinor
+	return pkg
+}
+
+func assertAPTPackageSet(t *testing.T, got []manager.Package, want map[string]manager.Package) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("ListPackages() count = %d, want %d", len(got), len(want))
+	}
+
+	seen := make(map[string]struct{}, len(got))
+	for _, pkg := range got {
+		if _, duplicate := seen[pkg.Name]; duplicate {
+			t.Errorf("ListPackages() returned duplicate %q", pkg.Name)
+			continue
+		}
+		seen[pkg.Name] = struct{}{}
+
+		wantPkg, ok := want[pkg.Name]
+		if !ok {
+			t.Errorf("ListPackages() returned unexpected package %#v", pkg)
+			continue
+		}
+		if pkg != wantPkg {
+			t.Errorf("ListPackages()[%q] = %#v, want %#v", pkg.Name, pkg, wantPkg)
+		}
+	}
+}
 
 func TestAdapter_Detect(t *testing.T) {
 	tests := []struct {
@@ -152,186 +226,225 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 }
 
 func TestAdapter_ListPackages(t *testing.T) {
+	installedError := errors.New("installed packages failed")
+	upgradableError := errors.New("upgradable packages failed")
 	tests := []struct {
-		name         string
-		execFunc     testutil.ExecutorFunc
-		wantCount    int
-		wantUpgrades int
-		wantErr      bool
+		name      string
+		responses []aptCommandResponse
+		want      map[string]manager.Package
+		wantErr   error
 	}{
 		{
-			name: "packages with updates",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				// apt list --installed
-				if command == aptCommand && len(args) == 2 && args[0] == listArg && args[1] == "--installed" {
-					return testutil.SuccessResult(`Listing...
+			name: "merges installed packages and upgrades",
+			responses: []aptCommandResponse{
+				{
+					command: aptCommand,
+					args:    []string{listArg, installedFlag},
+					result: testutil.SuccessResult(`Listing...
 vim/jammy-updates,now 2:8.2.3995-1ubuntu2.12 amd64 [installed]
 curl/jammy-security,now 7.81.0-1ubuntu1.15 amd64 [installed,automatic]
 git/jammy-updates,now 1:2.34.1-1ubuntu1.10 amd64 [installed]
-`), nil
-				}
-				// apt list --upgradable
-				if command == aptCommand && len(args) == 2 && args[0] == listArg && args[1] == "--upgradable" {
-					return testutil.SuccessResult(`Listing...
+`),
+				},
+				{
+					command: aptCommand,
+					args:    []string{listArg, upgradableFlag},
+					result: testutil.SuccessResult(`Listing...
 curl/jammy-security 7.81.0-1ubuntu1.16 amd64 [upgradable from: 7.81.0-1ubuntu1.15]
 git/jammy-updates 1:2.34.1-1ubuntu1.11 amd64 [upgradable from: 1:2.34.1-1ubuntu1.10]
-`), nil
-				}
-				return testutil.FailureResult(1, ""), nil
+					`),
+				},
 			},
-			wantCount:    3,
-			wantUpgrades: 2,
-			wantErr:      false,
+			want: map[string]manager.Package{
+				testVimPackage: testAPTPackage(testVimPackage, "2:8.2.3995-1ubuntu2.12"),
+				"curl":         testAPTUpdatablePackage("curl", "7.81.0-1ubuntu1.15", "7.81.0-1ubuntu1.16"),
+				"git":          testAPTUpdatablePackage("git", "1:2.34.1-1ubuntu1.10", "1:2.34.1-1ubuntu1.11"),
+			},
 		},
 		{
 			name: "no updates available",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == aptCommand && args[0] == listArg && args[1] == "--installed" {
-					return testutil.SuccessResult(`Listing...
+			responses: []aptCommandResponse{
+				{
+					command: aptCommand,
+					args:    []string{listArg, installedFlag},
+					result: testutil.SuccessResult(`Listing...
 vim/jammy-updates,now 2:8.2.3995-1ubuntu2.12 amd64 [installed]
-`), nil
-				}
-				if command == aptCommand && args[0] == listArg && args[1] == "--upgradable" {
-					return testutil.SuccessResult("Listing...\n"), nil
-				}
-				return testutil.FailureResult(1, ""), nil
+					`),
+				},
+				{command: aptCommand, args: []string{listArg, upgradableFlag}, result: testutil.SuccessResult("Listing...\n")},
 			},
-			wantCount:    1,
-			wantUpgrades: 0,
-			wantErr:      false,
+			want: map[string]manager.Package{
+				testVimPackage: testAPTPackage(testVimPackage, "2:8.2.3995-1ubuntu2.12"),
+			},
+		},
+		{
+			name: "parses relaxed rows and uses last versions",
+			responses: []aptCommandResponse{
+				{
+					command: aptCommand,
+					args:    []string{listArg, installedFlag},
+					result: testutil.SuccessResult(`Listing...
+
+vim/jammy,now 1 amd64 [installed]
+incomplete
+vim/jammy,now 2 amd64 [installed]
+curl/jammy-security,now 3 amd64 [installed]
+`),
+				},
+				{
+					command: aptCommand,
+					args:    []string{listArg, upgradableFlag},
+					result: testutil.SuccessResult(`Listing...
+vim/jammy 4 amd64 [upgradable from: 2]
+vim/jammy 5 amd64 [upgradable from: 4]
+orphan/jammy 6 amd64 [upgradable]
+`),
+				},
+			},
+			want: map[string]manager.Package{
+				testVimPackage: testAPTUpdatablePackage(testVimPackage, "2", "5"),
+				"curl":         testAPTPackage("curl", "3"),
+			},
+		},
+		{
+			name: "parses installed stdout even with nonzero exit",
+			responses: []aptCommandResponse{
+				{
+					command: aptCommand,
+					args:    []string{listArg, installedFlag},
+					result:  &output.ExecutionResult{Stdout: "vim/jammy,now 2 amd64 [installed]\n", ExitCode: 100},
+				},
+				{command: aptCommand, args: []string{listArg, upgradableFlag}, result: testutil.SuccessResult("Listing...\n")},
+			},
+			want: map[string]manager.Package{
+				testVimPackage: testAPTPackage(testVimPackage, "2"),
+			},
+		},
+		{
+			name: "ignores upgradable executor error",
+			responses: []aptCommandResponse{
+				{
+					command: aptCommand,
+					args:    []string{listArg, installedFlag},
+					result:  testutil.SuccessResult("vim/jammy,now 2 amd64 [installed]\n"),
+				},
+				{command: aptCommand, args: []string{listArg, upgradableFlag}, err: upgradableError},
+			},
+			want: map[string]manager.Package{
+				testVimPackage: testAPTPackage(testVimPackage, "2"),
+			},
+		},
+		{
+			name: "ignores upgradable stdout on nonzero exit",
+			responses: []aptCommandResponse{
+				{
+					command: aptCommand,
+					args:    []string{listArg, installedFlag},
+					result:  testutil.SuccessResult("vim/jammy,now 2 amd64 [installed]\n"),
+				},
+				{
+					command: aptCommand,
+					args:    []string{listArg, upgradableFlag},
+					result:  &output.ExecutionResult{Stdout: "vim/jammy 3 amd64 [upgradable]\n", ExitCode: 100},
+				},
+			},
+			want: map[string]manager.Package{
+				testVimPackage: testAPTPackage(testVimPackage, "2"),
+			},
+		},
+		{
+			name: "wraps installed executor error",
+			responses: []aptCommandResponse{
+				{command: aptCommand, args: []string{listArg, installedFlag}, err: installedError},
+			},
+			wantErr: installedError,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
+			execFunc, assertCalls := aptSequenceExecutor(t, tt.responses)
+			adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 			packages, err := adapter.ListPackages(context.Background())
+			assertCalls()
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ListPackages() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("ListPackages() error = %v, want errors.Is(..., %v)", err, tt.wantErr)
+				}
 				return
 			}
-
-			if len(packages) != tt.wantCount {
-				t.Errorf("ListPackages() package count = %d, want %d", len(packages), tt.wantCount)
+			if err != nil {
+				t.Fatalf("ListPackages() unexpected error = %v", err)
 			}
-
-			// Count upgradable packages
-			upgradeCount := 0
-			for _, pkg := range packages {
-				if pkg.UpdateType != manager.UpdateNone {
-					upgradeCount++
-				}
-			}
-
-			if upgradeCount != tt.wantUpgrades {
-				t.Errorf("ListPackages() upgrade count = %d, want %d", upgradeCount, tt.wantUpgrades)
-			}
-
-			// Verify package properties
-			if len(packages) > 0 {
-				pkg := packages[0]
-				if pkg.Name == "" {
-					t.Error("Package name is empty")
-				}
-				if pkg.CurrentVersion == "" {
-					t.Error("Package current version is empty")
-				}
-				if !pkg.IsGlobal {
-					t.Error("APT packages should be global")
-				}
-			}
+			assertAPTPackageSet(t, packages, tt.want)
 		})
 	}
 }
 
 func TestAdapter_CheckHealth(t *testing.T) {
 	tests := []struct {
-		name     string
-		execFunc testutil.ExecutorFunc
-		want     manager.Status
-		wantErr  bool
+		name      string
+		responses []aptCommandResponse
+		want      manager.Status
 	}{
 		{
 			name: "healthy system",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == aptGetCommand && len(args) == 1 && args[0] == checkCommand {
-					return testutil.SuccessResult("Reading package lists... Done\nBuilding dependency tree... Done\n"), nil
-				}
-				if command == testCommand {
-					return testutil.FailureResult(1, ""), nil // Lock file doesn't exist
-				}
-				return testutil.SuccessResult(""), nil
+			responses: []aptCommandResponse{
+				{command: aptGetCommand, args: []string{checkCommand}, result: testutil.SuccessResult("Reading package lists... Done\nBuilding dependency tree... Done\n")},
+				{command: testCommand, args: []string{testFileFlag, testAPTLockFile}, result: testutil.FailureResult(1, "")},
 			},
-			want:    manager.StatusHealthy,
-			wantErr: false,
+			want: manager.StatusHealthy,
 		},
 		{
 			name: "degraded with lock file",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == aptGetCommand && args[0] == checkCommand {
-					return testutil.SuccessResult("Reading package lists... Done\n"), nil
-				}
-				if command == testCommand {
-					return testutil.SuccessResult(""), nil // Lock file exists
-				}
-				return testutil.SuccessResult(""), nil
+			responses: []aptCommandResponse{
+				{command: aptGetCommand, args: []string{checkCommand}, result: testutil.SuccessResult("Reading package lists... Done\n")},
+				{command: testCommand, args: []string{testFileFlag, testAPTLockFile}, result: testutil.SuccessResult("")},
 			},
-			want:    manager.StatusDegraded,
-			wantErr: false,
+			want: manager.StatusDegraded,
 		},
 		{
 			name: "degraded with broken packages",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == aptGetCommand && args[0] == checkCommand {
-					return testutil.FailureResult(100, "E: Broken packages\n"), nil
-				}
-				if command == testCommand {
-					return testutil.FailureResult(1, ""), nil
-				}
-				return testutil.SuccessResult(""), nil
+			responses: []aptCommandResponse{
+				{command: aptGetCommand, args: []string{checkCommand}, result: testutil.FailureResult(100, "E: Broken packages\n")},
 			},
-			want:    manager.StatusDegraded,
-			wantErr: false,
+			want: manager.StatusDegraded,
 		},
 		{
 			name: "healthy when lock is absent with shell exit error",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == aptGetCommand && args[0] == checkCommand {
-					return testutil.SuccessResult("Reading package lists... Done\n"), nil
-				}
-				if command == testCommand {
-					return testutil.FailureResult(1, ""), errors.New("exit status 1")
-				}
-				return testutil.SuccessResult(""), nil
+			responses: []aptCommandResponse{
+				{command: aptGetCommand, args: []string{checkCommand}, result: testutil.SuccessResult("Reading package lists... Done\n")},
+				{command: testCommand, args: []string{testFileFlag, testAPTLockFile}, result: testutil.FailureResult(1, ""), err: errors.New("exit status 1")},
 			},
-			want:    manager.StatusHealthy,
-			wantErr: false,
+			want: manager.StatusHealthy,
 		},
 		{
 			name: "degraded when lock probe fails",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == aptGetCommand && args[0] == checkCommand {
-					return testutil.SuccessResult("Reading package lists... Done\n"), nil
-				}
-				if command == testCommand {
-					return nil, errors.New("lock check failed")
-				}
-				return testutil.SuccessResult(""), nil
+			responses: []aptCommandResponse{
+				{command: aptGetCommand, args: []string{checkCommand}, result: testutil.SuccessResult("Reading package lists... Done\n")},
+				{command: testCommand, args: []string{testFileFlag, testAPTLockFile}, err: errors.New("lock check failed")},
 			},
-			want:    manager.StatusDegraded,
-			wantErr: false,
+			want: manager.StatusDegraded,
+		},
+		{
+			name: "degraded when package check executor fails",
+			responses: []aptCommandResponse{
+				{command: aptGetCommand, args: []string{checkCommand}, err: errors.New("execution failed")},
+			},
+			want: manager.StatusDegraded,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
+			execFunc, assertCalls := aptSequenceExecutor(t, tt.responses)
+			adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
 			got, err := adapter.CheckHealth(context.Background())
+			assertCalls()
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("CheckHealth() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if err != nil {
+				t.Fatalf("CheckHealth() unexpected error = %v", err)
 			}
 			if got != tt.want {
 				t.Errorf("CheckHealth() = %v, want %v", got, tt.want)
@@ -389,32 +502,6 @@ func TestAdapter_GetBinaryPath_Error(t *testing.T) {
 	_, err := adapter.GetBinaryPath(context.Background())
 	if err == nil {
 		t.Error("Expected error for executor failure")
-	}
-}
-
-func TestAdapter_ListPackages_Error(t *testing.T) {
-	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-		return nil, errors.New("execution failed")
-	}), testutil.NewMockLogger())
-
-	_, err := adapter.ListPackages(context.Background())
-	if err == nil {
-		t.Error("Expected error for executor failure")
-	}
-}
-
-func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
-	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-		return nil, errors.New("execution failed")
-	}), testutil.NewMockLogger())
-
-	status, err := adapter.CheckHealth(context.Background())
-	if err != nil {
-		t.Errorf("CheckHealth() should not return error, got %v", err)
-	}
-
-	if status != manager.StatusDegraded {
-		t.Errorf("CheckHealth() = %v, want StatusDegraded", status)
 	}
 }
 

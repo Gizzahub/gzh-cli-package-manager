@@ -92,68 +92,45 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
 
-	// Parse installed packages
-	installedMap := make(map[string]string)
-	lines := strings.SplitSeq(strings.TrimSpace(result.Stdout), "\n")
-	for line := range lines {
+	installedMap := parseAPTListOutput(result.Stdout)
+
+	// Get upgradable packages
+	upgradeResult, err := a.executor.Execute(ctx, aptCommand, listArg, upgradableFlag)
+	upgradableMap := map[string]string{}
+	if err == nil && upgradeResult.ExitCode == 0 {
+		upgradableMap = parseAPTListOutput(upgradeResult.Stdout)
+	}
+
+	return buildAPTPackages(installedMap, upgradableMap), nil
+}
+
+func parseAPTListOutput(stdout string) map[string]string {
+	packages := make(map[string]string)
+	for line := range strings.SplitSeq(strings.TrimSpace(stdout), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "Listing...") {
 			continue
 		}
 
-		// APT output lists package suite, version, architecture, and status fields in that order.
-		// Example: "vim/jammy-updates,now 2:8.2.3995-1ubuntu2.12 amd64 [installed]"
 		parts := strings.Fields(line)
 		if len(parts) < 2 {
 			continue
 		}
 
-		// Extract package name (before /)
 		nameWithSuite := parts[0]
 		nameParts := strings.Split(nameWithSuite, "/")
 		if len(nameParts) == 0 {
 			continue
 		}
-		pkgName := nameParts[0]
-
-		// Extract version
-		pkgVersion := parts[1]
-
-		installedMap[pkgName] = pkgVersion
+		packages[nameParts[0]] = parts[1]
 	}
 
-	// Get upgradable packages
-	upgradeResult, err := a.executor.Execute(ctx, aptCommand, listArg, upgradableFlag)
-	upgradableMap := make(map[string]string)
-	if err == nil && upgradeResult.ExitCode == 0 {
-		upgradeLines := strings.SplitSeq(strings.TrimSpace(upgradeResult.Stdout), "\n")
-		for line := range upgradeLines {
-			line = strings.TrimSpace(line)
-			if line == "" || strings.HasPrefix(line, "Listing...") {
-				continue
-			}
+	return packages
+}
 
-			parts := strings.Fields(line)
-			if len(parts) < 2 {
-				continue
-			}
-
-			nameWithSuite := parts[0]
-			nameParts := strings.Split(nameWithSuite, "/")
-			if len(nameParts) == 0 {
-				continue
-			}
-			pkgName := nameParts[0]
-
-			// Available version
-			availableVersion := parts[1]
-			upgradableMap[pkgName] = availableVersion
-		}
-	}
-
-	// Build package list
-	packages := make([]manager.Package, 0, len(installedMap))
-	for pkgName, currentVersion := range installedMap {
+func buildAPTPackages(installed, upgradable map[string]string) []manager.Package {
+	packages := make([]manager.Package, 0, len(installed))
+	for pkgName, currentVersion := range installed {
 		pkg := manager.Package{
 			Name:           pkgName,
 			CurrentVersion: currentVersion,
@@ -162,7 +139,7 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 		}
 
 		// Check if update available
-		if availableVersion, hasUpdate := upgradableMap[pkgName]; hasUpdate {
+		if availableVersion, hasUpdate := upgradable[pkgName]; hasUpdate {
 			pkg.AvailableVersion = availableVersion
 			pkg.UpdateType = manager.UpdateMinor // APT doesn't distinguish update types
 		}
@@ -170,7 +147,7 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 		packages = append(packages, pkg)
 	}
 
-	return packages, nil
+	return packages
 }
 
 // CheckHealth verifies APT system health.
