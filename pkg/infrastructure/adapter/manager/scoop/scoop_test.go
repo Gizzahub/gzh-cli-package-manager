@@ -6,6 +6,7 @@ package scoop
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -18,6 +19,7 @@ import (
 const (
 	testScoopStatusCommand  = "status"
 	testScoopUpdateCommand  = "update"
+	testScoopUpdateAllArg   = "*"
 	testScoopVersionFlag    = "--version"
 	testScoopListSubcommand = "list"
 	testExtrasBucketName    = "extras"
@@ -25,6 +27,84 @@ const (
 	testScoopSearchHeader   = "Name Version Source"
 	testScoopSearchGitRow   = "git 2.43.0 main"
 )
+
+type scoopUpdateResponse struct {
+	result *output.ExecutionResult
+	err    error
+}
+
+type scoopUpdateExpectation struct {
+	success  bool
+	updated  int
+	contains string
+	err      bool
+}
+
+func scoopUpdateExecutor(t *testing.T, responses ...scoopUpdateResponse) testutil.ExecutorFunc {
+	t.Helper()
+
+	expectedArgs := [][]string{
+		{testScoopUpdateCommand},
+		{testScoopUpdateCommand, testScoopUpdateAllArg},
+	}
+	if len(responses) > len(expectedArgs) {
+		t.Fatalf("scoop update responses = %d, want at most %d", len(responses), len(expectedArgs))
+	}
+
+	calls := 0
+	t.Cleanup(func() {
+		if calls != len(responses) {
+			t.Errorf("scoop update calls = %d, want %d", calls, len(responses))
+		}
+	})
+
+	return func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		t.Helper()
+		call := calls
+		calls++
+		if call >= len(responses) {
+			t.Errorf("unexpected scoop update command = %q %q", command, args)
+			return nil, errors.New("unexpected scoop update command")
+		}
+		if command != scoopCommand || !slices.Equal(args, expectedArgs[call]) {
+			t.Errorf("scoop update command = %q %q, want %q %q", command, args, scoopCommand, expectedArgs[call])
+			return nil, errors.New("unexpected scoop update command")
+		}
+
+		response := responses[call]
+		return response.result, response.err
+	}
+}
+
+func assertScoopUpdateResult(
+	t *testing.T,
+	result *adapterm.UpdateResult,
+	err error,
+	want scoopUpdateExpectation,
+) {
+	t.Helper()
+	if (err != nil) != want.err {
+		t.Errorf("Update() error = %v, wantErr %v", err, want.err)
+		return
+	}
+
+	if result == nil {
+		if !want.err {
+			t.Error("Update() returned nil result")
+		}
+		return
+	}
+
+	if result.Success != want.success {
+		t.Errorf("Update().Success = %v, want %v", result.Success, want.success)
+	}
+	if want.updated > 0 && len(result.UpdatedPackages) != want.updated {
+		t.Errorf("Update().UpdatedPackages = %d, want %d", len(result.UpdatedPackages), want.updated)
+	}
+	if want.contains != "" && !strings.Contains(result.Message, want.contains) {
+		t.Errorf("Update().Message = %q, want to contain %q", result.Message, want.contains)
+	}
+}
 
 func TestNewAdapter(t *testing.T) {
 	executor := testutil.NewMockExecutor(nil)
@@ -327,114 +407,73 @@ func TestAdapter_CheckHealth(t *testing.T) {
 
 func TestAdapter_Update(t *testing.T) {
 	tests := []struct {
-		name         string
-		opts         adapterm.UpdateOptions
-		execFunc     testutil.ExecutorFunc
-		wantSuccess  bool
-		wantUpdated  int
-		wantContains string
-		wantErr      bool
+		name      string
+		opts      adapterm.UpdateOptions
+		responses []scoopUpdateResponse
+		want      scoopUpdateExpectation
 	}{
 		{
 			name: "dry run",
 			opts: adapterm.UpdateOptions{DryRun: true},
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				return testutil.SuccessResult(""), nil
+			want: scoopUpdateExpectation{
+				success:  true,
+				contains: "Dry-run",
 			},
-			wantSuccess:  true,
-			wantContains: "Dry-run",
 		},
 		{
 			name: "fixed strategy",
 			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyFixed},
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				return testutil.SuccessResult(""), nil
+			want: scoopUpdateExpectation{
+				success:  true,
+				contains: "skipped",
 			},
-			wantSuccess:  true,
-			wantContains: "skipped",
 		},
 		{
 			name: "successful upgrade",
 			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyLatest},
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == scoopCommand && len(args) > 0 {
-					if args[0] == testScoopUpdateCommand && len(args) == 1 {
-						return testutil.SuccessResult("Scoop was updated successfully"), nil
-					}
-					if args[0] == testScoopUpdateCommand && len(args) == 2 && args[1] == "*" {
-						return testutil.SuccessResult("Updating 'git' (2.42.0 -> 2.43.0)"), nil
-					}
-				}
-				return nil, errors.New("unexpected command")
+			responses: []scoopUpdateResponse{
+				{result: testutil.SuccessResult("Scoop was updated successfully")},
+				{result: testutil.SuccessResult("Updating 'git' (2.42.0 -> 2.43.0)")},
 			},
-			wantSuccess: true,
-			wantUpdated: 1,
+			want: scoopUpdateExpectation{
+				success: true,
+				updated: 1,
+			},
 		},
 		{
 			name: "no updates available",
 			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyLatest},
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == scoopCommand && len(args) > 0 {
-					if args[0] == testScoopUpdateCommand && len(args) == 1 {
-						return testutil.SuccessResult(""), nil
-					}
-					if args[0] == testScoopUpdateCommand && len(args) == 2 && args[1] == "*" {
-						return &output.ExecutionResult{
-							ExitCode: 1,
-							Stdout:   "All packages are up to date",
-						}, nil
-					}
-				}
-				return nil, errors.New("unexpected command")
+			responses: []scoopUpdateResponse{
+				{result: testutil.SuccessResult("")},
+				{result: &output.ExecutionResult{
+					ExitCode: 1,
+					Stdout:   "All packages are up to date",
+				}},
 			},
-			wantSuccess:  true,
-			wantContains: "up to date",
+			want: scoopUpdateExpectation{
+				success:  true,
+				contains: "up to date",
+			},
 		},
 		{
 			name: "upgrade fails",
 			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyLatest},
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == scoopCommand && len(args) > 0 {
-					if args[0] == testScoopUpdateCommand && len(args) == 1 {
-						return testutil.SuccessResult(""), nil
-					}
-					if args[0] == testScoopUpdateCommand && len(args) == 2 && args[1] == "*" {
-						return nil, errors.New("update failed")
-					}
-				}
-				return nil, errors.New("unexpected command")
+			responses: []scoopUpdateResponse{
+				{result: testutil.SuccessResult("")},
+				{err: errors.New("update failed")},
 			},
-			wantSuccess: false,
-			wantErr:     true,
+			want: scoopUpdateExpectation{
+				err: true,
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
+			adapter := NewAdapter(testutil.NewMockExecutor(scoopUpdateExecutor(t, tt.responses...)), testutil.NewMockLogger())
 
 			result, err := adapter.Update(context.Background(), tt.opts)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Update() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if result == nil {
-				if !tt.wantErr {
-					t.Error("Update() returned nil result")
-				}
-				return
-			}
-
-			if result.Success != tt.wantSuccess {
-				t.Errorf("Update().Success = %v, want %v", result.Success, tt.wantSuccess)
-			}
-			if tt.wantUpdated > 0 && len(result.UpdatedPackages) != tt.wantUpdated {
-				t.Errorf("Update().UpdatedPackages = %d, want %d", len(result.UpdatedPackages), tt.wantUpdated)
-			}
-			if tt.wantContains != "" && !strings.Contains(result.Message, tt.wantContains) {
-				t.Errorf("Update().Message = %q, want to contain %q", result.Message, tt.wantContains)
-			}
+			assertScoopUpdateResult(t, result, err, tt.want)
 		})
 	}
 }
