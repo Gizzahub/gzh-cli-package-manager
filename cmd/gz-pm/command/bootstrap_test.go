@@ -194,6 +194,14 @@ func TestDisplayBootstrapText_DetailPrecedence(t *testing.T) {
 				}
 			}
 			assertOutputOrder(t, got, tt.inOrder)
+			assertOutputContains(t, got, "\n\n📊 Summary\n", "blank line before summary")
 		})
+	}
+}
+
+func assertOutputContains(t *testing.T, output, want, description string) {
+	t.Helper()
+	if !strings.Contains(output, want) {
+		t.Errorf("output missing %s:\n%s", description, output)
 	}
 }
