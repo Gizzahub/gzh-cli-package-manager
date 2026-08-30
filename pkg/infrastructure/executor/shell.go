@@ -9,6 +9,11 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 )
 
+const (
+	commandFieldKey  = "command"
+	exitCodeFieldKey = "exit_code"
+)
+
 // ShellExecutor executes commands using the system shell.
 type ShellExecutor struct {
 	logger output.Logger
@@ -25,7 +30,7 @@ func NewShellExecutor(logger output.Logger) *ShellExecutor {
 func (e *ShellExecutor) Execute(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 	e.logger.Debug(
 		ctx, "Executing command",
-		output.Field{Key: "command", Value: command},
+		output.Field{Key: commandFieldKey, Value: command},
 		output.Field{Key: "args", Value: args},
 	)
 
@@ -54,8 +59,8 @@ func (e *ShellExecutor) Execute(ctx context.Context, command string, args ...str
 	if err != nil {
 		e.logger.Debug(
 			ctx, "Command execution failed",
-			output.Field{Key: "command", Value: command},
-			output.Field{Key: "exit_code", Value: result.ExitCode},
+			output.Field{Key: commandFieldKey, Value: command},
+			output.Field{Key: exitCodeFieldKey, Value: result.ExitCode},
 			output.Field{Key: "stderr", Value: result.Stderr},
 		)
 		return result, fmt.Errorf("command execution failed: %w", err)
@@ -63,8 +68,8 @@ func (e *ShellExecutor) Execute(ctx context.Context, command string, args ...str
 
 	e.logger.Debug(
 		ctx, "Command executed successfully",
-		output.Field{Key: "command", Value: command},
-		output.Field{Key: "exit_code", Value: result.ExitCode},
+		output.Field{Key: commandFieldKey, Value: command},
+		output.Field{Key: exitCodeFieldKey, Value: result.ExitCode},
 	)
 
 	return result, nil
@@ -74,7 +79,7 @@ func (e *ShellExecutor) Execute(ctx context.Context, command string, args ...str
 func (e *ShellExecutor) ExecuteWithInput(ctx context.Context, input string, command string, args ...string) (*output.ExecutionResult, error) {
 	e.logger.Debug(
 		ctx, "Executing command with input",
-		output.Field{Key: "command", Value: command},
+		output.Field{Key: commandFieldKey, Value: command},
 		output.Field{Key: "args", Value: args},
 	)
 
@@ -104,15 +109,15 @@ func (e *ShellExecutor) ExecuteWithInput(ctx context.Context, input string, comm
 	if err != nil {
 		e.logger.Debug(
 			ctx, "Command execution with input failed",
-			output.Field{Key: "command", Value: command},
-			output.Field{Key: "exit_code", Value: result.ExitCode},
+			output.Field{Key: commandFieldKey, Value: command},
+			output.Field{Key: exitCodeFieldKey, Value: result.ExitCode},
 		)
 		return result, fmt.Errorf("command execution with input failed: %w", err)
 	}
 
 	e.logger.Debug(
 		ctx, "Command with input executed successfully",
-		output.Field{Key: "command", Value: command},
+		output.Field{Key: commandFieldKey, Value: command},
 	)
 
 	return result, nil
