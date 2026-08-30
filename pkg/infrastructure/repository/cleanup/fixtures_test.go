@@ -4,6 +4,7 @@ const (
 	testASDFManagerID        = "asdf"
 	testGitCurrentVersion    = "2.43.0"
 	testGitPackageName       = "git"
+	testHomeDir              = "/home/user"
 	testHomebrewManagerID    = "homebrew"
 	testNPMManagerID         = "npm"
 	testNodePackageName      = "node"

@@ -91,7 +91,7 @@ func (r *cacheRepositoryStub) UpdateInfo(_ context.Context, _ *domaincleanup.Cac
 
 func TestResolveCachePaths(t *testing.T) {
 	t.Parallel()
-	home := "/home/user"
+	home := testHomeDir
 	paths := ResolveCachePaths(home, "linux", nil, DefaultKnownCachePaths())
 
 	if got := paths[testNPMManagerID]; got != filepath.Join(home, ".npm") {
@@ -125,7 +125,7 @@ func TestResolveCachePaths(t *testing.T) {
 
 func TestCacheScanner_Scan(t *testing.T) {
 	t.Parallel()
-	home := "/home/user"
+	home := testHomeDir
 	npmCache := filepath.Join(home, ".npm")
 	pipCache := filepath.Join(home, ".cache/pip")
 
@@ -187,7 +187,7 @@ func TestCacheScanner_Scan(t *testing.T) {
 
 func TestCacheScanner_ScanManagerFilter(t *testing.T) {
 	t.Parallel()
-	home := "/home/user"
+	home := testHomeDir
 	fsys := NewMapFileSystem()
 	fsys.AddFile(filepath.Join(home, ".npm", "a"), 100, time.Now())
 	fsys.AddFile(filepath.Join(home, ".cache/pip", "b"), 100, time.Now())
@@ -213,7 +213,7 @@ func TestCacheScanner_ScanWrapsStatErrorAndSkipsMissingRoot(t *testing.T) {
 	t.Parallel()
 
 	const (
-		home      = "/home/user"
+		home      = testHomeDir
 		managerID = testNPMManagerID
 		relPath   = ".npm"
 	)
@@ -267,7 +267,7 @@ func TestCacheScanner_PropagatesWalkErrorsAndPreventsClean(t *testing.T) {
 	t.Parallel()
 
 	const (
-		home          = "/home/user"
+		home          = testHomeDir
 		managerID     = testNPMManagerID
 		secondManager = "pip"
 	)
@@ -402,7 +402,7 @@ func TestCacheScanner_CleanFallbackReportsOnlyRemoveAllResult(t *testing.T) {
 	t.Parallel()
 
 	const (
-		home      = "/home/user"
+		home      = testHomeDir
 		managerID = testNPMManagerID
 		relPath   = ".npm"
 	)
@@ -471,7 +471,7 @@ func TestCacheScanner_CleanFallbackReportsOnlyRemoveAllResult(t *testing.T) {
 
 func TestCacheScanner_CleanDryRun(t *testing.T) {
 	t.Parallel()
-	home := "/home/user"
+	home := testHomeDir
 	npmCache := filepath.Join(home, ".npm")
 	fsys := NewMapFileSystem()
 	fsys.AddFile(filepath.Join(npmCache, "a"), 1024*1024, time.Now())
@@ -505,7 +505,7 @@ func TestCacheScanner_CleanDryRun(t *testing.T) {
 
 func TestCacheScanner_CleanExecutes(t *testing.T) {
 	t.Parallel()
-	home := "/home/user"
+	home := testHomeDir
 	npmCache := filepath.Join(home, ".npm")
 	fsys := NewMapFileSystem()
 	fsys.AddFile(filepath.Join(npmCache, "a"), 1024, time.Now())
@@ -534,7 +534,7 @@ func TestCacheScanner_CleanExecutes(t *testing.T) {
 func TestCacheScanner_CleanReportsRepositoryRefreshFailure(t *testing.T) {
 	t.Parallel()
 
-	home := "/home/user"
+	home := testHomeDir
 	npmCache := filepath.Join(home, ".npm")
 	failingRepo := &cacheRepositoryStub{
 		failOnUpdate: 2,
