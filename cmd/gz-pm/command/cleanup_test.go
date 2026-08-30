@@ -94,7 +94,7 @@ func TestCleanupCacheScanAndStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("scan: %v", err)
 	}
-	if !strings.Contains(out, "npm") {
+	if !strings.Contains(out, testNPMManagerID) {
 		t.Fatalf("scan output missing npm: %q", out)
 	}
 
@@ -104,7 +104,7 @@ func TestCleanupCacheScanAndStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("status: %v", err)
 	}
-	if !strings.Contains(out, "npm") {
+	if !strings.Contains(out, testNPMManagerID) {
 		t.Fatalf("status missing npm after scan: %q", out)
 	}
 }
@@ -131,7 +131,7 @@ func TestCleanupCacheCleanDryRun(t *testing.T) {
 	SetCleanupDeps(cacheRepo, nil, scanner)
 	t.Cleanup(func() { SetCleanupDeps(nil, nil, nil) })
 
-	cleanupManagerID = "npm"
+	cleanupManagerID = testNPMManagerID
 	cleanupDryRun = true
 	t.Cleanup(func() {
 		cleanupManagerID = ""
@@ -157,11 +157,11 @@ func TestCleanupQuarantinePurge(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 	_ = qrepo.Save(ctx, &cleanup.QuarantinedPackage{
-		Name: "stale", Version: "1.0", ManagerID: "npm",
+		Name: "stale", Version: "1.0", ManagerID: testNPMManagerID,
 		QuarantinedAt: now.AddDate(0, 0, -60), Status: cleanup.StatusQuarantined, SizeMB: 5,
 	})
 	_ = qrepo.Save(ctx, &cleanup.QuarantinedPackage{
-		Name: "fresh", Version: "1.0", ManagerID: "npm",
+		Name: "fresh", Version: "1.0", ManagerID: testNPMManagerID,
 		QuarantinedAt: now.AddDate(0, 0, -1), Status: cleanup.StatusQuarantined, SizeMB: 1,
 	})
 
@@ -181,10 +181,10 @@ func TestCleanupQuarantinePurge(t *testing.T) {
 		t.Fatalf("unexpected purge output: %q", out)
 	}
 
-	if _, err := qrepo.Get(ctx, "stale", "1.0", "npm"); err == nil {
+	if _, err := qrepo.Get(ctx, "stale", "1.0", testNPMManagerID); err == nil {
 		t.Fatal("stale package should be purged")
 	}
-	if _, err := qrepo.Get(ctx, "fresh", "1.0", "npm"); err != nil {
+	if _, err := qrepo.Get(ctx, "fresh", "1.0", testNPMManagerID); err != nil {
 		t.Fatalf("fresh package should remain: %v", err)
 	}
 }
@@ -260,12 +260,12 @@ func TestCleanupRunEWrapsCacheScanAndCleanFailures(t *testing.T) {
 		repo.WithFileSystem(failingCacheFileSystem{err: sentinel}),
 		repo.WithHomeDir("/home/test"),
 		repo.WithGOOS("linux"),
-		repo.WithKnownPaths([]repo.KnownCachePath{{ManagerID: "npm", RelPath: ".npm"}}),
+		repo.WithKnownPaths([]repo.KnownCachePath{{ManagerID: testNPMManagerID, RelPath: ".npm"}}),
 	)
 	SetCleanupDeps(nil, nil, scanner)
 	t.Cleanup(func() { SetCleanupDeps(nil, nil, nil) })
 
-	cleanupManagerID = "npm"
+	cleanupManagerID = testNPMManagerID
 	cleanupDryRun = true
 	t.Cleanup(func() {
 		cleanupManagerID = ""

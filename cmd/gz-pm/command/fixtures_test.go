@@ -1,3 +1,6 @@
 package command
 
-const testGitPackageName = "git"
+const (
+	testGitPackageName = "git"
+	testNPMManagerID   = "npm"
+)
