@@ -110,18 +110,19 @@ func displayBootstrapText(resp *dto.BootstrapResponse) {
 
 		fmt.Printf("%s %s\n", statusIcon, result.Name)
 
-		if result.Skipped {
+		switch {
+		case result.Skipped:
 			fmt.Printf("   Skipped: %s\n", result.SkipReason)
-		} else if result.AlreadyInstalled {
+		case result.AlreadyInstalled:
 			fmt.Println("   Already installed")
-		} else if result.Success {
+		case result.Success:
 			fmt.Printf("   Duration: %.1fs\n", result.Duration)
 			if len(result.Steps) > 0 {
 				for _, step := range result.Steps {
 					fmt.Printf("   • %s\n", step)
 				}
 			}
-		} else {
+		default:
 			fmt.Printf("   Error: %s\n", result.Error)
 		}
 		fmt.Println()
