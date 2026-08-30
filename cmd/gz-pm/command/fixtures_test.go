@@ -2,6 +2,7 @@ package command
 
 const (
 	testBucketCommand     = "bucket"
+	testChocoExecutable   = "choco"
 	testGitPackageName    = "git"
 	testGhostPackageName  = "ghost"
 	testNPMManagerID      = "npm"

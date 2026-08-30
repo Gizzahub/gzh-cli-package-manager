@@ -181,9 +181,9 @@ func TestPerManager_ChocolateyList(t *testing.T) {
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "choco" && len(args) == 1 && args[0] == testVersionFlag:
+		case command == testChocoExecutable && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("2.2.2\n"), nil
-		case command == "choco" && len(args) == 2 && args[0] == listCommand && args[1] == "-r":
+		case command == testChocoExecutable && len(args) == 2 && args[0] == listCommand && args[1] == "-r":
 			return testutil.SuccessResult(listOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
@@ -212,9 +212,9 @@ func TestPerManager_ChocolateySearch(t *testing.T) {
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "choco" && len(args) == 1 && args[0] == testVersionFlag:
+		case command == testChocoExecutable && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("2.2.2\n"), nil
-		case command == "choco" && len(args) == 3 && args[0] == testSearchCommand && args[1] == testGitPackageName && args[2] == "-r":
+		case command == testChocoExecutable && len(args) == 3 && args[0] == testSearchCommand && args[1] == testGitPackageName && args[2] == "-r":
 			return testutil.SuccessResult(searchOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
@@ -443,9 +443,9 @@ main https://github.com/ScoopInstaller/Main
 func TestPerManager_ChocolateyInstallElevation(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "choco" && len(args) == 1 && args[0] == testVersionFlag:
+		case command == testChocoExecutable && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("2.2.2\n"), nil
-		case command == "choco" && len(args) >= 1 && args[0] == "install":
+		case command == testChocoExecutable && len(args) >= 1 && args[0] == "install":
 			return testutil.FailureResult(1, "Access is denied. Requires elevation."), nil
 		default:
 			return nil, errors.New("unexpected")
@@ -463,7 +463,7 @@ func TestPerManager_ChocolateyInstallElevation(t *testing.T) {
 
 func TestPerManager_ChocolateyUpgradeDryRun(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == "choco" && len(args) == 1 && args[0] == testVersionFlag {
+		if command == testChocoExecutable && len(args) == 1 && args[0] == testVersionFlag {
 			return testutil.SuccessResult("2.2.2\n"), nil
 		}
 		return nil, errors.New("unexpected on dry-run")
