@@ -263,6 +263,47 @@ func TestPerManager_AdapterNotInitialized(t *testing.T) {
 	}
 }
 
+func TestNewPerManagerPackageActionCmd(t *testing.T) {
+	spec := perManagerSpec{Use: "test-manager"}
+	tests := []struct {
+		name       string
+		newCommand func(perManagerSpec) *cobra.Command
+		use        string
+		short      string
+		long       string
+		dryRunHelp string
+	}{
+		{
+			name:       perManagerInstallAction,
+			newCommand: newPerManagerInstallCmd,
+			use:        perManagerInstallAction + " <id>",
+			short:      "Install a package via test-manager",
+			long:       "Install a package by ID/name using test-manager. Use --dry-run to preview.",
+			dryRunHelp: "Show what would be installed without making changes",
+		},
+		{
+			name:       perManagerUninstallAction,
+			newCommand: newPerManagerUninstallCmd,
+			use:        perManagerUninstallAction + " <id>",
+			short:      "Uninstall a package via test-manager",
+			long:       "Uninstall a package by ID/name using test-manager. Use --dry-run to preview.",
+			dryRunHelp: "Show what would be uninstalled without making changes",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := tt.newCommand(spec)
+			if cmd.Use != tt.use || cmd.Short != tt.short || cmd.Long != tt.long {
+				t.Errorf("command = {%q, %q, %q}, want {%q, %q, %q}", cmd.Use, cmd.Short, cmd.Long, tt.use, tt.short, tt.long)
+			}
+			if flag := cmd.Flags().Lookup("dry-run"); flag == nil || flag.Usage != tt.dryRunHelp {
+				t.Errorf("dry-run flag = %#v, want usage %q", flag, tt.dryRunHelp)
+			}
+		})
+	}
+}
+
 func TestPerManager_UnknownOutputFormat(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		if command == testWingetExecutable && len(args) == 1 && args[0] == testVersionFlag {

@@ -16,6 +16,11 @@ import (
 // Injected from main (or tests) via SetManagerAdapters.
 var managerAdapters map[manager.ManagerID]adapterm.Adapter
 
+const (
+	perManagerInstallAction   = "install"
+	perManagerUninstallAction = "uninstall"
+)
+
 // SetManagerAdapters injects package manager adapters for per-manager commands.
 func SetManagerAdapters(adapters map[manager.ManagerID]adapterm.Adapter) {
 	managerAdapters = adapters
@@ -169,36 +174,29 @@ func newPerManagerSearchCmd(spec perManagerSpec) *cobra.Command {
 }
 
 func newPerManagerInstallCmd(spec perManagerSpec) *cobra.Command {
-	var dryRun bool
-
-	cmd := &cobra.Command{
-		Use:   "install <id>",
-		Short: fmt.Sprintf("Install a package via %s", spec.Use),
-		Long:  fmt.Sprintf("Install a package by ID/name using %s. Use --dry-run to preview.", spec.Use),
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPerManagerInstall(cmd.Context(), spec, args[0], dryRun, cmd.OutOrStdout())
-		},
-	}
-
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be installed without making changes")
-	return cmd
+	return newPerManagerPackageActionCmd(spec, perManagerInstallAction, "Install", "installed", runPerManagerInstall)
 }
 
 func newPerManagerUninstallCmd(spec perManagerSpec) *cobra.Command {
+	return newPerManagerPackageActionCmd(spec, perManagerUninstallAction, "Uninstall", "uninstalled", runPerManagerUninstall)
+}
+
+type perManagerPackageActionRunner func(context.Context, perManagerSpec, string, bool, io.Writer) error
+
+func newPerManagerPackageActionCmd(spec perManagerSpec, action, displayAction, dryRunDescription string, run perManagerPackageActionRunner) *cobra.Command {
 	var dryRun bool
 
 	cmd := &cobra.Command{
-		Use:   "uninstall <id>",
-		Short: fmt.Sprintf("Uninstall a package via %s", spec.Use),
-		Long:  fmt.Sprintf("Uninstall a package by ID/name using %s. Use --dry-run to preview.", spec.Use),
+		Use:   action + " <id>",
+		Short: fmt.Sprintf("%s a package via %s", displayAction, spec.Use),
+		Long:  fmt.Sprintf("%s a package by ID/name using %s. Use --dry-run to preview.", displayAction, spec.Use),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPerManagerUninstall(cmd.Context(), spec, args[0], dryRun, cmd.OutOrStdout())
+			return run(cmd.Context(), spec, args[0], dryRun, cmd.OutOrStdout())
 		},
 	}
 
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be uninstalled without making changes")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be "+dryRunDescription+" without making changes")
 	return cmd
 }
 
