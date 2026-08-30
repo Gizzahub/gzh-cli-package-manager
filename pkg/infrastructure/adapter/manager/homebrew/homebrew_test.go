@@ -19,6 +19,7 @@ const (
 	testBrewUpgradeCommand            = "upgrade"
 	testNonZeroExitCodeCaseName       = "non-zero exit code"
 	testCommandExecutionErrorCaseName = "command execution error"
+	testBrewStableStrategy            = "stable"
 )
 
 func TestAdapter_GetConfigPath(t *testing.T) {
@@ -574,7 +575,7 @@ func TestAdapter_Update(t *testing.T) {
 		{
 			name:     "update and upgrade success",
 			dryRun:   false,
-			strategy: "stable",
+			strategy: testBrewStableStrategy,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == brewCommand {
 					if len(args) == 1 && args[0] == "update" {
@@ -598,7 +599,7 @@ func TestAdapter_Update(t *testing.T) {
 		{
 			name:     "update fails",
 			dryRun:   false,
-			strategy: "stable",
+			strategy: testBrewStableStrategy,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == brewCommand && len(args) == 1 && args[0] == "update" {
 					return nil, errors.New("network error")
@@ -611,7 +612,7 @@ func TestAdapter_Update(t *testing.T) {
 		{
 			name:     "update non-zero exit code",
 			dryRun:   false,
-			strategy: "stable",
+			strategy: testBrewStableStrategy,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == brewCommand && len(args) == 1 && args[0] == "update" {
 					return &output.ExecutionResult{
@@ -643,7 +644,7 @@ func TestAdapter_Update(t *testing.T) {
 		{
 			name:     "upgrade fails with error",
 			dryRun:   false,
-			strategy: "stable",
+			strategy: testBrewStableStrategy,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == brewCommand {
 					if len(args) == 1 && args[0] == "update" {
@@ -661,7 +662,7 @@ func TestAdapter_Update(t *testing.T) {
 		{
 			name:     "upgrade non-zero exit code",
 			dryRun:   false,
-			strategy: "stable",
+			strategy: testBrewStableStrategy,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == brewCommand {
 					if len(args) == 1 && args[0] == "update" {
