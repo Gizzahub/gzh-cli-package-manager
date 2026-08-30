@@ -12,10 +12,11 @@ import (
 )
 
 const (
-	brewCommand           = "brew"
-	brewVersionFlag       = "--version"
-	brewWhichCommand      = "which"
-	testBrewDoctorCommand = "doctor"
+	brewCommand            = "brew"
+	brewVersionFlag        = "--version"
+	brewWhichCommand       = "which"
+	testBrewDoctorCommand  = "doctor"
+	testBrewUpgradeCommand = "upgrade"
 )
 
 func TestAdapter_GetConfigPath(t *testing.T) {
@@ -580,7 +581,7 @@ func TestAdapter_Update(t *testing.T) {
 							Stdout:   "Updated Homebrew\n",
 						}, nil
 					}
-					if len(args) == 1 && args[0] == "upgrade" {
+					if len(args) == 1 && args[0] == testBrewUpgradeCommand {
 						return &output.ExecutionResult{
 							ExitCode: 0,
 							Stdout:   "Upgrading git\n==> Upgrading 1 outdated package:\ngit 2.42.0 -> 2.43.0\n",
@@ -646,7 +647,7 @@ func TestAdapter_Update(t *testing.T) {
 					if len(args) == 1 && args[0] == "update" {
 						return &output.ExecutionResult{ExitCode: 0}, nil
 					}
-					if len(args) == 1 && args[0] == "upgrade" {
+					if len(args) == 1 && args[0] == testBrewUpgradeCommand {
 						return nil, errors.New("upgrade error")
 					}
 				}
@@ -664,7 +665,7 @@ func TestAdapter_Update(t *testing.T) {
 					if len(args) == 1 && args[0] == "update" {
 						return &output.ExecutionResult{ExitCode: 0}, nil
 					}
-					if len(args) == 1 && args[0] == "upgrade" {
+					if len(args) == 1 && args[0] == testBrewUpgradeCommand {
 						return &output.ExecutionResult{
 							ExitCode: 1,
 							Stderr:   "some packages failed",
