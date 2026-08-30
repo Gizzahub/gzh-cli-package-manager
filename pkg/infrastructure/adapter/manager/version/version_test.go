@@ -6,6 +6,11 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
 
+const (
+	fixtureVersion100  = "1.0.0"
+	fixtureVersion1053 = "10.5.3"
+)
+
 func TestDetermineUpdateType(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -15,19 +20,19 @@ func TestDetermineUpdateType(t *testing.T) {
 	}{
 		{
 			name:    "major version change",
-			current: "1.0.0",
+			current: fixtureVersion100,
 			latest:  "2.0.0",
 			want:    manager.UpdateMajor,
 		},
 		{
 			name:    "minor version change",
-			current: "1.0.0",
+			current: fixtureVersion100,
 			latest:  "1.1.0",
 			want:    manager.UpdateMinor,
 		},
 		{
 			name:    "patch version change",
-			current: "1.0.0",
+			current: fixtureVersion100,
 			latest:  "1.0.1",
 			want:    manager.UpdatePatch,
 		},
@@ -45,8 +50,8 @@ func TestDetermineUpdateType(t *testing.T) {
 		},
 		{
 			name:    "same version",
-			current: "1.0.0",
-			latest:  "1.0.0",
+			current: fixtureVersion100,
+			latest:  fixtureVersion100,
 			want:    manager.UpdatePatch,
 		},
 		{
@@ -70,12 +75,12 @@ func TestDetermineUpdateType(t *testing.T) {
 		{
 			name:    "empty current",
 			current: "",
-			latest:  "1.0.0",
+			latest:  fixtureVersion100,
 			want:    manager.UpdateMajor,
 		},
 		{
 			name:    "empty latest",
-			current: "1.0.0",
+			current: fixtureVersion100,
 			latest:  "",
 			want:    manager.UpdateMajor,
 		},
@@ -87,19 +92,19 @@ func TestDetermineUpdateType(t *testing.T) {
 		},
 		{
 			name:    "complex version major",
-			current: "10.5.3",
+			current: fixtureVersion1053,
 			latest:  "11.0.0",
 			want:    manager.UpdateMajor,
 		},
 		{
 			name:    "complex version minor",
-			current: "10.5.3",
+			current: fixtureVersion1053,
 			latest:  "10.6.0",
 			want:    manager.UpdateMinor,
 		},
 		{
 			name:    "complex version patch",
-			current: "10.5.3",
+			current: fixtureVersion1053,
 			latest:  "10.5.4",
 			want:    manager.UpdatePatch,
 		},
