@@ -7,6 +7,8 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 )
 
+const testCheckResultOperation = "test operation"
+
 func TestCheckResult(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -20,14 +22,14 @@ func TestCheckResult(t *testing.T) {
 			name:      "success",
 			result:    &output.ExecutionResult{ExitCode: 0},
 			err:       nil,
-			operation: "test operation",
+			operation: testCheckResultOperation,
 			wantErr:   false,
 		},
 		{
 			name:      "executor error",
 			result:    nil,
 			err:       errors.New("command not found"),
-			operation: "test operation",
+			operation: testCheckResultOperation,
 			wantErr:   true,
 			errMsg:    "test operation: command not found",
 		},
@@ -35,7 +37,7 @@ func TestCheckResult(t *testing.T) {
 			name:      "non-zero exit code with stderr",
 			result:    &output.ExecutionResult{ExitCode: 1, Stderr: "permission denied"},
 			err:       nil,
-			operation: "test operation",
+			operation: testCheckResultOperation,
 			wantErr:   true,
 			errMsg:    "test operation failed: permission denied",
 		},
@@ -43,7 +45,7 @@ func TestCheckResult(t *testing.T) {
 			name:      "non-zero exit code without stderr",
 			result:    &output.ExecutionResult{ExitCode: 127, Stderr: ""},
 			err:       nil,
-			operation: "test operation",
+			operation: testCheckResultOperation,
 			wantErr:   true,
 			errMsg:    "test operation failed with exit code 127",
 		},
