@@ -41,7 +41,9 @@ func (l *StructuredLogger) Warn(_ context.Context, msg string, fields ...output.
 
 // Error logs an error-level message.
 func (l *StructuredLogger) Error(_ context.Context, msg string, err error, fields ...output.Field) {
-	allFields := append(fields, output.Field{Key: "error", Value: err.Error()})
+	allFields := make([]output.Field, len(fields), len(fields)+1)
+	copy(allFields, fields)
+	allFields = append(allFields, output.Field{Key: "error", Value: err.Error()})
 	l.log("ERROR", msg, allFields)
 }
 

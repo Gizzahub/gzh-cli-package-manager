@@ -125,10 +125,12 @@ func TestStructuredLogger_Error(t *testing.T) {
 		logger: log.New(&buf, "test: ", 0),
 	}
 
+	fields := make([]output.Field, 1, 2)
+	fields[0] = output.Field{Key: "operation", Value: "detect"}
+
 	testErr := errors.New("test error")
 	logger.Error(
-		context.Background(), "error occurred", testErr,
-		output.Field{Key: "operation", Value: "detect"},
+		context.Background(), "error occurred", testErr, fields...,
 	)
 
 	gotOutput := buf.String()
@@ -143,6 +145,14 @@ func TestStructuredLogger_Error(t *testing.T) {
 	}
 	if !strings.Contains(gotOutput, "operation=detect") {
 		t.Errorf("output missing operation field: %q", gotOutput)
+	}
+	if strings.Index(gotOutput, "operation=detect") > strings.Index(gotOutput, "error=test error") {
+		t.Errorf("output fields are out of order: %q", gotOutput)
+	}
+
+	spareField := fields[:cap(fields)][1]
+	if spareField.Key != "" || spareField.Value != nil {
+		t.Errorf("Error() mutated caller field capacity: %#v", spareField)
 	}
 }
 
