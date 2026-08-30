@@ -83,6 +83,11 @@ linters:
       excludes:
         - G104
     govet:
+      # fieldalignment is a memory-layout optimisation, not a correctness
+      # check. Reordering exported or JSON-facing structs would create broad
+      # API and output-order churn without a measured hot-path benefit.
+      disable:
+        - fieldalignment
       enable-all: true
     nakedret:
       max-func-lines: 30
