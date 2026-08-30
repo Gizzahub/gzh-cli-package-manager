@@ -57,14 +57,15 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 	var managers []*manager.Manager
 	var err error
 
-	if req.All {
+	switch {
+	case req.All:
 		// Update all installed managers
 		managers, err = uc.managerRepo.FindInstalled(ctx)
 		if err != nil {
 			uc.logger.Error(ctx, "Failed to find installed managers", err)
 			return nil, fmt.Errorf("failed to find installed managers: %w", err)
 		}
-	} else if len(req.ManagerIDs) > 0 {
+	case len(req.ManagerIDs) > 0:
 		// Update specific managers
 		managers = make([]*manager.Manager, 0, len(req.ManagerIDs))
 		for _, id := range req.ManagerIDs {
@@ -79,7 +80,7 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 			}
 			managers = append(managers, mgr)
 		}
-	} else {
+	default:
 		return nil, fmt.Errorf("either --all flag or --managers must be specified")
 	}
 

@@ -314,6 +314,42 @@ func TestUseCase_Update_AllManagers(t *testing.T) {
 	}
 }
 
+func TestUseCase_Update_AllTakesPrecedenceOverManagerIDs(t *testing.T) {
+	findInstalledCalls := 0
+	findByIDCalls := 0
+	repo := &mockRepository{
+		findInstalledFunc: func(_ context.Context) ([]*manager.Manager, error) {
+			findInstalledCalls++
+			return []*manager.Manager{{
+				ID:        manager.ManagerHomebrew,
+				Name:      testHomebrewManagerName,
+				Installed: true,
+			}}, nil
+		},
+		findByIDFunc: func(_ context.Context, _ manager.ManagerID) (*manager.Manager, error) {
+			findByIDCalls++
+			return nil, errors.New("unexpected FindByID call")
+		},
+	}
+	uc := NewUseCase(repo, &mockLogger{}, map[manager.ManagerID]adapterm.Adapter{
+		manager.ManagerHomebrew: &mockAdapter{},
+	}, nil)
+
+	resp, err := uc.Update(context.Background(), &dto.UpdateRequest{
+		All:        true,
+		ManagerIDs: []manager.ManagerID{"missing"},
+	})
+	if err != nil {
+		t.Fatalf("Update() unexpected error: %v", err)
+	}
+	if findInstalledCalls != 1 || findByIDCalls != 0 {
+		t.Fatalf("repository calls = FindInstalled %d, FindByID %d; want 1, 0", findInstalledCalls, findByIDCalls)
+	}
+	if resp.Summary.SuccessfulManagers != 1 || resp.Summary.FailedManagers != 0 {
+		t.Errorf("summary = successful %d failed %d, want 1 and 0", resp.Summary.SuccessfulManagers, resp.Summary.FailedManagers)
+	}
+}
+
 func TestUseCase_Update_SpecificManagers(t *testing.T) {
 	now := time.Now()
 
