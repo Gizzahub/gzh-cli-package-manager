@@ -28,7 +28,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "cargo installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 && args[0] == cargoCommand {
+				if command == whichCommand && len(args) == 1 && args[0] == cargoCommand {
 					return testutil.SuccessResult("/usr/bin/cargo\n"), nil
 				}
 				return testutil.FailureResult(1, ""), nil
@@ -124,7 +124,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 		{
 			name: "binary found",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && args[0] == cargoCommand {
+				if command == whichCommand && args[0] == cargoCommand {
 					return testutil.SuccessResult("/home/user/.cargo/bin/cargo\n"), nil
 				}
 				return testutil.FailureResult(1, ""), nil
@@ -429,7 +429,7 @@ func TestAdapter_GetBinaryPath_EdgeCases(t *testing.T) {
 		{
 			name: "binary not found - returns empty path",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && args[0] == cargoCommand {
+				if command == whichCommand && args[0] == cargoCommand {
 					return &output.ExecutionResult{
 						ExitCode: 1,
 						Stderr:   "cargo not found",
