@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	brewCommand      = "brew"
-	brewVersionFlag  = "--version"
-	brewWhichCommand = "which"
+	brewCommand           = "brew"
+	brewVersionFlag       = "--version"
+	brewWhichCommand      = "which"
+	testBrewDoctorCommand = "doctor"
 )
 
 func TestAdapter_GetConfigPath(t *testing.T) {
@@ -224,7 +225,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "healthy system",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == "doctor" {
+				if command == brewCommand && len(args) == 1 && args[0] == testBrewDoctorCommand {
 					return &output.ExecutionResult{
 						ExitCode: 0,
 						Stdout:   "Your system is ready to brew.\n",
@@ -238,7 +239,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "degraded with warnings",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == "doctor" {
+				if command == brewCommand && len(args) == 1 && args[0] == testBrewDoctorCommand {
 					return &output.ExecutionResult{
 						ExitCode: 1,
 						Stdout:   "Warning: Some kegs are not writable\n",
@@ -260,7 +261,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 		{
 			name: "error status without warning keyword",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == "doctor" {
+				if command == brewCommand && len(args) == 1 && args[0] == testBrewDoctorCommand {
 					return &output.ExecutionResult{
 						ExitCode: 1,
 						Stdout:   "Some critical issue found\n",
