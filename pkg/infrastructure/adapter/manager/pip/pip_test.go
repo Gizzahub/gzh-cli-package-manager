@@ -45,7 +45,7 @@ func TestAdapter_Detect(t *testing.T) {
 					if args[0] == pip3Command {
 						return &output.ExecutionResult{ExitCode: 1}, nil
 					}
-					if args[0] == "pip" {
+					if args[0] == pipCommand {
 						return &output.ExecutionResult{
 							Stdout:   "/usr/bin/pip\n",
 							ExitCode: 0,
@@ -113,7 +113,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 				if command == whichCommand && args[0] == pip3Command {
 					return &output.ExecutionResult{ExitCode: 1}, nil
 				}
-				if command == "pip" && args[0] == "--version" {
+				if command == pipCommand && args[0] == "--version" {
 					return &output.ExecutionResult{
 						Stdout:   "pip 22.3.1 from /usr/lib/python3.10/site-packages/pip (python 3.10)\n",
 						ExitCode: 0,
