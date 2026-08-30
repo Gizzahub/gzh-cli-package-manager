@@ -17,6 +17,7 @@ import (
 
 const (
 	testScoopStatusCommand  = "status"
+	testScoopUpdateCommand  = "update"
 	testScoopVersionFlag    = "--version"
 	testScoopListSubcommand = "list"
 	testExtrasBucketName    = "extras"
@@ -354,10 +355,10 @@ func TestAdapter_Update(t *testing.T) {
 			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyLatest},
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == scoopCommand && len(args) > 0 {
-					if args[0] == "update" && len(args) == 1 {
+					if args[0] == testScoopUpdateCommand && len(args) == 1 {
 						return testutil.SuccessResult("Scoop was updated successfully"), nil
 					}
-					if args[0] == "update" && len(args) == 2 && args[1] == "*" {
+					if args[0] == testScoopUpdateCommand && len(args) == 2 && args[1] == "*" {
 						return testutil.SuccessResult("Updating 'git' (2.42.0 -> 2.43.0)"), nil
 					}
 				}
@@ -371,10 +372,10 @@ func TestAdapter_Update(t *testing.T) {
 			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyLatest},
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == scoopCommand && len(args) > 0 {
-					if args[0] == "update" && len(args) == 1 {
+					if args[0] == testScoopUpdateCommand && len(args) == 1 {
 						return testutil.SuccessResult(""), nil
 					}
-					if args[0] == "update" && len(args) == 2 && args[1] == "*" {
+					if args[0] == testScoopUpdateCommand && len(args) == 2 && args[1] == "*" {
 						return &output.ExecutionResult{
 							ExitCode: 1,
 							Stdout:   "All packages are up to date",
@@ -391,10 +392,10 @@ func TestAdapter_Update(t *testing.T) {
 			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyLatest},
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == scoopCommand && len(args) > 0 {
-					if args[0] == "update" && len(args) == 1 {
+					if args[0] == testScoopUpdateCommand && len(args) == 1 {
 						return testutil.SuccessResult(""), nil
 					}
-					if args[0] == "update" && len(args) == 2 && args[1] == "*" {
+					if args[0] == testScoopUpdateCommand && len(args) == 2 && args[1] == "*" {
 						return nil, errors.New("update failed")
 					}
 				}
