@@ -12,6 +12,8 @@ import (
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 )
 
+const testHomebrewManagerName = "Homebrew"
+
 // mockRepository implements manager.Repository for testing.
 type mockRepository struct {
 	findAllFunc       func(ctx context.Context) ([]*manager.Manager, error)
@@ -150,7 +152,7 @@ func TestUseCase_Update_AllManagers(t *testing.T) {
 			mockManagers: []*manager.Manager{
 				{
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewManagerName,
 					Type:        manager.TypeSystem,
 					Installed:   true,
 					Version:     "4.2.1",
@@ -179,7 +181,7 @@ func TestUseCase_Update_AllManagers(t *testing.T) {
 			mockManagers: []*manager.Manager{
 				{
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewManagerName,
 					Installed:   true,
 					LastChecked: now,
 				},
@@ -200,7 +202,7 @@ func TestUseCase_Update_AllManagers(t *testing.T) {
 			mockManagers: []*manager.Manager{
 				{
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewManagerName,
 					Installed:   true,
 					LastChecked: now,
 				},
@@ -330,7 +332,7 @@ func TestUseCase_Update_SpecificManagers(t *testing.T) {
 			mockManagers: map[manager.ManagerID]*manager.Manager{
 				manager.ManagerHomebrew: {
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewManagerName,
 					Installed:   true,
 					LastChecked: now,
 				},
@@ -352,7 +354,7 @@ func TestUseCase_Update_SpecificManagers(t *testing.T) {
 			mockManagers: map[manager.ManagerID]*manager.Manager{
 				manager.ManagerHomebrew: {
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewManagerName,
 					Installed:   true,
 					LastChecked: now,
 				},
@@ -392,7 +394,7 @@ func TestUseCase_Update_SpecificManagers(t *testing.T) {
 			mockManagers: map[manager.ManagerID]*manager.Manager{
 				manager.ManagerHomebrew: {
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewManagerName,
 					Installed:   false, // Not installed
 					LastChecked: time.Now(),
 				},
@@ -491,7 +493,7 @@ func TestUseCase_Update_DryRunMode(t *testing.T) {
 					return []*manager.Manager{
 						{
 							ID:          manager.ManagerHomebrew,
-							Name:        "Homebrew",
+							Name:        testHomebrewManagerName,
 							Installed:   true,
 							LastChecked: now,
 						},
@@ -579,7 +581,7 @@ func TestUseCase_Update_Strategies(t *testing.T) {
 					return []*manager.Manager{
 						{
 							ID:          manager.ManagerHomebrew,
-							Name:        "Homebrew",
+							Name:        testHomebrewManagerName,
 							Installed:   true,
 							LastChecked: now,
 						},
@@ -626,7 +628,7 @@ func TestUseCase_Update_NoAdapterFound(t *testing.T) {
 			return []*manager.Manager{
 				{
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewManagerName,
 					Installed:   true,
 					LastChecked: now,
 				},
@@ -756,7 +758,7 @@ func TestUseCase_Update_UnknownStrategy(t *testing.T) {
 			return []*manager.Manager{
 				{
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewManagerName,
 					Installed:   true,
 					LastChecked: now,
 				},
