@@ -102,6 +102,24 @@ type findAllExpectation struct {
 	allChecked     bool
 }
 
+type findByIDTestCase struct {
+	name      string
+	managerID manager.ManagerID
+	executor  *scriptedExecutor
+	configure func(*DetectingManagerRepository)
+	wantErr   string
+	want      findAllManagerExpectation
+	calls     []string
+	noCalls   bool
+}
+
+type managerIdentity struct {
+	id          manager.ManagerID
+	name        string
+	managerType manager.ManagerType
+	platform    manager.Platform
+}
+
 func currentPlatformManagerCount() int {
 	switch runtime.GOOS {
 	case "darwin":
@@ -187,6 +205,61 @@ func assertFindAll(t *testing.T, managers []*manager.Manager, err error, executo
 	assertFindAllManager(t, npmManager, &want.npm)
 	assertExecutedCommands(t, executor.calls, want.commandSet)
 	assertCommandSubsequence(t, executor.calls, want.npmSequence)
+}
+
+func assertFindByIDLookupError(t *testing.T, mgr *manager.Manager, err error, executor *scriptedExecutor, wantErr string) {
+	t.Helper()
+	if err == nil || err.Error() != wantErr {
+		t.Errorf("FindByID() error = %v, want %q", err, wantErr)
+	}
+	if mgr != nil {
+		t.Errorf("FindByID() manager = %#v, want nil", mgr)
+	}
+	if len(executor.calls) != 0 {
+		t.Errorf("FindByID() executed commands = %q, want none", executor.calls)
+	}
+}
+
+func assertFindByIDManager(t *testing.T, mgr, stored *manager.Manager, identity managerIdentity, tt *findByIDTestCase) {
+	t.Helper()
+	if mgr != stored {
+		t.Error("FindByID() did not return the stored manager pointer")
+	}
+	if mgr.ID != identity.id || mgr.Name != identity.name || mgr.Type != identity.managerType || mgr.Platform != identity.platform {
+		t.Errorf("FindByID() identity = %#v, want original manager identity", mgr)
+	}
+	assertFindAllManager(t, mgr, &tt.want)
+	assertCommandSubsequence(t, tt.executor.calls, tt.calls)
+	if tt.noCalls && len(tt.executor.calls) != 0 {
+		t.Errorf("FindByID() executed commands = %q, want none", tt.executor.calls)
+	}
+}
+
+func assertFindByID(t *testing.T, repo *DetectingManagerRepository, tt *findByIDTestCase) {
+	t.Helper()
+	if tt.wantErr != "" {
+		mgr, err := repo.FindByID(context.Background(), tt.managerID)
+		assertFindByIDLookupError(t, mgr, err, tt.executor, tt.wantErr)
+		return
+	}
+
+	stored, err := repo.ManagerRepository.FindByID(context.Background(), tt.managerID)
+	if err != nil {
+		t.Fatalf("base FindByID() error = %v", err)
+	}
+	identity := managerIdentity{
+		id:          stored.ID,
+		name:        stored.Name,
+		managerType: stored.Type,
+		platform:    stored.Platform,
+	}
+	stored.LastChecked = time.Time{}
+
+	mgr, err := repo.FindByID(context.Background(), tt.managerID)
+	if err != nil {
+		t.Fatalf("FindByID() error = %v", err)
+	}
+	assertFindByIDManager(t, mgr, stored, identity, tt)
 }
 
 func TestDetectingManagerRepository_FindAll(t *testing.T) {
@@ -367,16 +440,7 @@ func TestDetectingManagerRepository_FindInstalled(t *testing.T) {
 }
 
 func TestDetectingManagerRepository_FindByID(t *testing.T) {
-	tests := []struct {
-		name      string
-		managerID manager.ManagerID
-		executor  *scriptedExecutor
-		configure func(*DetectingManagerRepository)
-		wantErr   string
-		want      findAllManagerExpectation
-		calls     []string
-		noCalls   bool
-	}{
+	tests := []findByIDTestCase{
 		{
 			name:      "returns unavailable NPM after a failed probe",
 			managerID: manager.ManagerNPM,
@@ -463,49 +527,7 @@ func TestDetectingManagerRepository_FindByID(t *testing.T) {
 			if tt.configure != nil {
 				tt.configure(repo)
 			}
-
-			stored, storedErr := repo.ManagerRepository.FindByID(context.Background(), tt.managerID)
-			var storedName string
-			var storedType manager.ManagerType
-			var storedPlatform manager.Platform
-			if tt.wantErr == "" {
-				if storedErr != nil {
-					t.Fatalf("base FindByID() error = %v", storedErr)
-				}
-				storedName = stored.Name
-				storedType = stored.Type
-				storedPlatform = stored.Platform
-				stored.LastChecked = time.Time{}
-			}
-
-			mgr, err := repo.FindByID(context.Background(), tt.managerID)
-			if tt.wantErr != "" {
-				if err == nil || err.Error() != tt.wantErr {
-					t.Errorf("FindByID() error = %v, want %q", err, tt.wantErr)
-				}
-				if mgr != nil {
-					t.Errorf("FindByID() manager = %#v, want nil", mgr)
-				}
-				if len(tt.executor.calls) != 0 {
-					t.Errorf("FindByID() executed commands = %q, want none", tt.executor.calls)
-				}
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("FindByID() error = %v", err)
-			}
-			if mgr != stored {
-				t.Error("FindByID() did not return the stored manager pointer")
-			}
-			if mgr.ID != tt.managerID || mgr.Name != storedName || mgr.Type != storedType || mgr.Platform != storedPlatform {
-				t.Errorf("FindByID() identity = %#v, want NPM language manager", mgr)
-			}
-			assertFindAllManager(t, mgr, &tt.want)
-			assertCommandSubsequence(t, tt.executor.calls, tt.calls)
-			if tt.noCalls && len(tt.executor.calls) != 0 {
-				t.Errorf("FindByID() executed commands = %q, want none", tt.executor.calls)
-			}
+			assertFindByID(t, repo, &tt)
 		})
 	}
 }
