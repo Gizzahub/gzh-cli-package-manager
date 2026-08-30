@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+const (
+	fixtureVersion100 = "1.0.0"
+	fixtureVersion200 = "2.0.0"
+	fixtureVersion101 = "1.0.1"
+)
+
 func TestManager_IsHealthy(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -96,25 +102,25 @@ func TestManager_UpdatableCount(t *testing.T) {
 		{
 			name: "no updates available",
 			packages: []Package{
-				{Name: "pkg1", CurrentVersion: "1.0.0", AvailableVersion: "1.0.0", UpdateType: UpdateNone},
-				{Name: "pkg2", CurrentVersion: "2.0.0", AvailableVersion: "2.0.0", UpdateType: UpdateNone},
+				{Name: "pkg1", CurrentVersion: fixtureVersion100, AvailableVersion: fixtureVersion100, UpdateType: UpdateNone},
+				{Name: "pkg2", CurrentVersion: fixtureVersion200, AvailableVersion: fixtureVersion200, UpdateType: UpdateNone},
 			},
 			want: 0,
 		},
 		{
 			name: "all packages have updates",
 			packages: []Package{
-				{Name: "pkg1", CurrentVersion: "1.0.0", AvailableVersion: "1.0.1", UpdateType: UpdatePatch},
-				{Name: "pkg2", CurrentVersion: "1.0.0", AvailableVersion: "1.1.0", UpdateType: UpdateMinor},
+				{Name: "pkg1", CurrentVersion: fixtureVersion100, AvailableVersion: fixtureVersion101, UpdateType: UpdatePatch},
+				{Name: "pkg2", CurrentVersion: fixtureVersion100, AvailableVersion: "1.1.0", UpdateType: UpdateMinor},
 			},
 			want: 2,
 		},
 		{
 			name: "mixed update availability",
 			packages: []Package{
-				{Name: "pkg1", CurrentVersion: "1.0.0", AvailableVersion: "1.0.1", UpdateType: UpdatePatch},
-				{Name: "pkg2", CurrentVersion: "2.0.0", AvailableVersion: "2.0.0", UpdateType: UpdateNone},
-				{Name: "pkg3", CurrentVersion: "1.0.0", AvailableVersion: "2.0.0", UpdateType: UpdateMajor},
+				{Name: "pkg1", CurrentVersion: fixtureVersion100, AvailableVersion: fixtureVersion101, UpdateType: UpdatePatch},
+				{Name: "pkg2", CurrentVersion: fixtureVersion200, AvailableVersion: fixtureVersion200, UpdateType: UpdateNone},
+				{Name: "pkg3", CurrentVersion: fixtureVersion100, AvailableVersion: fixtureVersion200, UpdateType: UpdateMajor},
 			},
 			want: 2,
 		},
@@ -140,43 +146,43 @@ func TestPackage_IsUpdateAvailable(t *testing.T) {
 	}{
 		{
 			name:             "no update - same version",
-			currentVersion:   "1.0.0",
-			availableVersion: "1.0.0",
+			currentVersion:   fixtureVersion100,
+			availableVersion: fixtureVersion100,
 			updateType:       UpdateNone,
 			want:             false,
 		},
 		{
 			name:             "patch update available",
-			currentVersion:   "1.0.0",
-			availableVersion: "1.0.1",
+			currentVersion:   fixtureVersion100,
+			availableVersion: fixtureVersion101,
 			updateType:       UpdatePatch,
 			want:             true,
 		},
 		{
 			name:             "minor update available",
-			currentVersion:   "1.0.0",
+			currentVersion:   fixtureVersion100,
 			availableVersion: "1.1.0",
 			updateType:       UpdateMinor,
 			want:             true,
 		},
 		{
 			name:             "major update available",
-			currentVersion:   "1.0.0",
-			availableVersion: "2.0.0",
+			currentVersion:   fixtureVersion100,
+			availableVersion: fixtureVersion200,
 			updateType:       UpdateMajor,
 			want:             true,
 		},
 		{
 			name:             "no update - empty available version",
-			currentVersion:   "1.0.0",
+			currentVersion:   fixtureVersion100,
 			availableVersion: "",
 			updateType:       UpdateNone,
 			want:             false,
 		},
 		{
 			name:             "update type set but same version",
-			currentVersion:   "1.0.0",
-			availableVersion: "1.0.0",
+			currentVersion:   fixtureVersion100,
+			availableVersion: fixtureVersion100,
 			updateType:       UpdatePatch,
 			want:             false,
 		},
