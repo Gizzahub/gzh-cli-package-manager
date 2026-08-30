@@ -12,12 +12,13 @@ import (
 )
 
 const (
-	brewCommand                 = "brew"
-	brewVersionFlag             = "--version"
-	brewWhichCommand            = "which"
-	testBrewDoctorCommand       = "doctor"
-	testBrewUpgradeCommand      = "upgrade"
-	testNonZeroExitCodeCaseName = "non-zero exit code"
+	brewCommand                       = "brew"
+	brewVersionFlag                   = "--version"
+	brewWhichCommand                  = "which"
+	testBrewDoctorCommand             = "doctor"
+	testBrewUpgradeCommand            = "upgrade"
+	testNonZeroExitCodeCaseName       = "non-zero exit code"
+	testCommandExecutionErrorCaseName = "command execution error"
 )
 
 func TestAdapter_GetConfigPath(t *testing.T) {
@@ -118,7 +119,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "command execution error",
+			name: testCommandExecutionErrorCaseName,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("command not found")
 			},
@@ -253,7 +254,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "command execution error",
+			name: testCommandExecutionErrorCaseName,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("command failed")
 			},
@@ -328,7 +329,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "command execution error",
+			name: testCommandExecutionErrorCaseName,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("command failed")
 			},
@@ -419,7 +420,7 @@ func TestAdapter_GetConfigPath_EdgeCases(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "command execution error",
+			name: testCommandExecutionErrorCaseName,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("command failed")
 			},
@@ -459,7 +460,7 @@ func TestAdapter_ListPackages_EdgeCases(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "command execution error",
+			name: testCommandExecutionErrorCaseName,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("command failed")
 			},
