@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	brewCommand     = "brew"
-	brewVersionFlag = "--version"
+	brewCommand      = "brew"
+	brewVersionFlag  = "--version"
+	brewWhichCommand = "which"
 )
 
 func TestAdapter_GetConfigPath(t *testing.T) {
@@ -49,7 +50,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "brew installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 && args[0] == brewCommand {
+				if command == brewWhichCommand && len(args) == 1 && args[0] == brewCommand {
 					return &output.ExecutionResult{
 						ExitCode: 0,
 						Stdout:   "/usr/local/bin/brew\n",
@@ -63,7 +64,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "brew not installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 && args[0] == brewCommand {
+				if command == brewWhichCommand && len(args) == 1 && args[0] == brewCommand {
 					return &output.ExecutionResult{
 						ExitCode: 1,
 						Stderr:   "brew not found",
@@ -298,7 +299,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 		{
 			name: "brew found",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 && args[0] == brewCommand {
+				if command == brewWhichCommand && len(args) == 1 && args[0] == brewCommand {
 					return &output.ExecutionResult{
 						ExitCode: 0,
 						Stdout:   "/usr/local/bin/brew\n",
@@ -312,7 +313,7 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 		{
 			name: "brew not found - exit code 1",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 && args[0] == brewCommand {
+				if command == brewWhichCommand && len(args) == 1 && args[0] == brewCommand {
 					return &output.ExecutionResult{
 						ExitCode: 1,
 						Stderr:   "brew not found",
@@ -699,7 +700,7 @@ func TestAdapter_Update(t *testing.T) {
 
 func TestAdapter_Detect_EmptyOutput(t *testing.T) {
 	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == "which" && len(args) == 1 && args[0] == brewCommand {
+		if command == brewWhichCommand && len(args) == 1 && args[0] == brewCommand {
 			return &output.ExecutionResult{
 				ExitCode: 0,
 				Stdout:   "",
