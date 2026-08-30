@@ -11,7 +11,10 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/testutil"
 )
 
-const brewCommand = "brew"
+const (
+	brewCommand     = "brew"
+	brewVersionFlag = "--version"
+)
 
 func TestAdapter_GetConfigPath(t *testing.T) {
 	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
@@ -99,7 +102,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "valid version output",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == "--version" {
+				if command == brewCommand && len(args) == 1 && args[0] == brewVersionFlag {
 					return &output.ExecutionResult{
 						ExitCode: 0,
 						Stdout:   "Homebrew 4.2.1\nHomebrew/homebrew-core (git revision abc123; last commit 2024-01-15)\n",
@@ -355,7 +358,7 @@ func TestAdapter_GetVersion_EdgeCases(t *testing.T) {
 		{
 			name: "non-zero exit code",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == "--version" {
+				if command == brewCommand && len(args) == 1 && args[0] == brewVersionFlag {
 					return &output.ExecutionResult{
 						ExitCode: 1,
 						Stderr:   "brew not configured properly",
@@ -368,7 +371,7 @@ func TestAdapter_GetVersion_EdgeCases(t *testing.T) {
 		{
 			name: "empty output",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == "--version" {
+				if command == brewCommand && len(args) == 1 && args[0] == brewVersionFlag {
 					return &output.ExecutionResult{
 						ExitCode: 0,
 						Stdout:   "",
@@ -381,7 +384,7 @@ func TestAdapter_GetVersion_EdgeCases(t *testing.T) {
 		{
 			name: "unexpected format - single word",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == "--version" {
+				if command == brewCommand && len(args) == 1 && args[0] == brewVersionFlag {
 					return &output.ExecutionResult{
 						ExitCode: 0,
 						Stdout:   "Homebrew\n",
