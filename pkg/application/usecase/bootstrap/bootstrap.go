@@ -14,6 +14,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const managerIDLogKey = "manager_id"
+
 // UseCase implements the bootstrap use case.
 type UseCase struct {
 	managerRepo manager.Repository
@@ -84,7 +86,7 @@ func (uc *UseCase) Bootstrap(ctx context.Context, req *dto.BootstrapRequest) (*d
 
 	for _, mgrConfig := range config.Managers {
 		if !mgrConfig.Enabled {
-			uc.logger.Debug(ctx, "Manager disabled in config, skipping", output.Field{Key: "manager_id", Value: mgrConfig.ID})
+			uc.logger.Debug(ctx, "Manager disabled in config, skipping", output.Field{Key: managerIDLogKey, Value: mgrConfig.ID})
 			result := &dto.ManagerBootstrapResult{
 				ID:         manager.ManagerID(mgrConfig.ID),
 				Name:       mgrConfig.ID,
@@ -96,7 +98,7 @@ func (uc *UseCase) Bootstrap(ctx context.Context, req *dto.BootstrapRequest) (*d
 			continue
 		}
 
-		uc.logger.Info(ctx, "Processing manager", output.Field{Key: "manager_id", Value: mgrConfig.ID})
+		uc.logger.Info(ctx, "Processing manager", output.Field{Key: managerIDLogKey, Value: mgrConfig.ID})
 
 		result := uc.bootstrapManager(ctx, mgrConfig, installedMap, req.DryRun, config.Preferences)
 		results = append(results, result)
@@ -157,12 +159,12 @@ func (uc *UseCase) bootstrapManager(
 		if prefs.SkipAlreadyInstalled {
 			result.Skipped = true
 			result.SkipReason = "already installed"
-			uc.logger.Info(ctx, "Manager already installed, skipping", output.Field{Key: "manager_id", Value: mgrConfig.ID})
+			uc.logger.Info(ctx, "Manager already installed, skipping", output.Field{Key: managerIDLogKey, Value: mgrConfig.ID})
 			return result
 		}
 		result.Success = true
 		result.Steps = append(result.Steps, "Manager already installed")
-		uc.logger.Info(ctx, "Manager already installed", output.Field{Key: "manager_id", Value: mgrConfig.ID})
+		uc.logger.Info(ctx, "Manager already installed", output.Field{Key: managerIDLogKey, Value: mgrConfig.ID})
 		result.Duration = time.Since(startTime).Seconds()
 		return result
 	}
@@ -171,14 +173,14 @@ func (uc *UseCase) bootstrapManager(
 	if dryRun {
 		result.Success = true
 		result.Steps = append(result.Steps, fmt.Sprintf("Would install %s", mgrConfig.ID))
-		uc.logger.Info(ctx, "Dry-run: would install manager", output.Field{Key: "manager_id", Value: mgrConfig.ID})
+		uc.logger.Info(ctx, "Dry-run: would install manager", output.Field{Key: managerIDLogKey, Value: mgrConfig.ID})
 	} else {
 		// NOTE: For MVP, we're not implementing actual installation
 		// This would require platform-specific installation scripts
 		result.Success = false
 		result.Error = "automatic installation not yet implemented for this manager"
 		result.Steps = append(result.Steps, "Installation not implemented")
-		uc.logger.Warn(ctx, "Manager installation not yet implemented", output.Field{Key: "manager_id", Value: mgrConfig.ID})
+		uc.logger.Warn(ctx, "Manager installation not yet implemented", output.Field{Key: managerIDLogKey, Value: mgrConfig.ID})
 	}
 
 	result.Duration = time.Since(startTime).Seconds()
