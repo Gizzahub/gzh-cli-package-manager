@@ -29,6 +29,95 @@ func (w failingWriter) Write(_ []byte) (int, error) {
 	return 0, w.err
 }
 
+type perManagerListAdapterBase struct {
+	detectErr error
+	detected  bool
+}
+
+func (a *perManagerListAdapterBase) Detect(context.Context) (bool, error) {
+	return a.detected, a.detectErr
+}
+
+func (*perManagerListAdapterBase) GetVersion(context.Context) (string, error) { return "", nil }
+
+func (*perManagerListAdapterBase) GetBinaryPath(context.Context) (string, error) { return "", nil }
+
+func (*perManagerListAdapterBase) GetConfigPath(context.Context) (string, error) { return "", nil }
+
+func (*perManagerListAdapterBase) ListPackages(context.Context) ([]manager.Package, error) {
+	return nil, nil
+}
+
+func (*perManagerListAdapterBase) CheckHealth(context.Context) (manager.Status, error) {
+	return manager.StatusHealthy, nil
+}
+
+func (*perManagerListAdapterBase) Update(context.Context, adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
+	return &adapterm.UpdateResult{}, nil
+}
+
+type sourceListTestAdapter struct {
+	*perManagerListAdapterBase
+	err error
+}
+
+func (a *sourceListTestAdapter) ListSources(context.Context) ([]adapterm.Source, error) {
+	return nil, a.err
+}
+
+type bucketListTestAdapter struct {
+	*perManagerListAdapterBase
+	err error
+}
+
+func (a *bucketListTestAdapter) ListBuckets(context.Context) ([]adapterm.Bucket, error) {
+	return nil, a.err
+}
+
+func (*bucketListTestAdapter) AddBucket(context.Context, string, string) error { return nil }
+
+func (*bucketListTestAdapter) RemoveBucket(context.Context, string) error { return nil }
+
+func assertRunWithDetectedAdapter(
+	t *testing.T,
+	adapters map[manager.ManagerID]adapterm.Adapter,
+	spec perManagerSpec,
+	wantError string,
+	wantCause error,
+) {
+	t.Helper()
+	SetManagerAdapters(adapters)
+	t.Cleanup(func() { SetManagerAdapters(nil) })
+
+	called := false
+	err := runWithDetectedAdapter(context.Background(), spec, func(adapter adapterm.Adapter) error {
+		called = true
+		if adapter == nil {
+			t.Error("callback adapter = nil")
+		}
+		return nil
+	})
+
+	if wantError == "" {
+		if err != nil {
+			t.Fatalf("run with detected adapter: %v", err)
+		}
+		if !called {
+			t.Error("callback was not called")
+		}
+		return
+	}
+	if err == nil || err.Error() != wantError {
+		t.Fatalf("error = %v, want %q", err, wantError)
+	}
+	if wantCause != nil && !errors.Is(err, wantCause) {
+		t.Errorf("error = %v, want errors.Is(..., %v)", err, wantCause)
+	}
+	if called {
+		t.Error("callback was called after failed preflight")
+	}
+}
+
 // installTestAdapters wires real adapters backed by a mock executor for CLI tests.
 func installTestAdapters(t *testing.T, execFunc testutil.ExecutorFunc) {
 	t.Helper()
@@ -417,6 +506,120 @@ func TestPerManager_WingetUpgradeAllDryRun(t *testing.T) {
 	}
 }
 
+func TestRunWithDetectedAdapterPreservesPreflightContract(t *testing.T) {
+	detectErr := errors.New("detect failed")
+	wingetSpec := perManagerSpec{ID: manager.ManagerWinget, Use: testWingetCLICommand}
+	tests := []struct {
+		name      string
+		adapters  map[manager.ManagerID]adapterm.Adapter
+		wantError string
+		wantCause error
+	}{
+		{
+			name:      "adapters not initialized",
+			wantError: "winget: adapters not initialized",
+		},
+		{
+			name:      "adapter not registered",
+			adapters:  map[manager.ManagerID]adapterm.Adapter{},
+			wantError: "winget: adapter not registered",
+		},
+		{
+			name: "detect error",
+			adapters: map[manager.ManagerID]adapterm.Adapter{
+				manager.ManagerWinget: &perManagerListAdapterBase{detectErr: detectErr},
+			},
+			wantError: "winget: detect failed: detect failed",
+			wantCause: detectErr,
+		},
+		{
+			name: "not detected",
+			adapters: map[manager.ManagerID]adapterm.Adapter{
+				manager.ManagerWinget: &perManagerListAdapterBase{},
+			},
+			wantError: "winget is not available on this system (not installed or not in PATH)",
+		},
+		{
+			name: "detected",
+			adapters: map[manager.ManagerID]adapterm.Adapter{
+				manager.ManagerWinget: &perManagerListAdapterBase{detected: true},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assertRunWithDetectedAdapter(t, tt.adapters, wingetSpec, tt.wantError, tt.wantCause)
+		})
+	}
+}
+
+func TestPerManagerNamedCollectionListsPreserveErrorContracts(t *testing.T) {
+	listErr := errors.New("list unavailable")
+	wingetSpec := perManagerSpec{ID: manager.ManagerWinget, Use: testWingetCLICommand}
+	scoopSpec := perManagerSpec{ID: manager.ManagerScoop, Use: testScoopCLICommand}
+	tests := []struct {
+		name      string
+		spec      perManagerSpec
+		adapter   adapterm.Adapter
+		run       func(context.Context, perManagerSpec, string, io.Writer) error
+		wantError string
+		wantCause error
+	}{
+		{
+			name:      "source unsupported",
+			spec:      wingetSpec,
+			adapter:   &perManagerListAdapterBase{detected: true},
+			run:       runWingetSourceList,
+			wantError: "winget does not support source list",
+		},
+		{
+			name: "source list failure",
+			spec: wingetSpec,
+			adapter: &sourceListTestAdapter{
+				perManagerListAdapterBase: &perManagerListAdapterBase{detected: true},
+				err:                       listErr,
+			},
+			run:       runWingetSourceList,
+			wantError: "winget source list failed: list unavailable",
+			wantCause: listErr,
+		},
+		{
+			name:      "bucket unsupported",
+			spec:      scoopSpec,
+			adapter:   &perManagerListAdapterBase{detected: true},
+			run:       runScoopBucketList,
+			wantError: "scoop does not support bucket management",
+		},
+		{
+			name: "bucket list failure",
+			spec: scoopSpec,
+			adapter: &bucketListTestAdapter{
+				perManagerListAdapterBase: &perManagerListAdapterBase{detected: true},
+				err:                       listErr,
+			},
+			run:       runScoopBucketList,
+			wantError: "scoop bucket list failed: list unavailable",
+			wantCause: listErr,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{tt.spec.ID: tt.adapter})
+			t.Cleanup(func() { SetManagerAdapters(nil) })
+
+			err := tt.run(context.Background(), tt.spec, outputFormatText, io.Discard)
+			if err == nil || err.Error() != tt.wantError {
+				t.Fatalf("error = %v, want %q", err, tt.wantError)
+			}
+			if tt.wantCause != nil && !errors.Is(err, tt.wantCause) {
+				t.Errorf("error = %v, want errors.Is(..., %v)", err, tt.wantCause)
+			}
+		})
+	}
+}
+
 func TestPerManager_WingetSourceList(t *testing.T) {
 	sourceOutput := `Name    Argument
 ---------------------------------------------------
@@ -438,8 +641,9 @@ winget  https://cdn.winget.microsoft.com/cache
 	if err != nil {
 		t.Fatalf("winget source list: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "winget") {
-		t.Errorf("output = %q", out)
+	const want = "winget sources — 1\n  winget  https://cdn.winget.microsoft.com/cache\n"
+	if out != want {
+		t.Errorf("source list output = %q, want %q", out, want)
 	}
 }
 

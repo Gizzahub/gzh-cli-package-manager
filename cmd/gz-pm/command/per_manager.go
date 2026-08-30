@@ -445,28 +445,38 @@ func runPerManagerUpgrade(ctx context.Context, spec perManagerSpec, pkgID string
 }
 
 func runWingetSourceList(ctx context.Context, spec perManagerSpec, format string, out io.Writer) error {
-	adapter, err := requireAdapter(spec)
-	if err != nil {
-		return err
-	}
-	if detectErr := ensureDetected(ctx, adapter, spec.Use); detectErr != nil {
-		return detectErr
-	}
+	return runWithDetectedAdapter(ctx, spec, func(adapter adapterm.Adapter) error {
+		lister, ok := adapter.(adapterm.SourceLister)
+		if !ok {
+			return fmt.Errorf("%s does not support source list", spec.Use)
+		}
 
-	lister, ok := adapter.(adapterm.SourceLister)
-	if !ok {
-		return fmt.Errorf("%s does not support source list", spec.Use)
-	}
+		sources, err := lister.ListSources(ctx)
+		if err != nil {
+			return fmt.Errorf("%s source list failed: %w", spec.Use, err)
+		}
 
-	sources, err := lister.ListSources(ctx)
-	if err != nil {
-		return fmt.Errorf("%s source list failed: %w", spec.Use, err)
-	}
-
-	return writeSources(out, format, sources)
+		return writeSources(out, format, sources)
+	})
 }
 
 func runScoopBucketList(ctx context.Context, spec perManagerSpec, format string, out io.Writer) error {
+	return runWithDetectedAdapter(ctx, spec, func(adapter adapterm.Adapter) error {
+		bm, ok := adapter.(adapterm.BucketManager)
+		if !ok {
+			return fmt.Errorf("%s does not support bucket management", spec.Use)
+		}
+
+		buckets, err := bm.ListBuckets(ctx)
+		if err != nil {
+			return fmt.Errorf("%s bucket list failed: %w", spec.Use, err)
+		}
+
+		return writeBuckets(out, format, buckets)
+	})
+}
+
+func runWithDetectedAdapter(ctx context.Context, spec perManagerSpec, run func(adapterm.Adapter) error) error {
 	adapter, err := requireAdapter(spec)
 	if err != nil {
 		return err
@@ -474,18 +484,7 @@ func runScoopBucketList(ctx context.Context, spec perManagerSpec, format string,
 	if detectErr := ensureDetected(ctx, adapter, spec.Use); detectErr != nil {
 		return detectErr
 	}
-
-	bm, ok := adapter.(adapterm.BucketManager)
-	if !ok {
-		return fmt.Errorf("%s does not support bucket management", spec.Use)
-	}
-
-	buckets, err := bm.ListBuckets(ctx)
-	if err != nil {
-		return fmt.Errorf("%s bucket list failed: %w", spec.Use, err)
-	}
-
-	return writeBuckets(out, format, buckets)
+	return run(adapter)
 }
 
 func runScoopBucketAdd(ctx context.Context, spec perManagerSpec, name, url string, out io.Writer) error {
