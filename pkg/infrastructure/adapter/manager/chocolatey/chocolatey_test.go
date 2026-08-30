@@ -13,6 +13,12 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/testutil"
 )
 
+const (
+	testVersionArg       = "--version"
+	testNameCommandFails = "command fails"
+	testPackageGit       = "git"
+)
+
 func TestAdapter_Detect(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -23,7 +29,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "chocolatey installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == chocoCommand && len(args) == 1 && args[0] == "--version" {
+				if command == chocoCommand && len(args) == 1 && args[0] == testVersionArg {
 					return testutil.SuccessResult("2.2.2\n"), nil
 				}
 				return nil, errors.New("unexpected command")
@@ -34,7 +40,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "chocolatey not installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == chocoCommand && len(args) == 1 && args[0] == "--version" {
+				if command == chocoCommand && len(args) == 1 && args[0] == testVersionArg {
 					return testutil.FailureResult(1, "choco: command not found"), errors.New("exit code 1")
 				}
 				return nil, errors.New("unexpected command")
@@ -70,7 +76,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "version with newline",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == chocoCommand && len(args) == 1 && args[0] == "--version" {
+				if command == chocoCommand && len(args) == 1 && args[0] == testVersionArg {
 					return testutil.SuccessResult("2.2.2\n"), nil
 				}
 				return nil, errors.New("unexpected command")
@@ -81,7 +87,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "version without newline",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == chocoCommand && len(args) == 1 && args[0] == "--version" {
+				if command == chocoCommand && len(args) == 1 && args[0] == testVersionArg {
 					return testutil.SuccessResult("2.2.2"), nil
 				}
 				return nil, errors.New("unexpected command")
@@ -90,7 +96,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "command fails",
+			name: testNameCommandFails,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("command failed")
 			},
@@ -300,7 +306,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			want: manager.StatusError,
 		},
 		{
-			name: "command fails",
+			name: testNameCommandFails,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("network error")
 			},
@@ -372,7 +378,7 @@ func TestAdapter_Update(t *testing.T) {
 			want: &adapterm.UpdateResult{
 				Success:         true,
 				Message:         "1 packages updated successfully",
-				UpdatedPackages: []string{"git"},
+				UpdatedPackages: []string{testPackageGit},
 				FailedPackages:  []string{},
 			},
 			wantErr: false,
@@ -464,15 +470,15 @@ github-desktop|3.3.0
 	}{
 		{
 			name:  "machine readable results",
-			query: "git",
+			query: testPackageGit,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == chocoCommand && len(args) == 3 && args[0] == "search" && args[1] == "git" && args[2] == "-r" {
+				if command == chocoCommand && len(args) == 3 && args[0] == "search" && args[1] == testPackageGit && args[2] == "-r" {
 					return testutil.SuccessResult(searchOutput), nil
 				}
 				return nil, errors.New("unexpected command")
 			},
 			wantCount: 3,
-			wantFirst: "git",
+			wantFirst: testPackageGit,
 		},
 		{
 			name:  "empty query",
@@ -484,8 +490,8 @@ github-desktop|3.3.0
 			wantErr: true,
 		},
 		{
-			name:  "command fails",
-			query: "git",
+			name:  testNameCommandFails,
+			query: testPackageGit,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return testutil.FailureResult(1, "search error"), errors.New("exit 1")
 			},
@@ -521,7 +527,7 @@ func TestAdapter_Install(t *testing.T) {
 		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 			return nil, errors.New("should not be called")
 		}), testutil.NewMockLogger())
-		if err := adapter.Install(context.Background(), "git", true); err != nil {
+		if err := adapter.Install(context.Background(), testPackageGit, true); err != nil {
 			t.Fatalf("Install dry-run: %v", err)
 		}
 	})
@@ -535,10 +541,10 @@ func TestAdapter_Install(t *testing.T) {
 			gotArgs = args
 			return testutil.SuccessResult("Chocolatey installed git"), nil
 		}), testutil.NewMockLogger())
-		if err := adapter.Install(context.Background(), "git", false); err != nil {
+		if err := adapter.Install(context.Background(), testPackageGit, false); err != nil {
 			t.Fatalf("Install: %v", err)
 		}
-		if len(gotArgs) != 3 || gotArgs[0] != "install" || gotArgs[1] != "git" || gotArgs[2] != "-y" {
+		if len(gotArgs) != 3 || gotArgs[0] != "install" || gotArgs[1] != testPackageGit || gotArgs[2] != "-y" {
 			t.Fatalf("args = %v", gotArgs)
 		}
 	})
@@ -547,7 +553,7 @@ func TestAdapter_Install(t *testing.T) {
 		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 			return testutil.FailureResult(1, "Access is denied. This operation requires elevation."), nil
 		}), testutil.NewMockLogger())
-		err := adapter.Install(context.Background(), "git", false)
+		err := adapter.Install(context.Background(), testPackageGit, false)
 		if err == nil {
 			t.Fatal("expected elevation error")
 		}
@@ -564,10 +570,10 @@ func TestAdapter_Uninstall(t *testing.T) {
 		}
 		return nil, errors.New("unexpected")
 	}), testutil.NewMockLogger())
-	if err := adapter.Uninstall(context.Background(), "git", false); err != nil {
+	if err := adapter.Uninstall(context.Background(), testPackageGit, false); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
-	if err := adapter.Uninstall(context.Background(), "git", true); err != nil {
+	if err := adapter.Uninstall(context.Background(), testPackageGit, true); err != nil {
 		t.Fatalf("Uninstall dry-run: %v", err)
 	}
 	if err := adapter.Uninstall(context.Background(), "", false); err == nil {
