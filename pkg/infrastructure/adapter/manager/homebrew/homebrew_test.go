@@ -16,6 +16,7 @@ const (
 	brewVersionFlag                   = "--version"
 	brewWhichCommand                  = "which"
 	testBrewDoctorCommand             = "doctor"
+	testBrewUpdateCommand             = "update"
 	testBrewUpgradeCommand            = "upgrade"
 	testNonZeroExitCodeCaseName       = "non-zero exit code"
 	testCommandExecutionErrorCaseName = "command execution error"
@@ -578,7 +579,7 @@ func TestAdapter_Update(t *testing.T) {
 			strategy: testBrewStableStrategy,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == brewCommand {
-					if len(args) == 1 && args[0] == "update" {
+					if len(args) == 1 && args[0] == testBrewUpdateCommand {
 						return &output.ExecutionResult{
 							ExitCode: 0,
 							Stdout:   "Updated Homebrew\n",
@@ -601,7 +602,7 @@ func TestAdapter_Update(t *testing.T) {
 			dryRun:   false,
 			strategy: testBrewStableStrategy,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == "update" {
+				if command == brewCommand && len(args) == 1 && args[0] == testBrewUpdateCommand {
 					return nil, errors.New("network error")
 				}
 				return &output.ExecutionResult{ExitCode: 0}, nil
@@ -614,7 +615,7 @@ func TestAdapter_Update(t *testing.T) {
 			dryRun:   false,
 			strategy: testBrewStableStrategy,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == "update" {
+				if command == brewCommand && len(args) == 1 && args[0] == testBrewUpdateCommand {
 					return &output.ExecutionResult{
 						ExitCode: 1,
 						Stderr:   "update failed",
@@ -630,7 +631,7 @@ func TestAdapter_Update(t *testing.T) {
 			dryRun:   false,
 			strategy: "fixed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == "update" {
+				if command == brewCommand && len(args) == 1 && args[0] == testBrewUpdateCommand {
 					return &output.ExecutionResult{
 						ExitCode: 0,
 						Stdout:   "Updated Homebrew\n",
@@ -647,7 +648,7 @@ func TestAdapter_Update(t *testing.T) {
 			strategy: testBrewStableStrategy,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == brewCommand {
-					if len(args) == 1 && args[0] == "update" {
+					if len(args) == 1 && args[0] == testBrewUpdateCommand {
 						return &output.ExecutionResult{ExitCode: 0}, nil
 					}
 					if len(args) == 1 && args[0] == testBrewUpgradeCommand {
@@ -665,7 +666,7 @@ func TestAdapter_Update(t *testing.T) {
 			strategy: testBrewStableStrategy,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == brewCommand {
-					if len(args) == 1 && args[0] == "update" {
+					if len(args) == 1 && args[0] == testBrewUpdateCommand {
 						return &output.ExecutionResult{ExitCode: 0}, nil
 					}
 					if len(args) == 1 && args[0] == testBrewUpgradeCommand {
