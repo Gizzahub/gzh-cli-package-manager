@@ -334,7 +334,7 @@ func TestAdapterPackageListerPreservesAdapterError(t *testing.T) {
 func TestCleanupOrphansRemoveReportsInstallerFailureWithoutDuplicateContext(t *testing.T) {
 	sentinel := errors.New("uninstall unavailable")
 	stub := &failingUninstallAdapter{
-		stubListAdapter: &stubListAdapter{packages: []manager.Package{{Name: "ghost"}}},
+		stubListAdapter: &stubListAdapter{packages: []manager.Package{{Name: testGhostPackageName}}},
 		err:             sentinel,
 	}
 	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{manager.ManagerScoop: stub})
@@ -439,7 +439,7 @@ func (s *stubListAdapter) Uninstall(_ context.Context, pkgID string, dryRun bool
 
 func TestCleanupOrphansRemove_DryRunDefault(t *testing.T) {
 	stub := &stubListAdapter{packages: []manager.Package{
-		{Name: "ghost", CurrentVersion: ""},
+		{Name: testGhostPackageName, CurrentVersion: ""},
 		{Name: testGitPackageName, CurrentVersion: "2.0"},
 	}}
 	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{
@@ -470,7 +470,7 @@ func TestCleanupOrphansRemove_DryRunDefault(t *testing.T) {
 
 func TestCleanupOrphansRemove_Live(t *testing.T) {
 	stub := &stubListAdapter{packages: []manager.Package{
-		{Name: "ghost", CurrentVersion: ""},
+		{Name: testGhostPackageName, CurrentVersion: ""},
 	}}
 	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{
 		manager.ManagerScoop: stub,
@@ -493,7 +493,7 @@ func TestCleanupOrphansRemove_Live(t *testing.T) {
 	if !strings.Contains(out, "LIVE") {
 		t.Fatalf("expected LIVE mode: %q", out)
 	}
-	if len(stub.uninstalled) != 1 || stub.uninstalled[0] != "ghost" {
+	if len(stub.uninstalled) != 1 || stub.uninstalled[0] != testGhostPackageName {
 		t.Fatalf("expected live uninstall of ghost: %v", stub.uninstalled)
 	}
 }
