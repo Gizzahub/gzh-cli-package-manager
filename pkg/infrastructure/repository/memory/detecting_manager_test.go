@@ -17,6 +17,7 @@ import (
 // Test-specific constants.
 const (
 	npmCommand   = "npm"
+	pipCommand   = "pip"
 	pip3Command  = "pip3"
 	whichCommand = "which"
 	versionFlag  = "--version"
@@ -63,6 +64,29 @@ func scriptCommand(command string, args ...string) string {
 	return command + "\x00" + strings.Join(args, "\x00")
 }
 
+func newPipScriptedExecutor() *scriptedExecutor {
+	return newScriptedExecutor(map[string]scriptedCommandResult{
+		scriptCommand(whichCommand, pip3Command): {
+			result: &output.ExecutionResult{Stdout: "/usr/bin/pip3\n"},
+		},
+		scriptCommand(pip3Command, versionFlag): {
+			result: &output.ExecutionResult{Stdout: "pip 23.0.1 from /usr/lib/python3.11/site-packages/pip (python 3.11)\n"},
+		},
+		scriptCommand(pip3Command, "config", listCommand, "--user"): {
+			result: &output.ExecutionResult{},
+		},
+		scriptCommand(pip3Command, listCommand, "--format=json"): {
+			result: &output.ExecutionResult{Stdout: `[{"name":"pip","version":"23.0.1"}]`},
+		},
+		scriptCommand(pip3Command, listCommand, "--outdated", "--format=json"): {
+			result: &output.ExecutionResult{Stdout: "[]"},
+		},
+		scriptCommand(pip3Command, "check"): {
+			result: &output.ExecutionResult{},
+		},
+	})
+}
+
 func (e *scriptedExecutor) Execute(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 	key := scriptCommand(command, args...)
 	e.calls = append(e.calls, key)
@@ -84,7 +108,7 @@ func (m *mockLogger) Info(_ context.Context, _ string, _ ...output.Field)       
 func (m *mockLogger) Warn(_ context.Context, _ string, _ ...output.Field)           {}
 func (m *mockLogger) Error(_ context.Context, _ string, _ error, _ ...output.Field) {}
 
-type findAllManagerExpectation struct {
+type managerExpectation struct {
 	installed  bool
 	status     manager.Status
 	version    string
@@ -96,7 +120,7 @@ type findAllManagerExpectation struct {
 type findAllExpectation struct {
 	managerCount   int
 	installedCount int
-	npm            findAllManagerExpectation
+	npm            managerExpectation
 	commandSet     []string
 	npmSequence    []string
 	allChecked     bool
@@ -108,9 +132,22 @@ type findByIDTestCase struct {
 	executor  *scriptedExecutor
 	configure func(*DetectingManagerRepository)
 	wantErr   string
-	want      findAllManagerExpectation
+	want      managerExpectation
 	calls     []string
 	noCalls   bool
+}
+
+type findInstalledTestCase struct {
+	name             string
+	executor         *scriptedExecutor
+	configure        func(*DetectingManagerRepository)
+	prepare          func(*testing.T, *DetectingManagerRepository, *scriptedExecutor)
+	managerCount     int
+	expectPip        bool
+	pip              managerExpectation
+	requiredCommands []string
+	pipSequence      []string
+	allUnavailable   bool
 }
 
 type managerIdentity struct {
@@ -118,6 +155,42 @@ type managerIdentity struct {
 	name        string
 	managerType manager.ManagerType
 	platform    manager.Platform
+}
+
+func completePipExpectation(status manager.Status) managerExpectation {
+	return managerExpectation{
+		installed:  true,
+		status:     status,
+		version:    "23.0.1",
+		binaryPath: "/usr/bin/pip3",
+		configPath: "~/.pip/pip.conf",
+		packages: []manager.Package{
+			{
+				Name:           "pip",
+				CurrentVersion: "23.0.1",
+				Manager:        manager.ManagerPip,
+				IsGlobal:       true,
+				UpdateType:     manager.UpdateNone,
+			},
+		},
+	}
+}
+
+func pipCommandSequence() []string {
+	return []string{
+		scriptCommand(whichCommand, pip3Command),
+		scriptCommand(whichCommand, pip3Command),
+		scriptCommand(pip3Command, versionFlag),
+		scriptCommand(whichCommand, pip3Command),
+		scriptCommand(whichCommand, pip3Command),
+		scriptCommand(whichCommand, pip3Command),
+		scriptCommand(pip3Command, "config", listCommand, "--user"),
+		scriptCommand(whichCommand, pip3Command),
+		scriptCommand(pip3Command, listCommand, "--format=json"),
+		scriptCommand(pip3Command, listCommand, "--outdated", "--format=json"),
+		scriptCommand(whichCommand, pip3Command),
+		scriptCommand(pip3Command, "check"),
+	}
 }
 
 func currentPlatformManagerCount() int {
@@ -131,22 +204,22 @@ func currentPlatformManagerCount() int {
 	}
 }
 
-func assertFindAllManager(t *testing.T, got *manager.Manager, want *findAllManagerExpectation) {
+func assertManager(t *testing.T, label string, got *manager.Manager, want *managerExpectation) {
 	t.Helper()
 	if got.Installed != want.installed {
-		t.Errorf("NPM installed = %t, want %t", got.Installed, want.installed)
+		t.Errorf("%s installed = %t, want %t", label, got.Installed, want.installed)
 	}
 	if got.Status != want.status {
-		t.Errorf("NPM status = %q, want %q", got.Status, want.status)
+		t.Errorf("%s status = %q, want %q", label, got.Status, want.status)
 	}
 	if got.Version != want.version || got.BinaryPath != want.binaryPath || got.ConfigPath != want.configPath {
-		t.Errorf("NPM details = version %q, binary %q, config %q", got.Version, got.BinaryPath, got.ConfigPath)
+		t.Errorf("%s details = version %q, binary %q, config %q", label, got.Version, got.BinaryPath, got.ConfigPath)
 	}
 	if !slices.Equal(got.Packages, want.packages) {
-		t.Errorf("NPM packages = %#v, want %#v", got.Packages, want.packages)
+		t.Errorf("%s packages = %#v, want %#v", label, got.Packages, want.packages)
 	}
 	if got.LastChecked.IsZero() {
-		t.Error("NPM LastChecked is zero")
+		t.Errorf("%s LastChecked is zero", label)
 	}
 }
 
@@ -202,7 +275,7 @@ func assertFindAll(t *testing.T, managers []*manager.Manager, err error, executo
 		t.Fatal("FindAll() did not return NPM")
 	}
 
-	assertFindAllManager(t, npmManager, &want.npm)
+	assertManager(t, "NPM", npmManager, &want.npm)
 	assertExecutedCommands(t, executor.calls, want.commandSet)
 	assertCommandSubsequence(t, executor.calls, want.npmSequence)
 }
@@ -228,7 +301,7 @@ func assertFindByIDManager(t *testing.T, mgr, stored *manager.Manager, identity 
 	if mgr.ID != identity.id || mgr.Name != identity.name || mgr.Type != identity.managerType || mgr.Platform != identity.platform {
 		t.Errorf("FindByID() identity = %#v, want original manager identity", mgr)
 	}
-	assertFindAllManager(t, mgr, &tt.want)
+	assertManager(t, "NPM", mgr, &tt.want)
 	assertCommandSubsequence(t, tt.executor.calls, tt.calls)
 	if tt.noCalls && len(tt.executor.calls) != 0 {
 		t.Errorf("FindByID() executed commands = %q, want none", tt.executor.calls)
@@ -262,6 +335,52 @@ func assertFindByID(t *testing.T, repo *DetectingManagerRepository, tt *findByID
 	assertFindByIDManager(t, mgr, stored, identity, tt)
 }
 
+func assertAllManagersUnavailable(t *testing.T, repo *DetectingManagerRepository) {
+	t.Helper()
+	for _, mgr := range repo.managers {
+		if mgr.Installed || mgr.Status != manager.StatusUnavailable || mgr.LastChecked.IsZero() {
+			t.Errorf("FindInstalled() left %s as installed=%t status=%q checked=%t", mgr.ID, mgr.Installed, mgr.Status, !mgr.LastChecked.IsZero())
+		}
+	}
+}
+
+func assertFindInstalled(t *testing.T, repo *DetectingManagerRepository, executor *scriptedExecutor, stored *manager.Manager, identity managerIdentity, tt *findInstalledTestCase) {
+	t.Helper()
+	managers, err := repo.FindInstalled(context.Background())
+	if err != nil {
+		t.Fatalf("FindInstalled() error = %v", err)
+	}
+	if len(managers) != tt.managerCount {
+		t.Errorf("FindInstalled() manager count = %d, want %d", len(managers), tt.managerCount)
+	}
+	if tt.allUnavailable {
+		assertAllManagersUnavailable(t, repo)
+	}
+	if !tt.expectPip {
+		assertExecutedCommands(t, executor.calls, tt.requiredCommands)
+		return
+	}
+
+	var pipManager *manager.Manager
+	for _, mgr := range managers {
+		if mgr.ID == manager.ManagerPip {
+			pipManager = mgr
+		}
+	}
+	if pipManager == nil {
+		t.Fatal("FindInstalled() did not return Pip")
+	}
+	if pipManager != stored {
+		t.Error("FindInstalled() did not return the stored Pip manager pointer")
+	}
+	if pipManager.ID != identity.id || pipManager.Name != identity.name || pipManager.Type != identity.managerType || pipManager.Platform != identity.platform {
+		t.Errorf("FindInstalled() Pip identity = %#v, want original manager identity", pipManager)
+	}
+	assertManager(t, "Pip", pipManager, &tt.pip)
+	assertExecutedCommands(t, executor.calls, tt.requiredCommands)
+	assertCommandSubsequence(t, executor.calls, tt.pipSequence)
+}
+
 func TestDetectingManagerRepository_FindAll(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -275,7 +394,7 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 			want: findAllExpectation{
 				managerCount:   currentPlatformManagerCount(),
 				installedCount: 0,
-				npm: findAllManagerExpectation{
+				npm: managerExpectation{
 					status: manager.StatusUnavailable,
 				},
 				commandSet: []string{
@@ -308,7 +427,7 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 			want: findAllExpectation{
 				managerCount:   currentPlatformManagerCount(),
 				installedCount: 1,
-				npm: findAllManagerExpectation{
+				npm: managerExpectation{
 					installed:  true,
 					status:     manager.StatusHealthy,
 					version:    "10.0.0",
@@ -347,7 +466,7 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 			want: findAllExpectation{
 				managerCount:   currentPlatformManagerCount(),
 				installedCount: 0,
-				npm: findAllManagerExpectation{
+				npm: managerExpectation{
 					status: manager.StatusError,
 				},
 				allChecked: true,
@@ -368,73 +487,68 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 }
 
 func TestDetectingManagerRepository_FindInstalled(t *testing.T) {
-	tests := []struct {
-		name          string
-		execFunc      func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-		wantInstalled int
-	}{
+	tests := []findInstalledTestCase{
 		{
-			name: "no managers installed",
-			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return &output.ExecutionResult{ExitCode: 1}, nil
+			name:     "filters every unavailable manager after eager detection",
+			executor: newScriptedExecutor(nil),
+			configure: func(repo *DetectingManagerRepository) {
+				for _, mgr := range repo.managers {
+					mgr.LastChecked = time.Time{}
+				}
 			},
-			wantInstalled: 0,
+			allUnavailable: true,
+			requiredCommands: []string{
+				scriptCommand(whichCommand, pip3Command),
+				scriptCommand(whichCommand, pipCommand),
+			},
 		},
 		{
-			name: "pip detected",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == whichCommand && len(args) == 1 && args[0] == pip3Command {
-					return &output.ExecutionResult{
-						Stdout:   "/usr/bin/pip3\n",
-						ExitCode: 0,
-					}, nil
+			name:         "returns complete healthy Pip details through the canonical pointer",
+			executor:     newPipScriptedExecutor(),
+			managerCount: 1,
+			expectPip:    true,
+			pip:          completePipExpectation(manager.StatusHealthy),
+			pipSequence:  pipCommandSequence(),
+		},
+		{
+			name:         "retains previously installed Pip after a detection error",
+			executor:     newPipScriptedExecutor(),
+			managerCount: 1,
+			expectPip:    true,
+			pip:          completePipExpectation(manager.StatusError),
+			prepare: func(t *testing.T, repo *DetectingManagerRepository, executor *scriptedExecutor) {
+				t.Helper()
+				managers, err := repo.FindInstalled(context.Background())
+				if err != nil || len(managers) != 1 || managers[0].ID != manager.ManagerPip {
+					t.Fatalf("initial FindInstalled() managers = %#v, error = %v", managers, err)
 				}
-				if command == pip3Command && args[0] == versionFlag {
-					return &output.ExecutionResult{
-						Stdout:   "pip 23.0.1 from /usr/lib/python3.11/site-packages/pip (python 3.11)\n",
-						ExitCode: 0,
-					}, nil
-				}
-				if command == pip3Command && args[0] == listCommand {
-					return &output.ExecutionResult{
-						Stdout:   `[{"name": "pip", "version": "23.0.1"}]`,
-						ExitCode: 0,
-					}, nil
-				}
-				if command == pip3Command && args[0] == "check" {
-					return &output.ExecutionResult{
-						Stdout:   "No broken requirements found.\n",
-						ExitCode: 0,
-					}, nil
-				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+				repo.managers[manager.ManagerPip].LastChecked = time.Time{}
+				repo.adapters[manager.ManagerPip] = detectErrorAdapter{err: errFindAllDetect}
+				executor.calls = nil
 			},
-			wantInstalled: 1,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			executor := &mockExecutor{execFunc: tt.execFunc}
-			logger := &mockLogger{}
-			repo := NewDetectingManagerRepository(executor, logger)
-
-			managers, err := repo.FindInstalled(context.Background())
+			repo := NewDetectingManagerRepository(tt.executor, &mockLogger{})
+			if tt.configure != nil {
+				tt.configure(repo)
+			}
+			stored, err := repo.ManagerRepository.FindByID(context.Background(), manager.ManagerPip)
 			if err != nil {
-				t.Errorf("FindInstalled() error = %v", err)
-				return
+				t.Fatalf("base FindByID() error = %v", err)
 			}
-
-			if len(managers) != tt.wantInstalled {
-				t.Errorf("FindInstalled() count = %d, want %d", len(managers), tt.wantInstalled)
+			identity := managerIdentity{
+				id:          stored.ID,
+				name:        stored.Name,
+				managerType: stored.Type,
+				platform:    stored.Platform,
 			}
-
-			// Verify all returned managers are actually installed
-			for _, mgr := range managers {
-				if !mgr.Installed {
-					t.Errorf("FindInstalled() returned non-installed manager: %s", mgr.ID)
-				}
+			if tt.prepare != nil {
+				tt.prepare(t, repo, tt.executor)
 			}
+			assertFindInstalled(t, repo, tt.executor, stored, identity, &tt)
 		})
 	}
 }
@@ -445,7 +559,7 @@ func TestDetectingManagerRepository_FindByID(t *testing.T) {
 			name:      "returns unavailable NPM after a failed probe",
 			managerID: manager.ManagerNPM,
 			executor:  newScriptedExecutor(nil),
-			want: findAllManagerExpectation{
+			want: managerExpectation{
 				status: manager.StatusUnavailable,
 			},
 			calls: []string{
@@ -475,7 +589,7 @@ func TestDetectingManagerRepository_FindByID(t *testing.T) {
 					result: &output.ExecutionResult{Stdout: "ok\n"},
 				},
 			}),
-			want: findAllManagerExpectation{
+			want: managerExpectation{
 				installed:  true,
 				status:     manager.StatusHealthy,
 				version:    "10.0.0",
@@ -514,7 +628,7 @@ func TestDetectingManagerRepository_FindByID(t *testing.T) {
 			configure: func(repo *DetectingManagerRepository) {
 				repo.adapters[manager.ManagerNPM] = detectErrorAdapter{err: errFindAllDetect}
 			},
-			want: findAllManagerExpectation{
+			want: managerExpectation{
 				status: manager.StatusError,
 			},
 			noCalls: true,
