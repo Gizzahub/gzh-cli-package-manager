@@ -311,14 +311,6 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 		}
 	}
 
-	// Also check for "X packages upgraded" pattern
-	for _, line := range lines {
-		if strings.Contains(line, "packages upgraded") {
-			// Found summary line
-			break
-		}
-	}
-
 	result.Message = fmt.Sprintf("%d packages updated successfully", len(result.UpdatedPackages))
 	a.logger.Info(ctx, "Chocolatey update completed",
 		output.Field{Key: "updated_packages", Value: len(result.UpdatedPackages)})
