@@ -97,7 +97,7 @@ func TestResolveCachePaths(t *testing.T) {
 	if got := paths[testNPMManagerID]; got != filepath.Join(home, ".npm") {
 		t.Fatalf("npm path: got %q", got)
 	}
-	if got := paths[testHomebrewManagerID]; got != filepath.Join(home, ".cache/Homebrew") {
+	if got := paths[testHomebrewManagerID]; got != filepath.Join(home, ".cache", "Homebrew") {
 		t.Fatalf("homebrew linux: got %q", got)
 	}
 	if _, ok := paths["pnpm"]; !ok {
@@ -118,7 +118,7 @@ func TestResolveCachePaths(t *testing.T) {
 
 	// darwin homebrew
 	paths = ResolveCachePaths(home, "darwin", nil, DefaultKnownCachePaths())
-	if paths[testHomebrewManagerID] != filepath.Join(home, "Library/Caches/Homebrew") {
+	if paths[testHomebrewManagerID] != filepath.Join(home, "Library", "Caches", "Homebrew") {
 		t.Fatalf("homebrew darwin: got %q", paths[testHomebrewManagerID])
 	}
 }
@@ -127,7 +127,7 @@ func TestCacheScanner_Scan(t *testing.T) {
 	t.Parallel()
 	home := testHomeDir
 	npmCache := filepath.Join(home, ".npm")
-	pipCache := filepath.Join(home, ".cache/pip")
+	pipCache := filepath.Join(home, ".cache", "pip")
 
 	fsys := NewMapFileSystem()
 	now := time.Now()
@@ -190,7 +190,7 @@ func TestCacheScanner_ScanManagerFilter(t *testing.T) {
 	home := testHomeDir
 	fsys := NewMapFileSystem()
 	fsys.AddFile(filepath.Join(home, ".npm", "a"), 100, time.Now())
-	fsys.AddFile(filepath.Join(home, ".cache/pip", "b"), 100, time.Now())
+	fsys.AddFile(filepath.Join(home, ".cache", "pip", "b"), 100, time.Now())
 
 	scanner := NewCacheScanner(
 		WithFileSystem(fsys),
