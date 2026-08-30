@@ -70,14 +70,14 @@ Git        Git.Git   2.43.0  winget
 		switch {
 		case command == "winget" && len(args) == 1 && args[0] == "--version":
 			return testutil.SuccessResult("v1.6.0\n"), nil
-		case command == "winget" && len(args) > 0 && args[0] == "list":
+		case command == "winget" && len(args) > 0 && args[0] == listCommand:
 			return testutil.SuccessResult(listOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "winget", "list")
+	out, err := executePerManagerCmd(t, "winget", listCommand)
 	if err != nil {
 		t.Fatalf("winget list failed: %v\noutput: %s", err, out)
 	}
@@ -134,14 +134,14 @@ git   2.43.0  main   2024-01-01 00:00:00
 		switch {
 		case command == "scoop" && len(args) == 1 && args[0] == "--version":
 			return testutil.SuccessResult("v0.3.1\n"), nil
-		case command == "scoop" && len(args) == 1 && args[0] == "list":
+		case command == "scoop" && len(args) == 1 && args[0] == listCommand:
 			return testutil.SuccessResult(listOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "scoop", "list")
+	out, err := executePerManagerCmd(t, "scoop", listCommand)
 	if err != nil {
 		t.Fatalf("scoop list failed: %v\noutput: %s", err, out)
 	}
@@ -183,14 +183,14 @@ func TestPerManager_ChocolateyList(t *testing.T) {
 		switch {
 		case command == "choco" && len(args) == 1 && args[0] == "--version":
 			return testutil.SuccessResult("2.2.2\n"), nil
-		case command == "choco" && len(args) == 2 && args[0] == "list" && args[1] == "-r":
+		case command == "choco" && len(args) == 2 && args[0] == listCommand && args[1] == "-r":
 			return testutil.SuccessResult(listOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "chocolatey", "list", "-o", "json")
+	out, err := executePerManagerCmd(t, "chocolatey", listCommand, "-o", "json")
 	if err != nil {
 		t.Fatalf("chocolatey list failed: %v\noutput: %s", err, out)
 	}
@@ -241,7 +241,7 @@ func TestPerManager_NotDetected(t *testing.T) {
 
 	for _, name := range []string{"winget", "scoop", "chocolatey"} {
 		t.Run(name, func(t *testing.T) {
-			_, err := executePerManagerCmd(t, name, "list")
+			_, err := executePerManagerCmd(t, name, listCommand)
 			if err == nil {
 				t.Fatal("expected error when manager not detected")
 			}
@@ -254,7 +254,7 @@ func TestPerManager_NotDetected(t *testing.T) {
 
 func TestPerManager_AdapterNotInitialized(t *testing.T) {
 	SetManagerAdapters(nil)
-	_, err := executePerManagerCmd(t, "winget", "list")
+	_, err := executePerManagerCmd(t, "winget", listCommand)
 	if err == nil {
 		t.Fatal("expected error when adapters not initialized")
 	}
@@ -268,13 +268,13 @@ func TestPerManager_UnknownOutputFormat(t *testing.T) {
 		if command == "winget" && len(args) == 1 && args[0] == "--version" {
 			return testutil.SuccessResult("v1.6.0\n"), nil
 		}
-		if command == "winget" && len(args) > 0 && args[0] == "list" {
+		if command == "winget" && len(args) > 0 && args[0] == listCommand {
 			return testutil.SuccessResult(""), nil
 		}
 		return nil, errors.New("unexpected")
 	})
 
-	_, err := executePerManagerCmd(t, "winget", "list", "--output", "yaml")
+	_, err := executePerManagerCmd(t, "winget", listCommand, "--output", "yaml")
 	if err == nil {
 		t.Fatal("expected unknown format error")
 	}
