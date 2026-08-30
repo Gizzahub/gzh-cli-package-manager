@@ -14,6 +14,11 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/detector"
 )
 
+const (
+	managerIDFieldKey = "manager_id"
+	managerFieldKey   = "manager"
+)
+
 // UseCase implements the update use case.
 type UseCase struct {
 	managerRepo manager.Repository
@@ -65,11 +70,11 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 		for _, id := range req.ManagerIDs {
 			mgr, fetchErr := uc.managerRepo.FindByID(ctx, id)
 			if fetchErr != nil {
-				uc.logger.Error(ctx, "Failed to fetch manager", fetchErr, output.Field{Key: "manager_id", Value: id})
+				uc.logger.Error(ctx, "Failed to fetch manager", fetchErr, output.Field{Key: managerIDFieldKey, Value: id})
 				return nil, fmt.Errorf("failed to fetch manager %s: %w", id, fetchErr)
 			}
 			if !mgr.Installed {
-				uc.logger.Warn(ctx, "Manager not installed, skipping", output.Field{Key: "manager_id", Value: id})
+				uc.logger.Warn(ctx, "Manager not installed, skipping", output.Field{Key: managerIDFieldKey, Value: id})
 				continue
 			}
 			managers = append(managers, mgr)
@@ -129,7 +134,7 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 			continue
 		}
 
-		uc.logger.Info(ctx, "Updating manager", output.Field{Key: "manager", Value: mgr.Name})
+		uc.logger.Info(ctx, "Updating manager", output.Field{Key: managerFieldKey, Value: mgr.Name})
 
 		result := uc.updateManager(ctx, mgr, adapterStrategy, req.DryRun)
 		results = append(results, result)
@@ -187,7 +192,7 @@ func (uc *UseCase) updateManager(
 		result.Success = false
 		errMsg := fmt.Sprintf("no adapter found for manager: %s", mgr.ID)
 		result.Error = errMsg
-		uc.logger.Error(ctx, "No adapter found", fmt.Errorf("%s", errMsg), output.Field{Key: "manager_id", Value: mgr.ID})
+		uc.logger.Error(ctx, "No adapter found", fmt.Errorf("%s", errMsg), output.Field{Key: managerIDFieldKey, Value: mgr.ID})
 		return result
 	}
 
@@ -202,7 +207,7 @@ func (uc *UseCase) updateManager(
 	if err != nil {
 		result.Success = false
 		result.Error = err.Error()
-		uc.logger.Error(ctx, "Update failed", err, output.Field{Key: "manager", Value: mgr.Name})
+		uc.logger.Error(ctx, "Update failed", err, output.Field{Key: managerFieldKey, Value: mgr.Name})
 		result.Duration = time.Since(startTime).Seconds()
 		return result
 	}
@@ -227,7 +232,7 @@ func (uc *UseCase) updateManager(
 
 	uc.logger.Info(
 		ctx, "Manager update completed",
-		output.Field{Key: "manager", Value: mgr.Name},
+		output.Field{Key: managerFieldKey, Value: mgr.Name},
 		output.Field{Key: "success", Value: result.Success},
 		output.Field{Key: "updated_packages", Value: len(result.UpdatedPackages)},
 		output.Field{Key: "duration_seconds", Value: result.Duration},
