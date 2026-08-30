@@ -68,16 +68,16 @@ Git        Git.Git   2.43.0  winget
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "winget" && len(args) == 1 && args[0] == testVersionFlag:
+		case command == testWingetExecutable && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v1.6.0\n"), nil
-		case command == "winget" && len(args) > 0 && args[0] == listCommand:
+		case command == testWingetExecutable && len(args) > 0 && args[0] == listCommand:
 			return testutil.SuccessResult(listOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "winget", listCommand)
+	out, err := executePerManagerCmd(t, testWingetCLICommand, listCommand)
 	if err != nil {
 		t.Fatalf("winget list failed: %v\noutput: %s", err, out)
 	}
@@ -97,16 +97,16 @@ Git        Git.Git   2.43.0  winget
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "winget" && len(args) == 1 && args[0] == testVersionFlag:
+		case command == testWingetExecutable && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v1.6.0\n"), nil
-		case command == "winget" && len(args) >= 2 && args[0] == testSearchCommand && args[1] == testGitPackageName:
+		case command == testWingetExecutable && len(args) >= 2 && args[0] == testSearchCommand && args[1] == testGitPackageName:
 			return testutil.SuccessResult(searchOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "winget", testSearchCommand, testGitPackageName, "--output", "json")
+	out, err := executePerManagerCmd(t, testWingetCLICommand, testSearchCommand, testGitPackageName, "--output", "json")
 	if err != nil {
 		t.Fatalf("winget search failed: %v\noutput: %s", err, out)
 	}
@@ -239,7 +239,7 @@ func TestPerManager_NotDetected(t *testing.T) {
 		return nil, errors.New("unexpected command")
 	})
 
-	for _, name := range []string{"winget", testScoopCLICommand, "chocolatey"} {
+	for _, name := range []string{testWingetCLICommand, testScoopCLICommand, "chocolatey"} {
 		t.Run(name, func(t *testing.T) {
 			_, err := executePerManagerCmd(t, name, listCommand)
 			if err == nil {
@@ -254,7 +254,7 @@ func TestPerManager_NotDetected(t *testing.T) {
 
 func TestPerManager_AdapterNotInitialized(t *testing.T) {
 	SetManagerAdapters(nil)
-	_, err := executePerManagerCmd(t, "winget", listCommand)
+	_, err := executePerManagerCmd(t, testWingetCLICommand, listCommand)
 	if err == nil {
 		t.Fatal("expected error when adapters not initialized")
 	}
@@ -265,16 +265,16 @@ func TestPerManager_AdapterNotInitialized(t *testing.T) {
 
 func TestPerManager_UnknownOutputFormat(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == "winget" && len(args) == 1 && args[0] == testVersionFlag {
+		if command == testWingetExecutable && len(args) == 1 && args[0] == testVersionFlag {
 			return testutil.SuccessResult("v1.6.0\n"), nil
 		}
-		if command == "winget" && len(args) > 0 && args[0] == listCommand {
+		if command == testWingetExecutable && len(args) > 0 && args[0] == listCommand {
 			return testutil.SuccessResult(""), nil
 		}
 		return nil, errors.New("unexpected")
 	})
 
-	_, err := executePerManagerCmd(t, "winget", listCommand, "--output", "yaml")
+	_, err := executePerManagerCmd(t, testWingetCLICommand, listCommand, "--output", "yaml")
 	if err == nil {
 		t.Fatal("expected unknown format error")
 	}
@@ -285,13 +285,13 @@ func TestPerManager_UnknownOutputFormat(t *testing.T) {
 
 func TestPerManager_WingetInstallDryRun(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == "winget" && len(args) == 1 && args[0] == testVersionFlag {
+		if command == testWingetExecutable && len(args) == 1 && args[0] == testVersionFlag {
 			return testutil.SuccessResult("v1.6.0\n"), nil
 		}
 		return nil, errors.New("unexpected install call on dry-run: " + strings.Join(args, " "))
 	})
 
-	out, err := executePerManagerCmd(t, "winget", "install", "Git.Git", "--dry-run")
+	out, err := executePerManagerCmd(t, testWingetCLICommand, "install", "Git.Git", "--dry-run")
 	if err != nil {
 		t.Fatalf("winget install dry-run: %v\n%s", err, out)
 	}
@@ -304,9 +304,9 @@ func TestPerManager_WingetUninstall(t *testing.T) {
 	var uninstallCalled bool
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "winget" && len(args) == 1 && args[0] == testVersionFlag:
+		case command == testWingetExecutable && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v1.6.0\n"), nil
-		case command == "winget" && len(args) > 0 && args[0] == "uninstall":
+		case command == testWingetExecutable && len(args) > 0 && args[0] == "uninstall":
 			uninstallCalled = true
 			return testutil.SuccessResult("ok"), nil
 		default:
@@ -314,7 +314,7 @@ func TestPerManager_WingetUninstall(t *testing.T) {
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "winget", "uninstall", "Git.Git")
+	out, err := executePerManagerCmd(t, testWingetCLICommand, "uninstall", "Git.Git")
 	if err != nil {
 		t.Fatalf("winget uninstall: %v\n%s", err, out)
 	}
@@ -328,14 +328,14 @@ func TestPerManager_WingetUninstall(t *testing.T) {
 
 func TestPerManager_WingetUpgradeAllDryRun(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == "winget" && len(args) == 1 && args[0] == testVersionFlag {
+		if command == testWingetExecutable && len(args) == 1 && args[0] == testVersionFlag {
 			return testutil.SuccessResult("v1.6.0\n"), nil
 		}
 		// Update dry-run does not call executor
 		return nil, errors.New("unexpected: " + strings.Join(args, " "))
 	})
 
-	out, err := executePerManagerCmd(t, "winget", "upgrade", "--all", "--dry-run")
+	out, err := executePerManagerCmd(t, testWingetCLICommand, "upgrade", "--all", "--dry-run")
 	if err != nil {
 		t.Fatalf("winget upgrade: %v\n%s", err, out)
 	}
@@ -352,16 +352,16 @@ winget  https://cdn.winget.microsoft.com/cache
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "winget" && len(args) == 1 && args[0] == testVersionFlag:
+		case command == testWingetExecutable && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v1.6.0\n"), nil
-		case command == "winget" && len(args) == 2 && args[0] == "source" && args[1] == "list":
+		case command == testWingetExecutable && len(args) == 2 && args[0] == "source" && args[1] == "list":
 			return testutil.SuccessResult(sourceOutput), nil
 		default:
 			return nil, errors.New("unexpected: " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "winget", "source", "list")
+	out, err := executePerManagerCmd(t, testWingetCLICommand, "source", "list")
 	if err != nil {
 		t.Fatalf("winget source list: %v\n%s", err, out)
 	}

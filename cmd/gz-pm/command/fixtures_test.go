@@ -11,4 +11,6 @@ const (
 	testScoopCLICommand   = "scoop"
 	testScoopExecutable   = "scoop"
 	testVersionFlag       = "--version"
+	testWingetCLICommand  = "winget"
+	testWingetExecutable  = "winget"
 )

@@ -233,7 +233,7 @@ func TestCleanupVersionsList(t *testing.T) {
 	})
 	t.Cleanup(func() { SetManagerAdapters(nil) })
 
-	cleanupManagerID = "winget"
+	cleanupManagerID = string(manager.ManagerWinget)
 	cleanupDryRun = true
 	t.Cleanup(func() {
 		cleanupManagerID = ""
@@ -508,7 +508,7 @@ func TestCleanupVersionsRemove_DryRun(t *testing.T) {
 	})
 	t.Cleanup(func() { SetManagerAdapters(nil) })
 
-	cleanupManagerID = "winget"
+	cleanupManagerID = string(manager.ManagerWinget)
 	removeDryRun = true
 	t.Cleanup(func() {
 		cleanupManagerID = ""
