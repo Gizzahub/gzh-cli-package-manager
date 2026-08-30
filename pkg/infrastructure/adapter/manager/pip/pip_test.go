@@ -19,7 +19,7 @@ const (
 	testPipPackage     = "requests"
 )
 
-type pipUpdateCall struct {
+type pipCommandCall struct {
 	args    []string
 	command string
 	err     error
@@ -33,7 +33,13 @@ type pipUpdateExpectation struct {
 	updated []string
 }
 
-func newPipUpdateExecutor(t *testing.T, calls []pipUpdateCall) (executor testutil.ExecutorFunc, verify func()) {
+type pipListExpectation struct {
+	errorIs   error
+	packages  []manager.Package
+	wantError bool
+}
+
+func newPipCommandExecutor(t *testing.T, calls []pipCommandCall) (executor testutil.ExecutorFunc, verify func()) {
 	t.Helper()
 	callIndex := 0
 	executor = func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
@@ -77,6 +83,28 @@ func assertPipUpdateResult(t *testing.T, result *adapterm.UpdateResult, err erro
 	}
 	if !slices.Equal(result.UpdatedPackages, want.updated) {
 		t.Errorf("UpdatedPackages = %v, want %v", result.UpdatedPackages, want.updated)
+	}
+}
+
+func assertPipListResult(t *testing.T, packages []manager.Package, err error, want pipListExpectation) {
+	t.Helper()
+	if want.wantError {
+		if err == nil {
+			t.Fatal("ListPackages() error = nil, want error")
+		}
+		if want.errorIs != nil && !errors.Is(err, want.errorIs) {
+			t.Fatalf("ListPackages() error = %v, want errors.Is(..., %v)", err, want.errorIs)
+		}
+		return
+	}
+	if err != nil {
+		t.Fatalf("ListPackages() error = %v, want nil", err)
+	}
+	if packages == nil {
+		t.Fatal("ListPackages() packages = nil")
+	}
+	if !slices.Equal(packages, want.packages) {
+		t.Errorf("ListPackages() packages = %#v, want %#v", packages, want.packages)
 	}
 }
 
@@ -258,111 +286,129 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 }
 
 func TestAdapter_ListPackages(t *testing.T) {
+	initialListErr := errors.New("initial list failed")
+	outdatedListErr := errors.New("outdated list failed")
+	packagesWithUpdatesOutput := `[
+		{"name": "pip", "version": "23.0.1"},
+		{"name": "requests", "version": "2.28.0"},
+		{"name": "numpy", "version": "1.24.0"}
+	]`
+	outdatedPackagesOutput := `[
+		{"name": "requests", "version": "2.28.0", "latest_version": "2.31.0", "latest_filetype": "wheel"},
+		{"name": "numpy", "version": "1.24.0", "latest_version": "1.26.4", "latest_filetype": "wheel"}
+	]`
+	pipOnlyOutput := `[{"name": "pip", "version": "23.0.1"}]`
+	requestsOnlyOutput := `[{"name": "requests", "version": "2.28.0"}]`
+	pipOnlyPackage := manager.Package{
+		Name:           pipCommand,
+		CurrentVersion: "23.0.1",
+		IsGlobal:       true,
+		UpdateType:     manager.UpdateNone,
+	}
+	requestsOnlyPackage := manager.Package{
+		Name:           testPipPackage,
+		CurrentVersion: "2.28.0",
+		IsGlobal:       true,
+		UpdateType:     manager.UpdateNone,
+	}
+
 	tests := []struct {
-		name         string
-		execFunc     func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-		wantCount    int
-		wantUpgrades int
-		wantErr      bool
+		name  string
+		calls []pipCommandCall
+		want  pipListExpectation
 	}{
 		{
 			name: "packages with updates",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == whichCommand && args[0] == pip3Command {
-					return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
-				}
-				// pip3 list --format=json
-				if command == pip3Command && len(args) == 2 && args[0] == listArg && args[1] == "--format=json" {
-					return &output.ExecutionResult{
-						Stdout: `[
-							{"name": "pip", "version": "23.0.1"},
-							{"name": "requests", "version": "2.28.0"},
-							{"name": "numpy", "version": "1.24.0"}
-						]`,
-						ExitCode: 0,
-					}, nil
-				}
-				// pip3 list --outdated --format=json
-				if command == pip3Command && len(args) == 3 && args[0] == listArg && args[1] == outdatedFlag {
-					return &output.ExecutionResult{
-						Stdout: `[
-							{"name": "requests", "version": "2.28.0", "latest_version": "2.31.0", "latest_filetype": "wheel"},
-							{"name": "numpy", "version": "1.24.0", "latest_version": "1.26.4", "latest_filetype": "wheel"}
-						]`,
-						ExitCode: 0,
-					}, nil
-				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+			calls: []pipCommandCall{
+				{command: whichCommand, args: []string{pip3Command}, result: testutil.SuccessResult(testPip3BinaryPath)},
+				{command: pip3Command, args: []string{listArg, formatFlag}, result: testutil.SuccessResult(packagesWithUpdatesOutput)},
+				{command: pip3Command, args: []string{listArg, outdatedFlag, formatFlag}, result: testutil.SuccessResult(outdatedPackagesOutput)},
 			},
-			wantCount:    3,
-			wantUpgrades: 2,
-			wantErr:      false,
+			want: pipListExpectation{packages: []manager.Package{
+				pipOnlyPackage,
+				{Name: testPipPackage, CurrentVersion: "2.28.0", AvailableVersion: "2.31.0", IsGlobal: true, UpdateType: manager.UpdateMinor},
+				{Name: "numpy", CurrentVersion: "1.24.0", AvailableVersion: "1.26.4", IsGlobal: true, UpdateType: manager.UpdateMinor},
+			}},
 		},
 		{
 			name: "no updates available",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == whichCommand && args[0] == pip3Command {
-					return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
-				}
-				if command == pip3Command && args[0] == listArg && args[1] == "--format=json" {
-					return &output.ExecutionResult{
-						Stdout:   `[{"name": "pip", "version": "23.0.1"}]`,
-						ExitCode: 0,
-					}, nil
-				}
-				if command == pip3Command && args[0] == listArg && args[1] == outdatedFlag {
-					return &output.ExecutionResult{
-						Stdout:   "[]",
-						ExitCode: 0,
-					}, nil
-				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+			calls: []pipCommandCall{
+				{command: whichCommand, args: []string{pip3Command}, result: testutil.SuccessResult(testPip3BinaryPath)},
+				{command: pip3Command, args: []string{listArg, formatFlag}, result: testutil.SuccessResult(pipOnlyOutput)},
+				{command: pip3Command, args: []string{listArg, outdatedFlag, formatFlag}, result: testutil.SuccessResult("[]")},
 			},
-			wantCount:    1,
-			wantUpgrades: 0,
-			wantErr:      false,
+			want: pipListExpectation{packages: []manager.Package{pipOnlyPackage}},
+		},
+		{
+			name: "empty installed list returns non-nil empty slice",
+			calls: []pipCommandCall{
+				{command: whichCommand, args: []string{pip3Command}, result: testutil.SuccessResult(testPip3BinaryPath)},
+				{command: pip3Command, args: []string{listArg, formatFlag}, result: testutil.SuccessResult("[]")},
+				{command: pip3Command, args: []string{listArg, outdatedFlag, formatFlag}, result: testutil.SuccessResult("[]")},
+			},
+			want: pipListExpectation{packages: []manager.Package{}},
+		},
+		{
+			name: "initial nonzero with valid JSON succeeds",
+			calls: []pipCommandCall{
+				{command: whichCommand, args: []string{pip3Command}, result: testutil.SuccessResult(testPip3BinaryPath)},
+				{command: pip3Command, args: []string{listArg, formatFlag}, result: &output.ExecutionResult{ExitCode: 1, Stdout: pipOnlyOutput}},
+				{command: pip3Command, args: []string{listArg, outdatedFlag, formatFlag}, result: testutil.SuccessResult("[]")},
+			},
+			want: pipListExpectation{packages: []manager.Package{pipOnlyPackage}},
+		},
+		{
+			name: "initial executor error returns wrapped error",
+			calls: []pipCommandCall{
+				{command: whichCommand, args: []string{pip3Command}, result: testutil.SuccessResult(testPip3BinaryPath)},
+				{command: pip3Command, args: []string{listArg, formatFlag}, err: initialListErr},
+			},
+			want: pipListExpectation{errorIs: initialListErr, wantError: true},
+		},
+		{
+			name: "initial invalid JSON returns error",
+			calls: []pipCommandCall{
+				{command: whichCommand, args: []string{pip3Command}, result: testutil.SuccessResult(testPip3BinaryPath)},
+				{command: pip3Command, args: []string{listArg, formatFlag}, result: testutil.SuccessResult("not valid json")},
+			},
+			want: pipListExpectation{wantError: true},
+		},
+		{
+			name: "outdated executor error is ignored",
+			calls: []pipCommandCall{
+				{command: whichCommand, args: []string{pip3Command}, result: testutil.SuccessResult(testPip3BinaryPath)},
+				{command: pip3Command, args: []string{listArg, formatFlag}, result: testutil.SuccessResult(requestsOnlyOutput)},
+				{command: pip3Command, args: []string{listArg, outdatedFlag, formatFlag}, err: outdatedListErr},
+			},
+			want: pipListExpectation{packages: []manager.Package{requestsOnlyPackage}},
+		},
+		{
+			name: "outdated nonzero is ignored",
+			calls: []pipCommandCall{
+				{command: whichCommand, args: []string{pip3Command}, result: testutil.SuccessResult(testPip3BinaryPath)},
+				{command: pip3Command, args: []string{listArg, formatFlag}, result: testutil.SuccessResult(requestsOnlyOutput)},
+				{command: pip3Command, args: []string{listArg, outdatedFlag, formatFlag}, result: &output.ExecutionResult{ExitCode: 1}},
+			},
+			want: pipListExpectation{packages: []manager.Package{requestsOnlyPackage}},
+		},
+		{
+			name: "outdated invalid JSON is ignored",
+			calls: []pipCommandCall{
+				{command: whichCommand, args: []string{pip3Command}, result: testutil.SuccessResult(testPip3BinaryPath)},
+				{command: pip3Command, args: []string{listArg, formatFlag}, result: testutil.SuccessResult(requestsOnlyOutput)},
+				{command: pip3Command, args: []string{listArg, outdatedFlag, formatFlag}, result: testutil.SuccessResult("not valid json")},
+			},
+			want: pipListExpectation{packages: []manager.Package{requestsOnlyPackage}},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
+			executor, verify := newPipCommandExecutor(t, tt.calls)
+			adapter := NewAdapter(testutil.NewMockExecutor(executor), testutil.NewMockLogger())
 			packages, err := adapter.ListPackages(context.Background())
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ListPackages() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if len(packages) != tt.wantCount {
-				t.Errorf("ListPackages() package count = %d, want %d", len(packages), tt.wantCount)
-			}
-
-			// Count upgradable packages
-			upgradeCount := 0
-			for _, pkg := range packages {
-				if pkg.UpdateType != manager.UpdateNone {
-					upgradeCount++
-				}
-			}
-
-			if upgradeCount != tt.wantUpgrades {
-				t.Errorf("ListPackages() upgrade count = %d, want %d", upgradeCount, tt.wantUpgrades)
-			}
-
-			// Verify package properties
-			if len(packages) > 0 {
-				pkg := packages[0]
-				if pkg.Name == "" {
-					t.Error("Package name is empty")
-				}
-				if pkg.CurrentVersion == "" {
-					t.Error("Package current version is empty")
-				}
-				if !pkg.IsGlobal {
-					t.Error("Pip packages should be global")
-				}
-			}
+			verify()
+			assertPipListResult(t, packages, err, tt.want)
 		})
 	}
 }
@@ -469,42 +515,6 @@ func TestAdapter_GetBinaryPath_Error(t *testing.T) {
 	}
 }
 
-func TestAdapter_ListPackages_Error(t *testing.T) {
-	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == whichCommand {
-			return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
-		}
-		return nil, errors.New("execution failed")
-	}
-	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
-
-	_, err := adapter.ListPackages(context.Background())
-	if err == nil {
-		t.Error("Expected error for executor failure")
-	}
-}
-
-func TestAdapter_ListPackages_InvalidJSON(t *testing.T) {
-	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == whichCommand {
-			return &output.ExecutionResult{Stdout: testPip3BinaryPath, ExitCode: 0}, nil
-		}
-		if command == pip3Command && args[0] == listArg {
-			return &output.ExecutionResult{
-				Stdout:   "not valid json",
-				ExitCode: 0,
-			}, nil
-		}
-		return &output.ExecutionResult{ExitCode: 0}, nil
-	}
-	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
-
-	_, err := adapter.ListPackages(context.Background())
-	if err == nil {
-		t.Error("Expected error for invalid JSON")
-	}
-}
-
 func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
 	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		if command == whichCommand {
@@ -541,7 +551,7 @@ func TestAdapter_UpdateNonDryRunContracts(t *testing.T) {
 	discoveryErr := errors.New("discovery failed")
 	installErr := errors.New("install failed")
 	tests := []struct {
-		calls []pipUpdateCall
+		calls []pipCommandCall
 		name  string
 		opts  adapterm.UpdateOptions
 		want  pipUpdateExpectation
@@ -550,14 +560,14 @@ func TestAdapter_UpdateNonDryRunContracts(t *testing.T) {
 			name: "explicit packages skip discovery",
 			opts: adapterm.UpdateOptions{Packages: []string{testPipPackage}},
 			want: pipUpdateExpectation{success: true, updated: []string{testPipPackage}, message: "pip packages upgraded"},
-			calls: []pipUpdateCall{
+			calls: []pipCommandCall{
 				{command: pipCommand, args: []string{installArg, upgradeFlag, testPipPackage}, result: testutil.SuccessResult("")},
 			},
 		},
 		{
 			name: "discovered packages preserve order",
 			want: pipUpdateExpectation{success: true, updated: []string{testPipPackage, "flask"}, message: "pip packages upgraded"},
-			calls: []pipUpdateCall{
+			calls: []pipCommandCall{
 				{command: pipCommand, args: []string{listArg, outdatedFlag, freezeFormat}, result: testutil.SuccessResult(testPipPackage + "==2.28.0\n flask==3.0.0 \n\n")},
 				{command: pipCommand, args: []string{installArg, upgradeFlag, testPipPackage, "flask"}, result: testutil.SuccessResult("")},
 			},
@@ -565,21 +575,21 @@ func TestAdapter_UpdateNonDryRunContracts(t *testing.T) {
 		{
 			name: "empty discovery has no install",
 			want: pipUpdateExpectation{success: true, updated: []string{}, message: noOutdatedPackagesMessage},
-			calls: []pipUpdateCall{
+			calls: []pipCommandCall{
 				{command: pipCommand, args: []string{listArg, outdatedFlag, freezeFormat}, result: testutil.SuccessResult(" \n")},
 			},
 		},
 		{
 			name: "discovery error has no install",
 			want: pipUpdateExpectation{success: true, updated: []string{}, message: noOutdatedPackagesMessage},
-			calls: []pipUpdateCall{
+			calls: []pipCommandCall{
 				{command: pipCommand, args: []string{listArg, outdatedFlag, freezeFormat}, err: discoveryErr},
 			},
 		},
 		{
 			name: "nonzero discovery has no install",
 			want: pipUpdateExpectation{success: true, updated: []string{}, message: noOutdatedPackagesMessage},
-			calls: []pipUpdateCall{
+			calls: []pipCommandCall{
 				{command: pipCommand, args: []string{listArg, outdatedFlag, freezeFormat}, result: &output.ExecutionResult{ExitCode: 1}},
 			},
 		},
@@ -587,7 +597,7 @@ func TestAdapter_UpdateNonDryRunContracts(t *testing.T) {
 			name: "install error preserves cause",
 			opts: adapterm.UpdateOptions{Packages: []string{testPipPackage}},
 			want: pipUpdateExpectation{err: installErr, success: false, updated: []string{}, message: "pip install --upgrade failed: install failed"},
-			calls: []pipUpdateCall{
+			calls: []pipCommandCall{
 				{command: pipCommand, args: []string{installArg, upgradeFlag, testPipPackage}, err: installErr},
 			},
 		},
@@ -595,7 +605,7 @@ func TestAdapter_UpdateNonDryRunContracts(t *testing.T) {
 			name: "nonzero install reports stderr",
 			opts: adapterm.UpdateOptions{Packages: []string{testPipPackage}},
 			want: pipUpdateExpectation{success: false, updated: []string{}, message: "pip upgrade failed: permission denied"},
-			calls: []pipUpdateCall{
+			calls: []pipCommandCall{
 				{command: pipCommand, args: []string{installArg, upgradeFlag, testPipPackage}, result: &output.ExecutionResult{ExitCode: 1, Stderr: "permission denied"}},
 			},
 		},
@@ -603,7 +613,7 @@ func TestAdapter_UpdateNonDryRunContracts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			executor, verify := newPipUpdateExecutor(t, tt.calls)
+			executor, verify := newPipCommandExecutor(t, tt.calls)
 			result, err := NewAdapter(testutil.NewMockExecutor(executor), testutil.NewMockLogger()).Update(context.Background(), tt.opts)
 			verify()
 
