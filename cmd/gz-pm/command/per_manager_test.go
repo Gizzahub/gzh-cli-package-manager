@@ -132,16 +132,16 @@ git   2.43.0  main   2024-01-01 00:00:00
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "scoop" && len(args) == 1 && args[0] == testVersionFlag:
+		case command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v0.3.1\n"), nil
-		case command == "scoop" && len(args) == 1 && args[0] == listCommand:
+		case command == testScoopExecutable && len(args) == 1 && args[0] == listCommand:
 			return testutil.SuccessResult(listOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "scoop", listCommand)
+	out, err := executePerManagerCmd(t, testScoopCLICommand, listCommand)
 	if err != nil {
 		t.Fatalf("scoop list failed: %v\noutput: %s", err, out)
 	}
@@ -158,16 +158,16 @@ git  2.43.0  main
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "scoop" && len(args) == 1 && args[0] == testVersionFlag:
+		case command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v0.3.1\n"), nil
-		case command == "scoop" && len(args) == 2 && args[0] == testSearchCommand && args[1] == testGitPackageName:
+		case command == testScoopExecutable && len(args) == 2 && args[0] == testSearchCommand && args[1] == testGitPackageName:
 			return testutil.SuccessResult(searchOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "scoop", testSearchCommand, testGitPackageName)
+	out, err := executePerManagerCmd(t, testScoopCLICommand, testSearchCommand, testGitPackageName)
 	if err != nil {
 		t.Fatalf("scoop search failed: %v\noutput: %s", err, out)
 	}
@@ -239,7 +239,7 @@ func TestPerManager_NotDetected(t *testing.T) {
 		return nil, errors.New("unexpected command")
 	})
 
-	for _, name := range []string{"winget", "scoop", "chocolatey"} {
+	for _, name := range []string{"winget", testScoopCLICommand, "chocolatey"} {
 		t.Run(name, func(t *testing.T) {
 			_, err := executePerManagerCmd(t, name, listCommand)
 			if err == nil {
@@ -373,22 +373,22 @@ winget  https://cdn.winget.microsoft.com/cache
 func TestPerManager_ScoopInstallUninstall(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "scoop" && len(args) == 1 && args[0] == testVersionFlag:
+		case command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v0.3.1\n"), nil
-		case command == "scoop" && len(args) == 2 && args[0] == "install" && args[1] == testGitPackageName:
+		case command == testScoopExecutable && len(args) == 2 && args[0] == "install" && args[1] == testGitPackageName:
 			return testutil.SuccessResult("Installing 'git'"), nil
-		case command == "scoop" && len(args) == 2 && args[0] == "uninstall" && args[1] == testGitPackageName:
+		case command == testScoopExecutable && len(args) == 2 && args[0] == "uninstall" && args[1] == testGitPackageName:
 			return testutil.SuccessResult("Uninstalling 'git'"), nil
 		default:
 			return nil, errors.New("unexpected: " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "scoop", "install", testGitPackageName)
+	out, err := executePerManagerCmd(t, testScoopCLICommand, "install", testGitPackageName)
 	if err != nil {
 		t.Fatalf("scoop install: %v\n%s", err, out)
 	}
-	out, err = executePerManagerCmd(t, "scoop", "uninstall", testGitPackageName, "--dry-run")
+	out, err = executePerManagerCmd(t, testScoopCLICommand, "uninstall", testGitPackageName, "--dry-run")
 	if err != nil {
 		t.Fatalf("scoop uninstall dry-run: %v\n%s", err, out)
 	}
@@ -405,20 +405,20 @@ main https://github.com/ScoopInstaller/Main
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "scoop" && len(args) == 1 && args[0] == testVersionFlag:
+		case command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v0.3.1\n"), nil
-		case command == "scoop" && len(args) == 2 && args[0] == testBucketCommand && args[1] == "list":
+		case command == testScoopExecutable && len(args) == 2 && args[0] == testBucketCommand && args[1] == "list":
 			return testutil.SuccessResult(bucketOutput), nil
-		case command == "scoop" && len(args) >= 3 && args[0] == testBucketCommand && args[1] == "add":
+		case command == testScoopExecutable && len(args) >= 3 && args[0] == testBucketCommand && args[1] == "add":
 			return testutil.SuccessResult("ok"), nil
-		case command == "scoop" && len(args) == 3 && args[0] == testBucketCommand && args[1] == "rm":
+		case command == testScoopExecutable && len(args) == 3 && args[0] == testBucketCommand && args[1] == "rm":
 			return testutil.SuccessResult("ok"), nil
 		default:
 			return nil, errors.New("unexpected: " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "scoop", testBucketCommand, "list")
+	out, err := executePerManagerCmd(t, testScoopCLICommand, testBucketCommand, "list")
 	if err != nil {
 		t.Fatalf("bucket list: %v\n%s", err, out)
 	}
@@ -426,7 +426,7 @@ main https://github.com/ScoopInstaller/Main
 		t.Errorf("output = %q", out)
 	}
 
-	out, err = executePerManagerCmd(t, "scoop", testBucketCommand, "add", "extras")
+	out, err = executePerManagerCmd(t, testScoopCLICommand, testBucketCommand, "add", "extras")
 	if err != nil {
 		t.Fatalf("bucket add: %v\n%s", err, out)
 	}
@@ -434,7 +434,7 @@ main https://github.com/ScoopInstaller/Main
 		t.Errorf("output = %q", out)
 	}
 
-	out, err = executePerManagerCmd(t, "scoop", testBucketCommand, "remove", "extras")
+	out, err = executePerManagerCmd(t, testScoopCLICommand, testBucketCommand, "remove", "extras")
 	if err != nil {
 		t.Fatalf("bucket remove: %v\n%s", err, out)
 	}
