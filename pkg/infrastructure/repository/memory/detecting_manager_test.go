@@ -81,31 +81,31 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == versionFlag {
+				if command == npmCommand && args[0] == versionFlag {
 					return &output.ExecutionResult{
 						Stdout:   "10.0.0\n",
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == "config" {
+				if command == npmCommand && args[0] == "config" {
 					return &output.ExecutionResult{
 						Stdout:   "/usr/local\n",
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == listCommand {
+				if command == npmCommand && args[0] == listCommand {
 					return &output.ExecutionResult{
 						Stdout:   `{"dependencies": {}}`,
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == "outdated" {
+				if command == npmCommand && args[0] == "outdated" {
 					return &output.ExecutionResult{
 						Stdout:   "{}",
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == "doctor" {
+				if command == npmCommand && args[0] == "doctor" {
 					return &output.ExecutionResult{
 						Stdout:   "ok\n",
 						ExitCode: 0,
@@ -247,31 +247,31 @@ func TestDetectingManagerRepository_FindByID(t *testing.T) {
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == versionFlag {
+				if command == npmCommand && args[0] == versionFlag {
 					return &output.ExecutionResult{
 						Stdout:   "10.0.0\n",
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == "config" {
+				if command == npmCommand && args[0] == "config" {
 					return &output.ExecutionResult{
 						Stdout:   "/usr/local\n",
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == listCommand {
+				if command == npmCommand && args[0] == listCommand {
 					return &output.ExecutionResult{
 						Stdout:   `{"dependencies": {}}`,
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == "outdated" {
+				if command == npmCommand && args[0] == "outdated" {
 					return &output.ExecutionResult{
 						Stdout:   "{}",
 						ExitCode: 0,
 					}, nil
 				}
-				if command == "npm" && args[0] == "doctor" {
+				if command == npmCommand && args[0] == "doctor" {
 					return &output.ExecutionResult{
 						Stdout:   "ok\n",
 						ExitCode: 0,
