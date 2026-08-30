@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -23,6 +24,74 @@ const (
 
 // errMockExecution is a sentinel error for testing executor failures.
 var errMockExecution = errors.New("mock execution error")
+
+type asdfListPackagesCall struct {
+	args   []string
+	err    error
+	result *output.ExecutionResult
+}
+
+type asdfListPackagesExpectation struct {
+	err      error
+	errText  string
+	packages []manager.Package
+}
+
+func newASDFListPackagesExecutor(t *testing.T, calls []asdfListPackagesCall) (executor testutil.ExecutorFunc, verify func()) {
+	t.Helper()
+	callIndex := 0
+	executor = func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		t.Helper()
+		if callIndex == len(calls) {
+			t.Fatalf("unexpected command %q %v", command, args)
+		}
+		call := calls[callIndex]
+		callIndex++
+		if command != asdfCommand || !slices.Equal(args, call.args) {
+			t.Errorf("command = %q %v, want %q %v", command, args, asdfCommand, call.args)
+		}
+		return call.result, call.err
+	}
+	verify = func() {
+		t.Helper()
+		if callIndex != len(calls) {
+			t.Errorf("command calls = %d, want %d", callIndex, len(calls))
+		}
+	}
+	return executor, verify
+}
+
+func assertASDFListPackages(t *testing.T, packages []manager.Package, err error, want asdfListPackagesExpectation) {
+	t.Helper()
+	if want.err != nil {
+		if !errors.Is(err, want.err) {
+			t.Fatalf("ListPackages() error = %v, want errors.Is(..., %v)", err, want.err)
+		}
+		if !strings.Contains(err.Error(), want.errText) {
+			t.Errorf("ListPackages() error = %q, want context %q", err, want.errText)
+		}
+		return
+	}
+	if err != nil {
+		t.Fatalf("ListPackages() error = %v, want nil", err)
+	}
+	if packages == nil {
+		t.Fatal("ListPackages() packages = nil")
+	}
+	if !slices.Equal(packages, want.packages) {
+		t.Errorf("ListPackages() packages = %#v, want %#v", packages, want.packages)
+	}
+}
+
+func testASDFPackage(plugin, version string, isGlobal bool) manager.Package {
+	return manager.Package{
+		Name:           plugin + "@" + version,
+		CurrentVersion: version,
+		Description:    "ASDF plugin: " + plugin,
+		UpdateType:     manager.UpdateNone,
+		IsGlobal:       isGlobal,
+	}
+}
 
 func TestAdapter_Detect(t *testing.T) {
 	tests := []struct {
@@ -162,106 +231,89 @@ func TestAdapter_GetBinaryPath(t *testing.T) {
 
 func TestAdapter_ListPackages(t *testing.T) {
 	tests := []struct {
-		name      string
-		execFunc  func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-		wantCount int
-		wantErr   bool
+		name  string
+		calls []asdfListPackagesCall
+		want  asdfListPackagesExpectation
 	}{
 		{
 			name: "multiple plugins with versions",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				// asdf plugin list
-				if command == asdfCommand && len(args) == 2 && args[0] == "plugin" && args[1] == listArg {
-					return &output.ExecutionResult{
-						Stdout: `nodejs
-python
-ruby
-`,
-						ExitCode: 0,
-					}, nil
-				}
-				// asdf list nodejs
-				if command == asdfCommand && args[0] == listArg && args[1] == testNodeJSPlugin {
-					return &output.ExecutionResult{
-						Stdout: ` 18.0.0
-*20.11.0
- 21.0.0
-`,
-						ExitCode: 0,
-					}, nil
-				}
-				// asdf list python
-				if command == asdfCommand && args[0] == listArg && args[1] == testPythonPlugin {
-					return &output.ExecutionResult{
-						Stdout: `*3.11.7
- 3.12.0
-`,
-						ExitCode: 0,
-					}, nil
-				}
-				// asdf list ruby
-				if command == asdfCommand && args[0] == listArg && args[1] == "ruby" {
-					return &output.ExecutionResult{
-						Stdout: `*3.2.2
-`,
-						ExitCode: 0,
-					}, nil
-				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+			calls: []asdfListPackagesCall{
+				{args: []string{pluginArg, listArg}, result: testutil.SuccessResult("nodejs\npython\nruby\n")},
+				{args: []string{listArg, testNodeJSPlugin}, result: testutil.SuccessResult(" 18.0.0\n*20.11.0\n 21.0.0\n")},
+				{args: []string{listArg, testPythonPlugin}, result: testutil.SuccessResult("*3.11.7\n 3.12.0\n")},
+				{args: []string{listArg, "ruby"}, result: testutil.SuccessResult("*3.2.2\n")},
 			},
-			wantCount: 6, // 3 nodejs + 2 python + 1 ruby
-			wantErr:   false,
+			want: asdfListPackagesExpectation{packages: []manager.Package{
+				testASDFPackage(testNodeJSPlugin, "18.0.0", false),
+				testASDFPackage(testNodeJSPlugin, "20.11.0", true),
+				testASDFPackage(testNodeJSPlugin, "21.0.0", false),
+				testASDFPackage(testPythonPlugin, "3.11.7", true),
+				testASDFPackage(testPythonPlugin, "3.12.0", false),
+				testASDFPackage("ruby", "3.2.2", true),
+			}},
 		},
 		{
 			name: "no plugins installed",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == asdfCommand && args[0] == "plugin" && args[1] == listArg {
-					return &output.ExecutionResult{
-						Stdout:   "",
-						ExitCode: 0,
-					}, nil
-				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+			calls: []asdfListPackagesCall{
+				{args: []string{pluginArg, listArg}, result: testutil.SuccessResult("")},
 			},
-			wantCount: 0,
-			wantErr:   false,
+			want: asdfListPackagesExpectation{packages: []manager.Package{}},
+		},
+		{
+			name: "plugin list error preserves cause",
+			calls: []asdfListPackagesCall{
+				{args: []string{pluginArg, listArg}, err: errMockExecution},
+			},
+			want: asdfListPackagesExpectation{err: errMockExecution, errText: "failed to list plugins"},
+		},
+		{
+			name: "nonzero results still parse stdout",
+			calls: []asdfListPackagesCall{
+				{args: []string{pluginArg, listArg}, result: &output.ExecutionResult{ExitCode: 1, Stdout: testNodeJSPlugin + "\n", Stderr: "plugin list failed"}},
+				{args: []string{listArg, testNodeJSPlugin}, result: &output.ExecutionResult{ExitCode: 1, Stdout: "*20.11.0\n", Stderr: "version list failed"}},
+			},
+			want: asdfListPackagesExpectation{packages: []manager.Package{
+				testASDFPackage(testNodeJSPlugin, "20.11.0", true),
+			}},
+		},
+		{
+			name: "version list error skips plugin and continues",
+			calls: []asdfListPackagesCall{
+				{args: []string{pluginArg, listArg}, result: testutil.SuccessResult(testNodeJSPlugin + "\n" + testPythonPlugin + "\n")},
+				{args: []string{listArg, testNodeJSPlugin}, err: errMockExecution},
+				{args: []string{listArg, testPythonPlugin}, result: testutil.SuccessResult("*3.12.0\n")},
+			},
+			want: asdfListPackagesExpectation{packages: []manager.Package{
+				testASDFPackage(testPythonPlugin, "3.12.0", true),
+			}},
+		},
+		{
+			name: "empty version output",
+			calls: []asdfListPackagesCall{
+				{args: []string{pluginArg, listArg}, result: testutil.SuccessResult(testNodeJSPlugin + "\n")},
+				{args: []string{listArg, testNodeJSPlugin}, result: testutil.SuccessResult("")},
+			},
+			want: asdfListPackagesExpectation{packages: []manager.Package{}},
+		},
+		{
+			name: "malformed nonempty version remains package",
+			calls: []asdfListPackagesCall{
+				{args: []string{pluginArg, listArg}, result: testutil.SuccessResult(testNodeJSPlugin + "\n")},
+				{args: []string{listArg, testNodeJSPlugin}, result: testutil.SuccessResult("*\n")},
+			},
+			want: asdfListPackagesExpectation{packages: []manager.Package{
+				testASDFPackage(testNodeJSPlugin, "", true),
+			}},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
-			packages, err := adapter.ListPackages(context.Background())
+			executor, verify := newASDFListPackagesExecutor(t, tt.calls)
+			packages, err := NewAdapter(testutil.NewMockExecutor(executor), testutil.NewMockLogger()).ListPackages(context.Background())
+			verify()
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ListPackages() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if len(packages) != tt.wantCount {
-				t.Errorf("ListPackages() package count = %d, want %d", len(packages), tt.wantCount)
-			}
-
-			// Verify package properties
-			if len(packages) > 0 {
-				pkg := packages[0]
-				if pkg.Name == "" {
-					t.Error("Package name is empty")
-				}
-				if pkg.CurrentVersion == "" {
-					t.Error("Package current version is empty")
-				}
-			}
-
-			// Verify current version is marked with IsGlobal
-			for _, pkg := range packages {
-				if pkg.Name == "nodejs@20.11.0" && !pkg.IsGlobal {
-					t.Error("Current version should be marked as global")
-				}
-				if pkg.Name == "nodejs@18.0.0" && pkg.IsGlobal {
-					t.Error("Non-current version should not be marked as global")
-				}
-			}
+			assertASDFListPackages(t, packages, err, tt.want)
 		})
 	}
 }
@@ -444,84 +496,6 @@ func TestAdapter_GetConfigPath_ZeroValue(t *testing.T) {
 	if want := filepath.Join(homeDir, ".asdfrc"); got != want {
 		t.Errorf("GetConfigPath() = %q, want %q", got, want)
 	}
-}
-
-func TestAdapter_ListPackages_PluginListError(t *testing.T) {
-	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-		return nil, errMockExecution
-	}), testutil.NewMockLogger())
-
-	_, err := adapter.ListPackages(context.Background())
-	if err == nil {
-		t.Fatal("ListPackages() error = nil, want plugin list error")
-	}
-	if !errors.Is(err, errMockExecution) {
-		t.Errorf("ListPackages() error = %v, want cause %v", err, errMockExecution)
-	}
-	if !strings.Contains(err.Error(), "failed to list plugins") {
-		t.Errorf("ListPackages() error = %q, want plugin list context", err)
-	}
-}
-
-func TestAdapter_ListPackages_VersionListErrorSkipsPlugin(t *testing.T) {
-	adapter := NewAdapter(testutil.NewMockExecutor(testListPackagesExecutor(map[string]testExecutionResponse{
-		testCommandKey(asdfCommand, pluginArg, listArg): {
-			result: &output.ExecutionResult{Stdout: testNodeJSPlugin + "\n" + testPythonPlugin + "\n", ExitCode: 0},
-		},
-		testCommandKey(asdfCommand, listArg, testNodeJSPlugin): {err: errMockExecution},
-		testCommandKey(asdfCommand, listArg, testPythonPlugin): {
-			result: &output.ExecutionResult{Stdout: "*3.12.0\n", ExitCode: 0},
-		},
-	})), testutil.NewMockLogger())
-
-	packages, err := adapter.ListPackages(context.Background())
-	if err != nil {
-		t.Fatalf("ListPackages() error = %v", err)
-	}
-	if len(packages) != 1 {
-		t.Fatalf("ListPackages() package count = %d, want 1", len(packages))
-	}
-	if got := packages[0]; got.Name != testPythonPlugin+"@3.12.0" || !got.IsGlobal {
-		t.Errorf("ListPackages() package = %+v, want current %s@3.12.0", got, testPythonPlugin)
-	}
-}
-
-func TestAdapter_ListPackages_EmptyVersionOutput(t *testing.T) {
-	adapter := NewAdapter(testutil.NewMockExecutor(testListPackagesExecutor(map[string]testExecutionResponse{
-		testCommandKey(asdfCommand, pluginArg, listArg): {
-			result: &output.ExecutionResult{Stdout: testNodeJSPlugin + "\n", ExitCode: 0},
-		},
-		testCommandKey(asdfCommand, listArg, testNodeJSPlugin): {
-			result: &output.ExecutionResult{ExitCode: 0},
-		},
-	})), testutil.NewMockLogger())
-
-	packages, err := adapter.ListPackages(context.Background())
-	if err != nil {
-		t.Fatalf("ListPackages() error = %v", err)
-	}
-	if len(packages) != 0 {
-		t.Errorf("ListPackages() package count = %d, want 0", len(packages))
-	}
-}
-
-type testExecutionResponse struct {
-	result *output.ExecutionResult
-	err    error
-}
-
-func testListPackagesExecutor(responses map[string]testExecutionResponse) func(context.Context, string, ...string) (*output.ExecutionResult, error) {
-	return func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		response, ok := responses[testCommandKey(command, args...)]
-		if !ok {
-			return nil, errors.New("unexpected command")
-		}
-		return response.result, response.err
-	}
-}
-
-func testCommandKey(command string, args ...string) string {
-	return strings.Join(append([]string{command}, args...), " ")
 }
 
 func TestAdapter_Update(t *testing.T) {
