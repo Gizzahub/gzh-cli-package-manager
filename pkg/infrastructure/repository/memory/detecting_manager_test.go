@@ -13,10 +13,11 @@ import (
 
 // Test-specific constants.
 const (
-	npmCommand  = "npm"
-	pip3Command = "pip3"
-	versionFlag = "--version"
-	listCommand = "list"
+	npmCommand   = "npm"
+	pip3Command  = "pip3"
+	whichCommand = "which"
+	versionFlag  = "--version"
+	listCommand  = "list"
 )
 
 // mockExecutor implements output.CommandExecutor for testing.
@@ -74,7 +75,7 @@ func TestDetectingManagerRepository_FindAll(t *testing.T) {
 		{
 			name: "npm detected",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 && args[0] == npmCommand {
+				if command == whichCommand && len(args) == 1 && args[0] == npmCommand {
 					return &output.ExecutionResult{
 						Stdout:   "/usr/bin/npm\n",
 						ExitCode: 0,
@@ -163,7 +164,7 @@ func TestDetectingManagerRepository_FindInstalled(t *testing.T) {
 		{
 			name: "pip detected",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && len(args) == 1 && args[0] == pip3Command {
+				if command == whichCommand && len(args) == 1 && args[0] == pip3Command {
 					return &output.ExecutionResult{
 						Stdout:   "/usr/bin/pip3\n",
 						ExitCode: 0,
@@ -240,7 +241,7 @@ func TestDetectingManagerRepository_FindByID(t *testing.T) {
 			name:      "npm installed",
 			managerID: manager.ManagerNPM,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == "which" && args[0] == npmCommand {
+				if command == whichCommand && args[0] == npmCommand {
 					return &output.ExecutionResult{
 						Stdout:   "/usr/bin/npm\n",
 						ExitCode: 0,
