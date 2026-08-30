@@ -106,6 +106,12 @@ type mapFileInfo struct {
 	isDir   bool
 }
 
+type mapWalkItem struct {
+	path  string
+	isDir bool
+	size  int64
+}
+
 func (i mapFileInfo) Name() string       { return i.name }
 func (i mapFileInfo) Size() int64        { return i.size }
 func (i mapFileInfo) Mode() fs.FileMode  { return i.mode }
@@ -132,7 +138,7 @@ func (m *MapFileSystem) Stat(path string) (fs.FileInfo, error) {
 	return nil, os.ErrNotExist
 }
 
-// WalkDir implements FileSystem (depth-first over known paths under root).
+// WalkDir implements FileSystem (breadth-first over known paths under root; sibling order is unspecified).
 func (m *MapFileSystem) WalkDir(root string, fn fs.WalkDirFunc) error {
 	info, err := m.Stat(root)
 	if err != nil {
@@ -150,75 +156,86 @@ func (m *MapFileSystem) WalkDir(root string, fn fs.WalkDirFunc) error {
 		return nil
 	}
 
-	// Collect unique child paths one level under each visited dir via full listing.
-	type item struct {
-		path  string
-		isDir bool
-		size  int64
-	}
 	seen := map[string]bool{root: true}
 	queue := []string{root}
 
 	for len(queue) > 0 {
 		dir := queue[0]
 		queue = queue[1:]
-		children := map[string]item{}
-
-		prefix := dir + string(filepath.Separator)
-		for f, size := range m.Files {
-			if !hasPathPrefix(f, prefix) {
-				continue
-			}
-			rel := f[len(prefix):]
-			first, rest, found := splitFirst(rel)
-			childPath := filepath.Join(dir, first)
-			if found && rest != "" {
-				// intermediate dir
-				children[childPath] = item{path: childPath, isDir: true}
-			} else {
-				children[childPath] = item{path: childPath, isDir: false, size: size}
-			}
-		}
-		for d := range m.Dirs {
-			if !hasPathPrefix(d, prefix) {
-				continue
-			}
-			rel := d[len(prefix):]
-			first, rest, found := splitFirst(rel)
-			childPath := filepath.Join(dir, first)
-			if found && rest != "" {
-				children[childPath] = item{path: childPath, isDir: true}
-			} else if first != "" {
-				children[childPath] = item{path: childPath, isDir: true}
-			}
-		}
+		children := m.walkChildren(dir)
 
 		for _, child := range children {
-			if seen[child.path] {
-				continue
-			}
-			seen[child.path] = true
-			var fi fs.FileInfo
-			if child.isDir {
-				fi = mapFileInfo{name: filepath.Base(child.path), mode: fs.ModeDir | 0o755, isDir: true}
-			} else {
-				mt := m.ModTimes[child.path]
-				fi = mapFileInfo{name: filepath.Base(child.path), size: child.size, mode: 0o644, modTime: mt, isDir: false}
-			}
-			entry := fs.FileInfoToDirEntry(fi)
-			if err := fn(child.path, entry, nil); err != nil {
-				//nolint:errorlint // filepath.WalkDir treats only the exact sentinel as SkipDir.
-				if err == fs.SkipDir {
-					continue
-				}
+			enqueue, err := m.walkChild(child, seen, fn)
+			if err != nil {
 				return err
 			}
-			if child.isDir {
+			if enqueue {
 				queue = append(queue, child.path)
 			}
 		}
 	}
 	return nil
+}
+
+func (m *MapFileSystem) walkChildren(dir string) map[string]mapWalkItem {
+	children := map[string]mapWalkItem{}
+	prefix := dir + string(filepath.Separator)
+	for path, size := range m.Files {
+		if !hasPathPrefix(path, prefix) {
+			continue
+		}
+		rel := path[len(prefix):]
+		first, rest, found := splitFirst(rel)
+		childPath := filepath.Join(dir, first)
+		if found && rest != "" {
+			children[childPath] = mapWalkItem{path: childPath, isDir: true}
+			continue
+		}
+		children[childPath] = mapWalkItem{path: childPath, size: size}
+	}
+	for path := range m.Dirs {
+		if !hasPathPrefix(path, prefix) {
+			continue
+		}
+		rel := path[len(prefix):]
+		first, rest, found := splitFirst(rel)
+		childPath := filepath.Join(dir, first)
+		if found && rest != "" {
+			children[childPath] = mapWalkItem{path: childPath, isDir: true}
+			continue
+		}
+		if first != "" {
+			children[childPath] = mapWalkItem{path: childPath, isDir: true}
+		}
+	}
+	return children
+}
+
+func (m *MapFileSystem) walkChild(child mapWalkItem, seen map[string]bool, fn fs.WalkDirFunc) (bool, error) {
+	if seen[child.path] {
+		return false, nil
+	}
+	seen[child.path] = true
+	if err := fn(child.path, m.walkDirEntry(child), nil); err != nil {
+		//nolint:errorlint // filepath.WalkDir treats only the exact sentinel as SkipDir.
+		if err == fs.SkipDir {
+			return false, nil
+		}
+		return false, err
+	}
+	return child.isDir, nil
+}
+
+func (m *MapFileSystem) walkDirEntry(item mapWalkItem) fs.DirEntry {
+	if item.isDir {
+		return fs.FileInfoToDirEntry(mapFileInfo{name: filepath.Base(item.path), mode: fs.ModeDir | 0o755, isDir: true})
+	}
+	return fs.FileInfoToDirEntry(mapFileInfo{
+		name:    filepath.Base(item.path),
+		size:    item.size,
+		mode:    0o644,
+		modTime: m.ModTimes[item.path],
+	})
 }
 
 // RemoveAll implements FileSystem.
