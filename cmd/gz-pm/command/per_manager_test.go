@@ -407,18 +407,18 @@ main https://github.com/ScoopInstaller/Main
 		switch {
 		case command == "scoop" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v0.3.1\n"), nil
-		case command == "scoop" && len(args) == 2 && args[0] == "bucket" && args[1] == "list":
+		case command == "scoop" && len(args) == 2 && args[0] == testBucketCommand && args[1] == "list":
 			return testutil.SuccessResult(bucketOutput), nil
-		case command == "scoop" && len(args) >= 3 && args[0] == "bucket" && args[1] == "add":
+		case command == "scoop" && len(args) >= 3 && args[0] == testBucketCommand && args[1] == "add":
 			return testutil.SuccessResult("ok"), nil
-		case command == "scoop" && len(args) == 3 && args[0] == "bucket" && args[1] == "rm":
+		case command == "scoop" && len(args) == 3 && args[0] == testBucketCommand && args[1] == "rm":
 			return testutil.SuccessResult("ok"), nil
 		default:
 			return nil, errors.New("unexpected: " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "scoop", "bucket", "list")
+	out, err := executePerManagerCmd(t, "scoop", testBucketCommand, "list")
 	if err != nil {
 		t.Fatalf("bucket list: %v\n%s", err, out)
 	}
@@ -426,7 +426,7 @@ main https://github.com/ScoopInstaller/Main
 		t.Errorf("output = %q", out)
 	}
 
-	out, err = executePerManagerCmd(t, "scoop", "bucket", "add", "extras")
+	out, err = executePerManagerCmd(t, "scoop", testBucketCommand, "add", "extras")
 	if err != nil {
 		t.Fatalf("bucket add: %v\n%s", err, out)
 	}
@@ -434,7 +434,7 @@ main https://github.com/ScoopInstaller/Main
 		t.Errorf("output = %q", out)
 	}
 
-	out, err = executePerManagerCmd(t, "scoop", "bucket", "remove", "extras")
+	out, err = executePerManagerCmd(t, "scoop", testBucketCommand, "remove", "extras")
 	if err != nil {
 		t.Fatalf("bucket remove: %v\n%s", err, out)
 	}

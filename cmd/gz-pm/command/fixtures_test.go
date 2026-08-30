@@ -1,6 +1,7 @@
 package command
 
 const (
+	testBucketCommand     = "bucket"
 	testGitPackageName    = "git"
 	testGhostPackageName  = "ghost"
 	testNPMManagerID      = "npm"
