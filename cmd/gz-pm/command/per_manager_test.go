@@ -658,3 +658,90 @@ func TestPerManagerOutputWriteErrorsPreserveCauseAndContext(t *testing.T) {
 		})
 	}
 }
+
+func TestPerManagerNamedCollectionWritersExactOutput(t *testing.T) {
+	sources := []adapterm.Source{
+		{Name: testWingetCLICommand, Arg: testWingetSourceURL},
+		{Name: testScoopCLICommand},
+	}
+	buckets := []adapterm.Bucket{
+		{Name: testExtrasBucketName, Source: testScoopBucketURL},
+		{Name: testWingetCLICommand},
+	}
+	tests := []struct {
+		name  string
+		write func(io.Writer) error
+		want  string
+	}{
+		{
+			name: "sources JSON",
+			write: func(out io.Writer) error {
+				return writeSources(out, outputFormatJSON, sources)
+			},
+			want: "{\n  \"count\": 2,\n  \"sources\": [\n    {\n      \"name\": \"" + testWingetCLICommand + "\",\n      \"arg\": \"" + testWingetSourceURL + "\"\n    },\n    {\n      \"name\": \"" + testScoopCLICommand + "\"\n    }\n  ]\n}\n",
+		},
+		{
+			name: "sources text",
+			write: func(out io.Writer) error {
+				return writeSources(out, outputFormatText, sources)
+			},
+			want: "winget sources — 2\n  " + testWingetCLICommand + "  " + testWingetSourceURL + "\n  " + testScoopCLICommand + "\n",
+		},
+		{
+			name: "sources empty default format",
+			write: func(out io.Writer) error {
+				return writeSources(out, "", nil)
+			},
+			want: "No sources configured.\n",
+		},
+		{
+			name: "buckets JSON",
+			write: func(out io.Writer) error {
+				return writeBuckets(out, outputFormatJSON, buckets)
+			},
+			want: "{\n  \"count\": 2,\n  \"buckets\": [\n    {\n      \"name\": \"" + testExtrasBucketName + "\",\n      \"source\": \"" + testScoopBucketURL + "\"\n    },\n    {\n      \"name\": \"" + testWingetCLICommand + "\"\n    }\n  ]\n}\n",
+		},
+		{
+			name: "buckets text",
+			write: func(out io.Writer) error {
+				return writeBuckets(out, outputFormatText, buckets)
+			},
+			want: "scoop buckets — 2\n  " + testExtrasBucketName + "  " + testScoopBucketURL + "\n  " + testWingetCLICommand + "\n",
+		},
+		{
+			name: "buckets empty text",
+			write: func(out io.Writer) error {
+				return writeBuckets(out, outputFormatText, nil)
+			},
+			want: "No buckets configured.\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var out bytes.Buffer
+			if err := tt.write(&out); err != nil {
+				t.Fatalf("write collection: %v", err)
+			}
+			if got := out.String(); got != tt.want {
+				t.Errorf("output = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPerManagerNamedCollectionWritersPreserveTextWriteBehavior(t *testing.T) {
+	if err := writeSources(failingWriter{err: errors.New("source writer failed")}, outputFormatText, []adapterm.Source{{Name: testWingetCLICommand}}); err != nil {
+		t.Errorf("write sources = %v, want nil", err)
+	}
+	if err := writeBuckets(failingWriter{err: errors.New("bucket writer failed")}, outputFormatText, []adapterm.Bucket{{Name: testExtrasBucketName}}); err != nil {
+		t.Errorf("write buckets = %v, want nil", err)
+	}
+}
+
+func TestPerManagerNamedCollectionWritersRejectUnknownFormat(t *testing.T) {
+	err := writeSources(io.Discard, "yaml", nil)
+	if want := "unknown output format \"yaml\" (supported: text, json)"; err == nil || err.Error() != want {
+		t.Errorf("error = %v, want %q", err, want)
+	}
+}

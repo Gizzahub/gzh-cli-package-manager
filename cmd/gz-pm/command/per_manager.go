@@ -531,69 +531,92 @@ func runScoopBucketRemove(ctx context.Context, spec perManagerSpec, name string,
 }
 
 func writeSources(out io.Writer, format string, sources []adapterm.Source) error {
-	switch strings.ToLower(format) {
-	case outputFormatJSON:
-		type srcView struct {
-			Name string `json:"name"`
-			Arg  string `json:"arg,omitempty"`
-		}
-		views := make([]srcView, 0, len(sources))
-		for _, s := range sources {
-			views = append(views, srcView{Name: s.Name, Arg: s.Arg})
-		}
-		enc := json.NewEncoder(out)
-		enc.SetIndent("", "  ")
-		return wrapOutputError("sources", enc.Encode(map[string]any{
-			"count":   len(views),
-			"sources": views,
-		}))
-	case outputFormatText, "":
-		if len(sources) == 0 {
-			_, err := fmt.Fprintln(out, "No sources configured.")
-			return wrapOutputError("sources", err)
-		}
-		_, _ = fmt.Fprintf(out, "winget sources — %d\n", len(sources))
-		for _, s := range sources {
-			if s.Arg != "" {
-				_, _ = fmt.Fprintf(out, "  %s  %s\n", s.Name, s.Arg)
-			} else {
-				_, _ = fmt.Fprintf(out, "  %s\n", s.Name)
-			}
-		}
-		return nil
-	default:
-		return fmt.Errorf("unknown output format %q (supported: text, json)", format)
-	}
+	views, entries := mapPerManagerNamedCollection(sources, func(source adapterm.Source) (sourceView, perManagerNamedDetail) {
+		return sourceView{Name: source.Name, Arg: source.Arg}, perManagerNamedDetail{name: source.Name, detail: source.Arg}
+	})
+	return writePerManagerNamedCollection(out, format, entries, sourcesResponse{Count: len(views), Sources: views}, perManagerNamedCollectionFormat{
+		outputKind:   "sources",
+		emptyMessage: "No sources configured.",
+		heading:      "winget sources",
+	})
 }
 
 func writeBuckets(out io.Writer, format string, buckets []adapterm.Bucket) error {
+	views, entries := mapPerManagerNamedCollection(buckets, func(bucket adapterm.Bucket) (bucketView, perManagerNamedDetail) {
+		return bucketView{Name: bucket.Name, Source: bucket.Source}, perManagerNamedDetail{name: bucket.Name, detail: bucket.Source}
+	})
+	return writePerManagerNamedCollection(out, format, entries, bucketsResponse{Count: len(views), Buckets: views}, perManagerNamedCollectionFormat{
+		outputKind:   "buckets",
+		emptyMessage: "No buckets configured.",
+		heading:      "scoop buckets",
+	})
+}
+
+type sourceView struct {
+	Name string `json:"name"`
+	Arg  string `json:"arg,omitempty"`
+}
+
+type sourcesResponse struct {
+	Count   int          `json:"count"`
+	Sources []sourceView `json:"sources"`
+}
+
+type bucketView struct {
+	Name   string `json:"name"`
+	Source string `json:"source,omitempty"`
+}
+
+type bucketsResponse struct {
+	Count   int          `json:"count"`
+	Buckets []bucketView `json:"buckets"`
+}
+
+type perManagerNamedDetail struct {
+	name   string
+	detail string
+}
+
+type perManagerNamedCollectionFormat struct {
+	outputKind   string
+	emptyMessage string
+	heading      string
+}
+
+func mapPerManagerNamedCollection[Value any, View any](values []Value, mapValue func(Value) (View, perManagerNamedDetail)) ([]View, []perManagerNamedDetail) {
+	views := make([]View, 0, len(values))
+	entries := make([]perManagerNamedDetail, 0, len(values))
+	for _, value := range values {
+		view, entry := mapValue(value)
+		views = append(views, view)
+		entries = append(entries, entry)
+	}
+	return views, entries
+}
+
+func writePerManagerNamedCollection(
+	out io.Writer,
+	format string,
+	entries []perManagerNamedDetail,
+	jsonValue any,
+	collectionFormat perManagerNamedCollectionFormat,
+) error {
 	switch strings.ToLower(format) {
 	case outputFormatJSON:
-		type bucketView struct {
-			Name   string `json:"name"`
-			Source string `json:"source,omitempty"`
-		}
-		views := make([]bucketView, 0, len(buckets))
-		for _, b := range buckets {
-			views = append(views, bucketView{Name: b.Name, Source: b.Source})
-		}
 		enc := json.NewEncoder(out)
 		enc.SetIndent("", "  ")
-		return wrapOutputError("buckets", enc.Encode(map[string]any{
-			"count":   len(views),
-			"buckets": views,
-		}))
+		return wrapOutputError(collectionFormat.outputKind, enc.Encode(jsonValue))
 	case outputFormatText, "":
-		if len(buckets) == 0 {
-			_, err := fmt.Fprintln(out, "No buckets configured.")
-			return wrapOutputError("buckets", err)
+		if len(entries) == 0 {
+			_, err := fmt.Fprintln(out, collectionFormat.emptyMessage)
+			return wrapOutputError(collectionFormat.outputKind, err)
 		}
-		_, _ = fmt.Fprintf(out, "scoop buckets — %d\n", len(buckets))
-		for _, b := range buckets {
-			if b.Source != "" {
-				_, _ = fmt.Fprintf(out, "  %s  %s\n", b.Name, b.Source)
+		_, _ = fmt.Fprintf(out, "%s — %d\n", collectionFormat.heading, len(entries))
+		for _, entry := range entries {
+			if entry.detail != "" {
+				_, _ = fmt.Fprintf(out, "  %s  %s\n", entry.name, entry.detail)
 			} else {
-				_, _ = fmt.Fprintf(out, "  %s\n", b.Name)
+				_, _ = fmt.Fprintf(out, "  %s\n", entry.name)
 			}
 		}
 		return nil

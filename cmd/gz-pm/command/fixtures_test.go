@@ -12,8 +12,10 @@ const (
 	testSearchCommand      = "search"
 	testScoopCLICommand    = "scoop"
 	testScoopExecutable    = "scoop"
+	testScoopBucketURL     = "https://github.com/ScoopInstaller/Extras"
 	testScoopVersionOutput = "v0.3.1\n"
 	testVersionFlag        = "--version"
 	testWingetCLICommand   = "winget"
 	testWingetExecutable   = "winget"
+	testWingetSourceURL    = "https://cdn.winget.microsoft.com/cache"
 )
