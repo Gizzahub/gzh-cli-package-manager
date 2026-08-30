@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	chocoCommand = "choco"
+	chocoCommand   = "choco"
+	dryRunFieldKey = "dry_run"
 )
 
 // Adapter implements the manager.Adapter interface for Chocolatey.
@@ -153,7 +154,7 @@ func (a *Adapter) Install(ctx context.Context, pkgID string, dryRun bool) error 
 
 	a.logger.Info(ctx, "Chocolatey install",
 		output.Field{Key: "package", Value: pkgID},
-		output.Field{Key: "dry_run", Value: dryRun})
+		output.Field{Key: dryRunFieldKey, Value: dryRun})
 
 	if dryRun {
 		return nil
@@ -176,7 +177,7 @@ func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) erro
 
 	a.logger.Info(ctx, "Chocolatey uninstall",
 		output.Field{Key: "package", Value: pkgID},
-		output.Field{Key: "dry_run", Value: dryRun})
+		output.Field{Key: dryRunFieldKey, Value: dryRun})
 
 	if dryRun {
 		return nil
@@ -254,7 +255,7 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 // Update performs update operations on Chocolatey packages.
 func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
 	a.logger.Info(ctx, "Starting Chocolatey update",
-		output.Field{Key: "dry_run", Value: opts.DryRun},
+		output.Field{Key: dryRunFieldKey, Value: opts.DryRun},
 		output.Field{Key: "strategy", Value: string(opts.Strategy)})
 
 	result := &adapterm.UpdateResult{

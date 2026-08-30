@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	scoopCommand = "scoop"
+	scoopCommand   = "scoop"
+	dryRunFieldKey = "dry_run"
 )
 
 // Adapter implements the manager.Adapter interface for Scoop.
@@ -285,7 +286,7 @@ func (a *Adapter) Install(ctx context.Context, pkgID string, dryRun bool) error 
 
 	a.logger.Info(ctx, "Scoop install",
 		output.Field{Key: "package", Value: pkgID},
-		output.Field{Key: "dry_run", Value: dryRun})
+		output.Field{Key: dryRunFieldKey, Value: dryRun})
 
 	if dryRun {
 		return nil
@@ -308,7 +309,7 @@ func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) erro
 
 	a.logger.Info(ctx, "Scoop uninstall",
 		output.Field{Key: "package", Value: pkgID},
-		output.Field{Key: "dry_run", Value: dryRun})
+		output.Field{Key: dryRunFieldKey, Value: dryRun})
 
 	if dryRun {
 		return nil
@@ -439,7 +440,7 @@ func (a *Adapter) CheckHealth(ctx context.Context) (manager.Status, error) {
 // Update performs update operations on Scoop packages.
 func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
 	a.logger.Info(ctx, "Starting Scoop update",
-		output.Field{Key: "dry_run", Value: opts.DryRun},
+		output.Field{Key: dryRunFieldKey, Value: opts.DryRun},
 		output.Field{Key: "strategy", Value: string(opts.Strategy)})
 
 	result := &adapterm.UpdateResult{

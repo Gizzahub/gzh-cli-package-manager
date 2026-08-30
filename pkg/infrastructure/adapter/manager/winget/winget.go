@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	wingetCommand = "winget"
+	wingetCommand  = "winget"
+	dryRunFieldKey = "dry_run"
 	// Default config path on Windows.
 	defaultConfigPath = `%LOCALAPPDATA%\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\settings.json`
 )
@@ -271,7 +272,7 @@ func (a *Adapter) Install(ctx context.Context, pkgID string, dryRun bool) error 
 
 	a.logger.Info(ctx, "Winget install",
 		output.Field{Key: "package", Value: pkgID},
-		output.Field{Key: "dry_run", Value: dryRun})
+		output.Field{Key: dryRunFieldKey, Value: dryRun})
 
 	if dryRun {
 		return nil
@@ -300,7 +301,7 @@ func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) erro
 
 	a.logger.Info(ctx, "Winget uninstall",
 		output.Field{Key: "package", Value: pkgID},
-		output.Field{Key: "dry_run", Value: dryRun})
+		output.Field{Key: dryRunFieldKey, Value: dryRun})
 
 	if dryRun {
 		return nil
@@ -373,7 +374,7 @@ func parseWingetSources(stdout string) []adapterm.Source {
 // Update performs update operations on winget packages.
 func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
 	a.logger.Info(ctx, "Starting winget update",
-		output.Field{Key: "dry_run", Value: opts.DryRun},
+		output.Field{Key: dryRunFieldKey, Value: opts.DryRun},
 		output.Field{Key: "strategy", Value: string(opts.Strategy)})
 
 	result := &adapterm.UpdateResult{
