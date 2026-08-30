@@ -11,6 +11,18 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
 
+const (
+	testHomebrewName    = "Homebrew"
+	testHomebrewVersion = "4.2.1"
+	testGitName         = "git"
+	testGitVersion      = "2.43.0"
+	testNPMName         = "NPM"
+	testNPMVersion      = "10.5.0"
+	testReactName       = "react"
+	testReactVersion    = "18.0.0"
+	testVersion300      = "3.0.0"
+)
+
 // mockRepository implements manager.Repository for testing.
 type mockRepository struct {
 	findAllFunc  func(ctx context.Context) ([]*manager.Manager, error)
@@ -107,19 +119,19 @@ func TestUseCase_GetStatus_AllManagers(t *testing.T) {
 			mockManagers: []*manager.Manager{
 				{
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewName,
 					Type:        manager.TypeSystem,
 					Platform:    manager.PlatformDarwin,
 					Installed:   true,
-					Version:     "4.2.1",
+					Version:     testHomebrewVersion,
 					Status:      manager.StatusHealthy,
 					BinaryPath:  "/usr/local/bin/brew",
 					ConfigPath:  "/usr/local",
 					LastChecked: now,
 					Packages: []manager.Package{
 						{
-							Name:             "git",
-							CurrentVersion:   "2.43.0",
+							Name:             testGitName,
+							CurrentVersion:   testGitVersion,
 							AvailableVersion: "2.44.0",
 							UpdateType:       manager.UpdateMinor,
 						},
@@ -143,14 +155,14 @@ func TestUseCase_GetStatus_AllManagers(t *testing.T) {
 			mockManagers: []*manager.Manager{
 				{
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewName,
 					Type:        manager.TypeSystem,
 					Installed:   true,
-					Version:     "4.2.1",
+					Version:     testHomebrewVersion,
 					Status:      manager.StatusHealthy,
 					LastChecked: now,
 					Packages: []manager.Package{
-						{Name: "git", CurrentVersion: "2.43.0", UpdateType: manager.UpdateNone},
+						{Name: testGitName, CurrentVersion: testGitVersion, UpdateType: manager.UpdateNone},
 					},
 				},
 				{
@@ -164,15 +176,15 @@ func TestUseCase_GetStatus_AllManagers(t *testing.T) {
 				},
 				{
 					ID:          manager.ManagerNPM,
-					Name:        "NPM",
+					Name:        testNPMName,
 					Type:        manager.TypeLanguage,
 					Installed:   true,
-					Version:     "10.5.0",
+					Version:     testNPMVersion,
 					Status:      manager.StatusDegraded,
 					LastChecked: now,
 					Packages: []manager.Package{
-						{Name: "react", CurrentVersion: "18.0.0", AvailableVersion: "18.2.0", UpdateType: manager.UpdateMinor},
-						{Name: "vue", CurrentVersion: "3.0.0", AvailableVersion: "3.4.0", UpdateType: manager.UpdateMinor},
+						{Name: testReactName, CurrentVersion: testReactVersion, AvailableVersion: "18.2.0", UpdateType: manager.UpdateMinor},
+						{Name: "vue", CurrentVersion: testVersion300, AvailableVersion: "3.4.0", UpdateType: manager.UpdateMinor},
 					},
 				},
 			},
@@ -274,7 +286,7 @@ func TestUseCase_GetStatus_SpecificManagers(t *testing.T) {
 			mockManagers: map[manager.ManagerID]*manager.Manager{
 				manager.ManagerHomebrew: {
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewName,
 					Type:        manager.TypeSystem,
 					Installed:   true,
 					Status:      manager.StatusHealthy,
@@ -294,7 +306,7 @@ func TestUseCase_GetStatus_SpecificManagers(t *testing.T) {
 			mockManagers: map[manager.ManagerID]*manager.Manager{
 				manager.ManagerHomebrew: {
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewName,
 					Type:        manager.TypeSystem,
 					Installed:   true,
 					Status:      manager.StatusHealthy,
@@ -303,7 +315,7 @@ func TestUseCase_GetStatus_SpecificManagers(t *testing.T) {
 				},
 				manager.ManagerNPM: {
 					ID:          manager.ManagerNPM,
-					Name:        "NPM",
+					Name:        testNPMName,
 					Type:        manager.TypeLanguage,
 					Installed:   false,
 					Status:      manager.StatusUnavailable,
@@ -374,19 +386,19 @@ func TestUseCase_GetStatus_DTOMapping(t *testing.T) {
 	// Create a manager with known values
 	inputManager := &manager.Manager{
 		ID:          manager.ManagerHomebrew,
-		Name:        "Homebrew",
+		Name:        testHomebrewName,
 		Type:        manager.TypeSystem,
 		Platform:    manager.PlatformDarwin,
 		Installed:   true,
-		Version:     "4.2.1",
+		Version:     testHomebrewVersion,
 		Status:      manager.StatusHealthy,
 		BinaryPath:  "/usr/local/bin/brew",
 		ConfigPath:  "/usr/local",
 		LastChecked: now,
 		Packages: []manager.Package{
 			{
-				Name:             "git",
-				CurrentVersion:   "2.43.0",
+				Name:             testGitName,
+				CurrentVersion:   testGitVersion,
 				AvailableVersion: "2.44.0",
 				UpdateType:       manager.UpdateMinor,
 			},
@@ -461,23 +473,23 @@ func TestUseCase_GetStatus_VerboseMode(t *testing.T) {
 			mockManagers: []*manager.Manager{
 				{
 					ID:          manager.ManagerNPM,
-					Name:        "NPM",
+					Name:        testNPMName,
 					Type:        manager.TypeLanguage,
 					Installed:   true,
-					Version:     "10.5.0",
+					Version:     testNPMVersion,
 					Status:      manager.StatusHealthy,
 					LastChecked: now,
 					Packages: []manager.Package{
 						{
-							Name:             "react",
-							CurrentVersion:   "18.0.0",
+							Name:             testReactName,
+							CurrentVersion:   testReactVersion,
 							AvailableVersion: "18.2.0",
 							UpdateType:       manager.UpdateMinor,
 							Description:      "React library",
 						},
 						{
 							Name:           "vue",
-							CurrentVersion: "3.0.0",
+							CurrentVersion: testVersion300,
 							UpdateType:     manager.UpdateNone,
 							Description:    "Vue framework",
 						},
@@ -494,16 +506,16 @@ func TestUseCase_GetStatus_VerboseMode(t *testing.T) {
 			mockManagers: []*manager.Manager{
 				{
 					ID:          manager.ManagerNPM,
-					Name:        "NPM",
+					Name:        testNPMName,
 					Type:        manager.TypeLanguage,
 					Installed:   true,
-					Version:     "10.5.0",
+					Version:     testNPMVersion,
 					Status:      manager.StatusHealthy,
 					LastChecked: now,
 					Packages: []manager.Package{
 						{
-							Name:           "react",
-							CurrentVersion: "18.0.0",
+							Name:           testReactName,
+							CurrentVersion: testReactVersion,
 							UpdateType:     manager.UpdateNone,
 						},
 					},
@@ -519,7 +531,7 @@ func TestUseCase_GetStatus_VerboseMode(t *testing.T) {
 			mockManagers: []*manager.Manager{
 				{
 					ID:          manager.ManagerNPM,
-					Name:        "NPM",
+					Name:        testNPMName,
 					Installed:   true,
 					LastChecked: now,
 					Packages: []manager.Package{
@@ -601,7 +613,7 @@ func TestUseCase_GetStatus_VerbosePackageMapping(t *testing.T) {
 			return []*manager.Manager{
 				{
 					ID:          manager.ManagerNPM,
-					Name:        "NPM",
+					Name:        testNPMName,
 					Installed:   true,
 					LastChecked: now,
 					Packages:    inputPackages,
@@ -663,7 +675,7 @@ func TestUseCase_GetStatus_VerboseWithMultipleManagers(t *testing.T) {
 			return []*manager.Manager{
 				{
 					ID:          manager.ManagerNPM,
-					Name:        "NPM",
+					Name:        testNPMName,
 					Installed:   true,
 					LastChecked: now,
 					Packages: []manager.Package{
@@ -677,12 +689,12 @@ func TestUseCase_GetStatus_VerboseWithMultipleManagers(t *testing.T) {
 					Installed:   true,
 					LastChecked: now,
 					Packages: []manager.Package{
-						{Name: "pip-pkg1", CurrentVersion: "3.0.0"},
+						{Name: "pip-pkg1", CurrentVersion: testVersion300},
 					},
 				},
 				{
 					ID:          manager.ManagerHomebrew,
-					Name:        "Homebrew",
+					Name:        testHomebrewName,
 					Installed:   false, // Not installed
 					LastChecked: now,
 					Packages:    []manager.Package{},
