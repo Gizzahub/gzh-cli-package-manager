@@ -10,9 +10,13 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/detector"
 )
 
-const testHomebrewManagerName = "Homebrew"
+const (
+	testHomebrewManagerName = "Homebrew"
+	testPipManagerName      = "Pip"
+)
 
 // mockRepository implements manager.Repository for testing.
 type mockRepository struct {
@@ -214,7 +218,7 @@ func TestUseCase_Update_AllManagers(t *testing.T) {
 				},
 				{
 					ID:          manager.ManagerPip,
-					Name:        "Pip",
+					Name:        testPipManagerName,
 					Installed:   true,
 					LastChecked: now,
 				},
@@ -299,6 +303,10 @@ func TestUseCase_Update_AllManagers(t *testing.T) {
 			if resp.Summary.FailedManagers != tt.wantFailed {
 				t.Errorf("Summary.FailedManagers = %d, want %d",
 					resp.Summary.FailedManagers, tt.wantFailed)
+			}
+
+			if resp.Summary.SkippedManagers != 0 {
+				t.Errorf("Summary.SkippedManagers = %d, want 0", resp.Summary.SkippedManagers)
 			}
 
 			if resp.Summary.TotalManagers != len(tt.mockManagers) {
@@ -492,7 +500,58 @@ func TestUseCase_Update_SpecificManagers(t *testing.T) {
 				t.Errorf("Summary.FailedManagers = %d, want %d",
 					resp.Summary.FailedManagers, tt.wantFailed)
 			}
+
+			if resp.Summary.SkippedManagers != 0 {
+				t.Errorf("Summary.SkippedManagers = %d, want 0", resp.Summary.SkippedManagers)
+			}
 		})
+	}
+}
+
+func TestUseCase_Update_SkipsPipInCondaEnvironment(t *testing.T) {
+	t.Setenv("CONDA_DEFAULT_ENV", "test-conda")
+	t.Setenv("CONDA_PREFIX", "/tmp/test-conda")
+
+	adapterCalls := 0
+	repo := &mockRepository{
+		findInstalledFunc: func(_ context.Context) ([]*manager.Manager, error) {
+			return []*manager.Manager{{
+				ID:        manager.ManagerPip,
+				Name:      testPipManagerName,
+				Installed: true,
+			}}, nil
+		},
+	}
+	logger := &mockLogger{}
+	uc := NewUseCase(repo, logger, map[manager.ManagerID]adapterm.Adapter{
+		manager.ManagerPip: &mockAdapter{
+			updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
+				adapterCalls++
+				return &adapterm.UpdateResult{Success: true}, nil
+			},
+		},
+	}, detector.NewDetector(nil, logger))
+
+	resp, err := uc.Update(context.Background(), &dto.UpdateRequest{
+		All:      true,
+		Strategy: dto.StrategyStable,
+	})
+	if err != nil {
+		t.Fatalf("Update() unexpected error: %v", err)
+	}
+	if adapterCalls != 0 {
+		t.Errorf("adapter calls = %d, want 0", adapterCalls)
+	}
+	if len(resp.Results) != 1 || !resp.Results[0].Skipped || !resp.Results[0].Success {
+		t.Errorf("results = %#v, want one successful skipped result", resp.Results)
+	}
+	if resp.Summary.SkippedManagers != 1 || resp.Summary.SuccessfulManagers != 0 || resp.Summary.FailedManagers != 0 {
+		t.Errorf(
+			"summary = skipped %d successful %d failed %d, want 1, 0, 0",
+			resp.Summary.SkippedManagers,
+			resp.Summary.SuccessfulManagers,
+			resp.Summary.FailedManagers,
+		)
 	}
 }
 
@@ -747,7 +806,7 @@ func TestUseCase_Update_WithNilEnvDetector(t *testing.T) {
 			return []*manager.Manager{
 				{
 					ID:          manager.ManagerPip,
-					Name:        "Pip",
+					Name:        testPipManagerName,
 					Installed:   true,
 					LastChecked: now,
 				},

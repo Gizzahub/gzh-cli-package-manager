@@ -141,11 +141,12 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 		results = append(results, result)
 
 		// Update summary
-		if result.Skipped {
+		switch {
+		case result.Skipped:
 			summary.SkippedManagers++
-		} else if result.Success {
+		case result.Success:
 			summary.SuccessfulManagers++
-		} else {
+		default:
 			summary.FailedManagers++
 		}
 		summary.TotalPackagesUpdated += len(result.UpdatedPackages)
