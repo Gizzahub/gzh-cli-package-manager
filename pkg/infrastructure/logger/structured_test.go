@@ -12,6 +12,8 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 )
 
+const testLoggerPrefix = "test"
+
 func TestNewStructuredLogger(t *testing.T) {
 	logger := NewStructuredLogger("test-app")
 
@@ -31,7 +33,7 @@ func TestNewStructuredLogger(t *testing.T) {
 func TestStructuredLogger_Debug(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &StructuredLogger{
-		prefix: "test",
+		prefix: testLoggerPrefix,
 		logger: log.New(&buf, "test: ", 0),
 	}
 
@@ -49,7 +51,7 @@ func TestStructuredLogger_Debug(t *testing.T) {
 func TestStructuredLogger_DebugWithFields(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &StructuredLogger{
-		prefix: "test",
+		prefix: testLoggerPrefix,
 		logger: log.New(&buf, "test: ", 0),
 	}
 
@@ -77,7 +79,7 @@ func TestStructuredLogger_DebugWithFields(t *testing.T) {
 func TestStructuredLogger_Info(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &StructuredLogger{
-		prefix: "test",
+		prefix: testLoggerPrefix,
 		logger: log.New(&buf, "test: ", 0),
 	}
 
@@ -95,7 +97,7 @@ func TestStructuredLogger_Info(t *testing.T) {
 func TestStructuredLogger_Warn(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &StructuredLogger{
-		prefix: "test",
+		prefix: testLoggerPrefix,
 		logger: log.New(&buf, "test: ", 0),
 	}
 
@@ -119,7 +121,7 @@ func TestStructuredLogger_Warn(t *testing.T) {
 func TestStructuredLogger_Error(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &StructuredLogger{
-		prefix: "test",
+		prefix: testLoggerPrefix,
 		logger: log.New(&buf, "test: ", 0),
 	}
 
@@ -147,7 +149,7 @@ func TestStructuredLogger_Error(t *testing.T) {
 func TestStructuredLogger_MultipleFields(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &StructuredLogger{
-		prefix: "test",
+		prefix: testLoggerPrefix,
 		logger: log.New(&buf, "test: ", 0),
 	}
 
@@ -173,7 +175,7 @@ func TestStructuredLogger_MultipleFields(t *testing.T) {
 func TestStructuredLogger_NoFields(t *testing.T) {
 	var buf bytes.Buffer
 	logger := &StructuredLogger{
-		prefix: "test",
+		prefix: testLoggerPrefix,
 		logger: log.New(&buf, "test: ", 0),
 	}
 
@@ -207,7 +209,7 @@ func TestStructuredLogger_AllLevels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			logger := &StructuredLogger{
-				prefix: "test",
+				prefix: testLoggerPrefix,
 				logger: log.New(&buf, "test: ", 0),
 			}
 
