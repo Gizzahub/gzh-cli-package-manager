@@ -97,7 +97,7 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 }
 
 // parseListOutput parses the machine-readable output from 'choco list -r'.
-// Format: "package|version" per line
+// Format: "package|version" per line.
 func (a *Adapter) parseListOutput(result *output.ExecutionResult) []manager.Package {
 	lines := strings.Split(result.Stdout, "\n")
 	var packages []manager.Package

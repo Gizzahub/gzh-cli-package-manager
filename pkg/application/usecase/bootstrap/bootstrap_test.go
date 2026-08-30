@@ -16,7 +16,7 @@ import (
 
 const testBrewManagerName = "brew"
 
-// mockManagerRepository is a test double for manager.Repository
+// mockManagerRepository is a test double for manager.Repository.
 type mockManagerRepository struct {
 	findErr  error
 	managers []*manager.Manager

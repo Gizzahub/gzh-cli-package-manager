@@ -11,7 +11,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/testutil"
 )
 
-// Test-specific constants
+// Test-specific constants.
 const (
 	testCommand = "test"
 )

@@ -116,7 +116,7 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 }
 
 // parseListOutput parses the text output from 'scoop list'.
-// Format: "Name    Version   Source  Updated   Info"
+// Format: "Name    Version   Source  Updated   Info".
 func (a *Adapter) parseListOutput(result *output.ExecutionResult) []manager.Package {
 	lines := strings.Split(result.Stdout, "\n")
 	var packages []manager.Package

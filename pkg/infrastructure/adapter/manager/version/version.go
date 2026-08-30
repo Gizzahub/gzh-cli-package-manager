@@ -11,7 +11,7 @@ import (
 // It follows semantic versioning conventions:
 // - Different major version -> UpdateMajor
 // - Different minor version (same major) -> UpdateMinor
-// - Different patch version (same major/minor) -> UpdatePatch
+// - Different patch version (same major/minor) -> UpdatePatch.
 func DetermineUpdateType(current, latest string) manager.UpdateType {
 	// Remove 'v' prefix if present
 	current = strings.TrimPrefix(current, "v")

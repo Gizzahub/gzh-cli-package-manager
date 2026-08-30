@@ -11,7 +11,7 @@ import (
 	adapterpkg "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 )
 
-// Test-specific constants
+// Test-specific constants.
 const (
 	npmCommand  = "npm"
 	pip3Command = "pip3"
