@@ -2,6 +2,7 @@ package cleanup
 
 const (
 	testASDFManagerID     = "asdf"
+	testGitCurrentVersion = "2.43.0"
 	testGitPackageName    = "git"
 	testHomebrewManagerID = "homebrew"
 	testNPMManagerID      = "npm"

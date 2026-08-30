@@ -11,7 +11,7 @@ func TestScanVersionsFromPackages_MultiVersion(t *testing.T) {
 	pkgs := []manager.Package{
 		{Name: testPythonPackageName, CurrentVersion: "3.11.0"},
 		{Name: testPythonPackageName, CurrentVersion: "3.12.0"},
-		{Name: testGitPackageName, CurrentVersion: "2.43.0"},
+		{Name: testGitPackageName, CurrentVersion: testGitCurrentVersion},
 		{Name: testPythonPackageName, CurrentVersion: "3.11.0"}, // duplicate ignored
 	}
 
@@ -42,7 +42,7 @@ func TestScanVersionsFromPackages_MultiVersion(t *testing.T) {
 
 func TestScanVersionsFromPackages_SingleNoReport(t *testing.T) {
 	pkgs := []manager.Package{
-		{Name: testGitPackageName, CurrentVersion: "2.43.0"},
+		{Name: testGitPackageName, CurrentVersion: testGitCurrentVersion},
 	}
 	if got := ScanVersionsFromPackages("winget", pkgs); len(got) != 0 {
 		t.Fatalf("expected empty, got %d", len(got))
