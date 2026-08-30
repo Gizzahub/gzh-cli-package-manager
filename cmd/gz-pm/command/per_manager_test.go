@@ -370,15 +370,13 @@ winget  https://cdn.winget.microsoft.com/cache
 	}
 }
 
-func TestPerManager_ScoopInstallUninstall(t *testing.T) {
+func TestPerManager_ScoopInstall(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
 		case command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v0.3.1\n"), nil
 		case command == testScoopExecutable && len(args) == 2 && args[0] == "install" && args[1] == testGitPackageName:
 			return testutil.SuccessResult("Installing 'git'"), nil
-		case command == testScoopExecutable && len(args) == 2 && args[0] == "uninstall" && args[1] == testGitPackageName:
-			return testutil.SuccessResult("Uninstalling 'git'"), nil
 		default:
 			return nil, errors.New("unexpected: " + strings.Join(args, " "))
 		}
@@ -388,7 +386,17 @@ func TestPerManager_ScoopInstallUninstall(t *testing.T) {
 	if err != nil {
 		t.Fatalf("scoop install: %v\n%s", err, out)
 	}
-	out, err = executePerManagerCmd(t, testScoopCLICommand, "uninstall", testGitPackageName, "--dry-run")
+}
+
+func TestPerManager_ScoopUninstallDryRun(t *testing.T) {
+	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command == testScoopExecutable && len(args) == 1 && args[0] == testVersionFlag {
+			return testutil.SuccessResult("v0.3.1\n"), nil
+		}
+		return nil, errors.New("unexpected: " + strings.Join(args, " "))
+	})
+
+	out, err := executePerManagerCmd(t, testScoopCLICommand, "uninstall", testGitPackageName, "--dry-run")
 	if err != nil {
 		t.Fatalf("scoop uninstall dry-run: %v\n%s", err, out)
 	}
