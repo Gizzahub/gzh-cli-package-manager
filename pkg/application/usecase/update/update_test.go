@@ -512,21 +512,35 @@ func TestUseCase_Update_SkipsPipInCondaEnvironment(t *testing.T) {
 	t.Setenv("CONDA_DEFAULT_ENV", "test-conda")
 	t.Setenv("CONDA_PREFIX", "/tmp/test-conda")
 
-	adapterCalls := 0
+	pipAdapterCalls := 0
+	homebrewAdapterCalls := 0
 	repo := &mockRepository{
 		findInstalledFunc: func(_ context.Context) ([]*manager.Manager, error) {
-			return []*manager.Manager{{
-				ID:        manager.ManagerPip,
-				Name:      testPipManagerName,
-				Installed: true,
-			}}, nil
+			return []*manager.Manager{
+				{
+					ID:        manager.ManagerPip,
+					Name:      testPipManagerName,
+					Installed: true,
+				},
+				{
+					ID:        manager.ManagerHomebrew,
+					Name:      testHomebrewManagerName,
+					Installed: true,
+				},
+			}, nil
 		},
 	}
 	logger := &mockLogger{}
 	uc := NewUseCase(repo, logger, map[manager.ManagerID]adapterm.Adapter{
 		manager.ManagerPip: &mockAdapter{
 			updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-				adapterCalls++
+				pipAdapterCalls++
+				return &adapterm.UpdateResult{Success: true}, nil
+			},
+		},
+		manager.ManagerHomebrew: &mockAdapter{
+			updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
+				homebrewAdapterCalls++
 				return &adapterm.UpdateResult{Success: true}, nil
 			},
 		},
@@ -539,15 +553,15 @@ func TestUseCase_Update_SkipsPipInCondaEnvironment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Update() unexpected error: %v", err)
 	}
-	if adapterCalls != 0 {
-		t.Errorf("adapter calls = %d, want 0", adapterCalls)
+	if pipAdapterCalls != 0 || homebrewAdapterCalls != 1 {
+		t.Errorf("adapter calls = pip %d homebrew %d, want 0 and 1", pipAdapterCalls, homebrewAdapterCalls)
 	}
-	if len(resp.Results) != 1 || !resp.Results[0].Skipped || !resp.Results[0].Success {
-		t.Errorf("results = %#v, want one successful skipped result", resp.Results)
+	if len(resp.Results) != 2 || !resp.Results[0].Skipped || !resp.Results[0].Success || resp.Results[1].Skipped || !resp.Results[1].Success {
+		t.Errorf("results = %#v, want skipped Pip then successful Homebrew", resp.Results)
 	}
-	if resp.Summary.SkippedManagers != 1 || resp.Summary.SuccessfulManagers != 0 || resp.Summary.FailedManagers != 0 {
+	if resp.Summary.SkippedManagers != 1 || resp.Summary.SuccessfulManagers != 1 || resp.Summary.FailedManagers != 0 {
 		t.Errorf(
-			"summary = skipped %d successful %d failed %d, want 1, 0, 0",
+			"summary = skipped %d successful %d failed %d, want 1, 1, 0",
 			resp.Summary.SkippedManagers,
 			resp.Summary.SuccessfulManagers,
 			resp.Summary.FailedManagers,
