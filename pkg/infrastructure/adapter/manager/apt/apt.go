@@ -101,7 +101,7 @@ func (a *Adapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
 			continue
 		}
 
-		// Format: "package/suite version architecture [status]"
+		// APT output lists package suite, version, architecture, and status fields in that order.
 		// Example: "vim/jammy-updates,now 2:8.2.3995-1ubuntu2.12 amd64 [installed]"
 		parts := strings.Fields(line)
 		if len(parts) < 2 {
