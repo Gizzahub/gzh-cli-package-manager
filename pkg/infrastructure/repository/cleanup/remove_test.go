@@ -67,8 +67,8 @@ func TestRemoveOldVersions_SkipsCurrent(t *testing.T) {
 	u := &recordingUninstaller{}
 	ex := NewAdapterCleanupExecutor(u)
 	summary, err := ex.RemoveOldVersions(context.Background(), []*domaincleanup.OldVersion{
-		{Name: testNodePackageName, Version: "18.0.0", ManagerID: "asdf", IsCurrent: false},
-		{Name: testNodePackageName, Version: "20.0.0", ManagerID: "asdf", IsCurrent: true},
+		{Name: testNodePackageName, Version: "18.0.0", ManagerID: testASDFManagerID, IsCurrent: false},
+		{Name: testNodePackageName, Version: "20.0.0", ManagerID: testASDFManagerID, IsCurrent: true},
 	}, true)
 	if err != nil {
 		t.Fatal(err)

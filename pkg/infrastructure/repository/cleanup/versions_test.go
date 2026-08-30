@@ -15,7 +15,7 @@ func TestScanVersionsFromPackages_MultiVersion(t *testing.T) {
 		{Name: testPythonPackageName, CurrentVersion: "3.11.0"}, // duplicate ignored
 	}
 
-	got := ScanVersionsFromPackages("asdf", pkgs)
+	got := ScanVersionsFromPackages(testASDFManagerID, pkgs)
 	if len(got) != 2 {
 		t.Fatalf("len = %d, want 2 (only multi-version package rows)", len(got))
 	}
@@ -25,7 +25,7 @@ func TestScanVersionsFromPackages_MultiVersion(t *testing.T) {
 		if v.Name != testPythonPackageName {
 			t.Errorf("unexpected name %q", v.Name)
 		}
-		if v.ManagerID != "asdf" {
+		if v.ManagerID != testASDFManagerID {
 			t.Errorf("ManagerID = %q", v.ManagerID)
 		}
 		if v.IsCurrent {
@@ -51,7 +51,7 @@ func TestScanVersionsFromPackages_SingleNoReport(t *testing.T) {
 
 func TestHeuristicVersionScanner_Scan(t *testing.T) {
 	s := NewHeuristicVersionScanner(map[string]PackageLister{
-		"asdf": &stubLister{packages: []manager.Package{
+		testASDFManagerID: &stubLister{packages: []manager.Package{
 			{Name: testNodePackageName, CurrentVersion: "18.0.0"},
 			{Name: testNodePackageName, CurrentVersion: "20.0.0"},
 			{Name: testPythonPackageName, CurrentVersion: "3.12.0"},
@@ -59,7 +59,7 @@ func TestHeuristicVersionScanner_Scan(t *testing.T) {
 		}},
 	})
 
-	got, err := s.Scan(context.Background(), testNodePackageName, "asdf")
+	got, err := s.Scan(context.Background(), testNodePackageName, testASDFManagerID)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
