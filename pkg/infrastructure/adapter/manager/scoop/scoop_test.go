@@ -21,6 +21,7 @@ const (
 	testScoopVersionFlag    = "--version"
 	testScoopListSubcommand = "list"
 	testExtrasBucketName    = "extras"
+	testGitPackageName      = "git"
 )
 
 func TestNewAdapter(t *testing.T) {
@@ -234,8 +235,8 @@ nodejs   20.10.0   main    2024-01-02  Update available
 		return
 	}
 
-	if packages[0].Name != "git" {
-		t.Errorf("packages[0].Name = %q, want %q", packages[0].Name, "git")
+	if packages[0].Name != testGitPackageName {
+		t.Errorf("packages[0].Name = %q, want %q", packages[0].Name, testGitPackageName)
 	}
 	if packages[0].CurrentVersion != "2.43.0" {
 		t.Errorf("packages[0].CurrentVersion = %q, want %q", packages[0].CurrentVersion, "2.43.0")
@@ -458,19 +459,19 @@ github 2.40.0  main
 	}{
 		{
 			name:  "table results",
-			query: "git",
+			query: testGitPackageName,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == scoopCommand && len(args) == 2 && args[0] == "search" && args[1] == "git" {
+				if command == scoopCommand && len(args) == 2 && args[0] == "search" && args[1] == testGitPackageName {
 					return testutil.SuccessResult(tableOutput), nil
 				}
 				return nil, errors.New("unexpected command")
 			},
 			wantCount: 2,
-			wantFirst: "git",
+			wantFirst: testGitPackageName,
 		},
 		{
 			name:  "quoted results",
-			query: "git",
+			query: testGitPackageName,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				if command == scoopCommand && len(args) == 2 && args[0] == "search" {
 					return testutil.SuccessResult(quotedOutput), nil
@@ -478,7 +479,7 @@ github 2.40.0  main
 				return nil, errors.New("unexpected command")
 			},
 			wantCount: 2,
-			wantFirst: "git",
+			wantFirst: testGitPackageName,
 		},
 		{
 			name:  "empty query",
@@ -516,7 +517,7 @@ func TestAdapter_Install(t *testing.T) {
 		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 			return nil, errors.New("should not be called")
 		}), testutil.NewMockLogger())
-		if err := adapter.Install(context.Background(), "git", true); err != nil {
+		if err := adapter.Install(context.Background(), testGitPackageName, true); err != nil {
 			t.Fatalf("Install dry-run: %v", err)
 		}
 	})
@@ -530,10 +531,10 @@ func TestAdapter_Install(t *testing.T) {
 			gotArgs = args
 			return testutil.SuccessResult("Installing 'git'"), nil
 		}), testutil.NewMockLogger())
-		if err := adapter.Install(context.Background(), "git", false); err != nil {
+		if err := adapter.Install(context.Background(), testGitPackageName, false); err != nil {
 			t.Fatalf("Install: %v", err)
 		}
-		if len(gotArgs) != 2 || gotArgs[0] != "install" || gotArgs[1] != "git" {
+		if len(gotArgs) != 2 || gotArgs[0] != "install" || gotArgs[1] != testGitPackageName {
 			t.Fatalf("args = %v", gotArgs)
 		}
 	})
@@ -552,13 +553,13 @@ func TestAdapter_Uninstall(t *testing.T) {
 		gotArgs = args
 		return testutil.SuccessResult("Uninstalling 'git'"), nil
 	}), testutil.NewMockLogger())
-	if err := adapter.Uninstall(context.Background(), "git", false); err != nil {
+	if err := adapter.Uninstall(context.Background(), testGitPackageName, false); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
-	if gotArgs[0] != "uninstall" || gotArgs[1] != "git" {
+	if gotArgs[0] != "uninstall" || gotArgs[1] != testGitPackageName {
 		t.Fatalf("args = %v", gotArgs)
 	}
-	if err := adapter.Uninstall(context.Background(), "git", true); err != nil {
+	if err := adapter.Uninstall(context.Background(), testGitPackageName, true); err != nil {
 		t.Fatalf("Uninstall dry-run: %v", err)
 	}
 }
