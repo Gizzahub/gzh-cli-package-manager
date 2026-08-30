@@ -3,6 +3,7 @@ package update
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -15,7 +16,9 @@ import (
 
 const (
 	testHomebrewManagerName = "Homebrew"
+	testNPMManagerName      = "NPM"
 	testPipManagerName      = "Pip"
+	testGitPackageName      = "git"
 )
 
 // mockRepository implements manager.Repository for testing.
@@ -80,6 +83,26 @@ type mockAdapter struct {
 	updateFunc func(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error)
 }
 
+type updateAllManagersCase struct {
+	name           string
+	mockManagers   []*manager.Manager
+	mockError      error
+	mockAdapters   map[manager.ManagerID]*mockAdapter
+	wantSuccessful int
+	wantFailed     int
+	wantErr        bool
+}
+
+type updateSpecificManagersCase struct {
+	name           string
+	requestIDs     []manager.ManagerID
+	mockManagers   map[manager.ManagerID]*manager.Manager
+	mockAdapters   map[manager.ManagerID]*mockAdapter
+	wantSuccessful int
+	wantFailed     int
+	wantErr        bool
+}
+
 func (m *mockAdapter) Detect(_ context.Context) (bool, error) {
 	return true, nil
 }
@@ -111,6 +134,33 @@ func (m *mockAdapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (
 	return &adapterm.UpdateResult{Success: true}, nil
 }
 
+func makeAdapterMap(mockAdapters map[manager.ManagerID]*mockAdapter) map[manager.ManagerID]adapterm.Adapter {
+	adapters := make(map[manager.ManagerID]adapterm.Adapter, len(mockAdapters))
+	for id, adapter := range mockAdapters {
+		adapters[id] = adapter
+	}
+	return adapters
+}
+
+func assertUpdateSummary(t *testing.T, resp *dto.UpdateResponse, total, successful, failed int) {
+	t.Helper()
+	if resp == nil {
+		t.Fatal("Update() returned nil response")
+	}
+	if resp.Summary.TotalManagers != total {
+		t.Errorf("Summary.TotalManagers = %d, want %d", resp.Summary.TotalManagers, total)
+	}
+	if resp.Summary.SuccessfulManagers != successful {
+		t.Errorf("Summary.SuccessfulManagers = %d, want %d", resp.Summary.SuccessfulManagers, successful)
+	}
+	if resp.Summary.FailedManagers != failed {
+		t.Errorf("Summary.FailedManagers = %d, want %d", resp.Summary.FailedManagers, failed)
+	}
+	if resp.Summary.SkippedManagers != 0 {
+		t.Errorf("Summary.SkippedManagers = %d, want 0", resp.Summary.SkippedManagers)
+	}
+}
+
 func TestNewUseCase(t *testing.T) {
 	repo := &mockRepository{}
 	logger := &mockLogger{}
@@ -135,15 +185,7 @@ func TestNewUseCase(t *testing.T) {
 func TestUseCase_Update_AllManagers(t *testing.T) {
 	now := time.Now()
 
-	tests := []struct {
-		name           string
-		mockManagers   []*manager.Manager
-		mockError      error
-		mockAdapters   map[manager.ManagerID]*mockAdapter
-		wantSuccessful int
-		wantFailed     int
-		wantErr        bool
-	}{
+	tests := []updateAllManagersCase{
 		{
 			name:           "no managers installed",
 			mockManagers:   []*manager.Manager{},
@@ -170,7 +212,7 @@ func TestUseCase_Update_AllManagers(t *testing.T) {
 					updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
 						return &adapterm.UpdateResult{
 							Success:         true,
-							UpdatedPackages: []string{"git", "wget"},
+							UpdatedPackages: []string{testGitPackageName, "wget"},
 							Message:         "Updated successfully",
 						}, nil
 					},
@@ -212,7 +254,7 @@ func TestUseCase_Update_AllManagers(t *testing.T) {
 				},
 				{
 					ID:          manager.ManagerNPM,
-					Name:        "NPM",
+					Name:        testNPMManagerName,
 					Installed:   true,
 					LastChecked: now,
 				},
@@ -226,7 +268,7 @@ func TestUseCase_Update_AllManagers(t *testing.T) {
 			mockAdapters: map[manager.ManagerID]*mockAdapter{
 				manager.ManagerHomebrew: {
 					updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-						return &adapterm.UpdateResult{Success: true, UpdatedPackages: []string{"git"}}, nil
+						return &adapterm.UpdateResult{Success: true, UpdatedPackages: []string{testGitPackageName}}, nil
 					},
 				},
 				manager.ManagerNPM: {
@@ -254,71 +296,38 @@ func TestUseCase_Update_AllManagers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := &mockRepository{
-				findInstalledFunc: func(_ context.Context) ([]*manager.Manager, error) {
-					if tt.mockError != nil {
-						return nil, tt.mockError
-					}
-					return tt.mockManagers, nil
-				},
-			}
-			logger := &mockLogger{}
-
-			// Convert mock adapters to adapter interface
-			adapters := make(map[manager.ManagerID]adapterm.Adapter)
-			for id, adapter := range tt.mockAdapters {
-				adapters[id] = adapter
-			}
-
-			uc := NewUseCase(repo, logger, adapters, nil)
-
-			req := &dto.UpdateRequest{
-				All:      true,
-				DryRun:   false,
-				Strategy: dto.StrategyStable,
-			}
-
-			resp, err := uc.Update(context.Background(), req)
-
-			// Check error expectation
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Update() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.wantErr {
-				return // No need to check response if we expected an error
-			}
-
-			// Validate response
-			if resp == nil {
-				t.Fatal("Update() returned nil response")
-			}
-
-			if resp.Summary.SuccessfulManagers != tt.wantSuccessful {
-				t.Errorf("Summary.SuccessfulManagers = %d, want %d",
-					resp.Summary.SuccessfulManagers, tt.wantSuccessful)
-			}
-
-			if resp.Summary.FailedManagers != tt.wantFailed {
-				t.Errorf("Summary.FailedManagers = %d, want %d",
-					resp.Summary.FailedManagers, tt.wantFailed)
-			}
-
-			if resp.Summary.SkippedManagers != 0 {
-				t.Errorf("Summary.SkippedManagers = %d, want 0", resp.Summary.SkippedManagers)
-			}
-
-			if resp.Summary.TotalManagers != len(tt.mockManagers) {
-				t.Errorf("Summary.TotalManagers = %d, want %d",
-					resp.Summary.TotalManagers, len(tt.mockManagers))
-			}
-
-			// Verify logger was called
-			if len(logger.infoMessages) < 2 {
-				t.Error("Expected at least 2 info log messages")
-			}
+			testUpdateAllManagers(t, &tt)
 		})
+	}
+}
+
+func testUpdateAllManagers(t *testing.T, tt *updateAllManagersCase) {
+	t.Helper()
+	repo := &mockRepository{
+		findInstalledFunc: func(_ context.Context) ([]*manager.Manager, error) {
+			if tt.mockError != nil {
+				return nil, tt.mockError
+			}
+			return tt.mockManagers, nil
+		},
+	}
+	logger := &mockLogger{}
+	adapters := makeAdapterMap(tt.mockAdapters)
+
+	resp, err := NewUseCase(repo, logger, adapters, nil).Update(context.Background(), &dto.UpdateRequest{
+		All:      true,
+		Strategy: dto.StrategyStable,
+	})
+	if (err != nil) != tt.wantErr {
+		t.Errorf("Update() error = %v, wantErr %v", err, tt.wantErr)
+		return
+	}
+	if tt.wantErr {
+		return
+	}
+	assertUpdateSummary(t, resp, len(tt.mockManagers), tt.wantSuccessful, tt.wantFailed)
+	if len(logger.infoMessages) < 2 {
+		t.Error("Expected at least 2 info log messages")
 	}
 }
 
@@ -361,15 +370,7 @@ func TestUseCase_Update_AllTakesPrecedenceOverManagerIDs(t *testing.T) {
 func TestUseCase_Update_SpecificManagers(t *testing.T) {
 	now := time.Now()
 
-	tests := []struct {
-		name           string
-		requestIDs     []manager.ManagerID
-		mockManagers   map[manager.ManagerID]*manager.Manager
-		mockAdapters   map[manager.ManagerID]*mockAdapter
-		wantSuccessful int
-		wantFailed     int
-		wantErr        bool
-	}{
+	tests := []updateSpecificManagersCase{
 		{
 			name:       "single specific manager",
 			requestIDs: []manager.ManagerID{manager.ManagerHomebrew},
@@ -404,7 +405,7 @@ func TestUseCase_Update_SpecificManagers(t *testing.T) {
 				},
 				manager.ManagerNPM: {
 					ID:          manager.ManagerNPM,
-					Name:        "NPM",
+					Name:        testNPMManagerName,
 					Installed:   true,
 					LastChecked: now,
 				},
@@ -452,59 +453,170 @@ func TestUseCase_Update_SpecificManagers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := &mockRepository{
-				findByIDFunc: func(_ context.Context, id manager.ManagerID) (*manager.Manager, error) {
-					if mgr, exists := tt.mockManagers[id]; exists {
-						return mgr, nil
-					}
-					return nil, errors.New("manager not found")
-				},
-			}
-			logger := &mockLogger{}
-
-			adapters := make(map[manager.ManagerID]adapterm.Adapter)
-			for id, adapter := range tt.mockAdapters {
-				adapters[id] = adapter
-			}
-
-			uc := NewUseCase(repo, logger, adapters, nil)
-
-			req := &dto.UpdateRequest{
-				All:        false,
-				ManagerIDs: tt.requestIDs,
-				DryRun:     false,
-				Strategy:   dto.StrategyStable,
-			}
-
-			resp, err := uc.Update(context.Background(), req)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Update() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.wantErr {
-				return
-			}
-
-			if resp == nil {
-				t.Fatal("Update() returned nil response")
-			}
-
-			if resp.Summary.SuccessfulManagers != tt.wantSuccessful {
-				t.Errorf("Summary.SuccessfulManagers = %d, want %d",
-					resp.Summary.SuccessfulManagers, tt.wantSuccessful)
-			}
-
-			if resp.Summary.FailedManagers != tt.wantFailed {
-				t.Errorf("Summary.FailedManagers = %d, want %d",
-					resp.Summary.FailedManagers, tt.wantFailed)
-			}
-
-			if resp.Summary.SkippedManagers != 0 {
-				t.Errorf("Summary.SkippedManagers = %d, want 0", resp.Summary.SkippedManagers)
-			}
+			testUpdateSpecificManagers(t, &tt)
 		})
+	}
+}
+
+func testUpdateSpecificManagers(t *testing.T, tt *updateSpecificManagersCase) {
+	t.Helper()
+	repo := &mockRepository{
+		findByIDFunc: func(_ context.Context, id manager.ManagerID) (*manager.Manager, error) {
+			if mgr, exists := tt.mockManagers[id]; exists {
+				return mgr, nil
+			}
+			return nil, errors.New("manager not found")
+		},
+	}
+	resp, err := NewUseCase(repo, &mockLogger{}, makeAdapterMap(tt.mockAdapters), nil).Update(context.Background(), &dto.UpdateRequest{
+		ManagerIDs: tt.requestIDs,
+		Strategy:   dto.StrategyStable,
+	})
+	if (err != nil) != tt.wantErr {
+		t.Errorf("Update() error = %v, wantErr %v", err, tt.wantErr)
+		return
+	}
+	if !tt.wantErr {
+		assertUpdateSummary(t, resp, tt.wantSuccessful+tt.wantFailed, tt.wantSuccessful, tt.wantFailed)
+	}
+}
+
+func TestUseCase_SelectManagers_PreservesSpecificRequestOrder(t *testing.T) {
+	requested := []manager.ManagerID{manager.ManagerNPM, manager.ManagerHomebrew, manager.ManagerPip}
+	calls := make([]manager.ManagerID, 0, len(requested))
+	repo := &mockRepository{
+		findByIDFunc: func(_ context.Context, id manager.ManagerID) (*manager.Manager, error) {
+			calls = append(calls, id)
+			return &manager.Manager{ID: id, Installed: id != manager.ManagerHomebrew}, nil
+		},
+	}
+
+	managers, err := NewUseCase(repo, &mockLogger{}, nil, nil).selectManagers(context.Background(), &dto.UpdateRequest{
+		ManagerIDs: requested,
+	})
+	if err != nil {
+		t.Fatalf("selectManagers() unexpected error: %v", err)
+	}
+	if !slices.Equal(calls, requested) {
+		t.Errorf("FindByID calls = %v, want %v", calls, requested)
+	}
+	if len(managers) != 2 || managers[0].ID != manager.ManagerNPM || managers[1].ID != manager.ManagerPip {
+		t.Errorf("selected managers = %#v, want NPM then Pip", managers)
+	}
+}
+
+func TestUseCase_SelectManagers_StopsOnFirstLookupError(t *testing.T) {
+	lookupErr := errors.New("lookup failed")
+	requested := []manager.ManagerID{manager.ManagerHomebrew, manager.ManagerNPM, manager.ManagerPip}
+	calls := make([]manager.ManagerID, 0, len(requested))
+	repo := &mockRepository{
+		findByIDFunc: func(_ context.Context, id manager.ManagerID) (*manager.Manager, error) {
+			calls = append(calls, id)
+			if id == manager.ManagerNPM {
+				return nil, lookupErr
+			}
+			return &manager.Manager{ID: id, Installed: true}, nil
+		},
+	}
+
+	_, err := NewUseCase(repo, &mockLogger{}, nil, nil).selectManagers(context.Background(), &dto.UpdateRequest{
+		ManagerIDs: requested,
+	})
+	if !errors.Is(err, lookupErr) {
+		t.Fatalf("selectManagers() error = %v, want wrapped %v", err, lookupErr)
+	}
+	if err.Error() != "failed to fetch manager npm: lookup failed" {
+		t.Errorf("selectManagers() error = %q, want exact context", err)
+	}
+	if !slices.Equal(calls, requested[:2]) {
+		t.Errorf("FindByID calls = %v, want %v", calls, requested[:2])
+	}
+}
+
+func TestUseCase_Update_AllowsPipInCondaWhenRequested(t *testing.T) {
+	t.Setenv("CONDA_DEFAULT_ENV", "test-conda")
+	t.Setenv("CONDA_PREFIX", "/tmp/test-conda")
+	pipAdapterCalls := 0
+	repo := &mockRepository{
+		findInstalledFunc: func(_ context.Context) ([]*manager.Manager, error) {
+			return []*manager.Manager{{ID: manager.ManagerPip, Name: testPipManagerName, Installed: true}}, nil
+		},
+	}
+	uc := NewUseCase(repo, &mockLogger{}, map[manager.ManagerID]adapterm.Adapter{
+		manager.ManagerPip: &mockAdapter{
+			updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
+				pipAdapterCalls++
+				return &adapterm.UpdateResult{Success: true}, nil
+			},
+		},
+	}, detector.NewDetector(nil, &mockLogger{}))
+
+	resp, err := uc.Update(context.Background(), &dto.UpdateRequest{
+		All:           true,
+		PipAllowConda: true,
+		Strategy:      dto.StrategyStable,
+	})
+	if err != nil {
+		t.Fatalf("Update() unexpected error: %v", err)
+	}
+	if len(resp.Results) != 1 {
+		t.Fatalf("result count = %d, want 1", len(resp.Results))
+	}
+	if pipAdapterCalls != 1 || resp.Results[0].Skipped {
+		t.Errorf("pip calls/skipped = %d/%t, want 1/false", pipAdapterCalls, resp.Results[0].Skipped)
+	}
+	assertUpdateSummary(t, resp, 1, 1, 0)
+}
+
+func TestUseCase_Update_PreservesResultShapeAndOrder(t *testing.T) {
+	repo := &mockRepository{
+		findInstalledFunc: func(_ context.Context) ([]*manager.Manager, error) {
+			return []*manager.Manager{
+				{ID: manager.ManagerHomebrew, Name: testHomebrewManagerName, Installed: true},
+				{ID: manager.ManagerNPM, Name: testNPMManagerName, Installed: true},
+			}, nil
+		},
+	}
+	uc := NewUseCase(repo, &mockLogger{}, map[manager.ManagerID]adapterm.Adapter{
+		manager.ManagerHomebrew: &mockAdapter{
+			updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
+				return &adapterm.UpdateResult{
+					Success:         true,
+					UpdatedPackages: []string{testGitPackageName, "curl"},
+					FailedPackages:  []string{"openssl"},
+				}, nil
+			},
+		},
+		manager.ManagerNPM: &mockAdapter{
+			updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
+				return &adapterm.UpdateResult{Success: false, UpdatedPackages: []string{"npm"}}, nil
+			},
+		},
+	}, nil)
+
+	resp, err := uc.Update(context.Background(), &dto.UpdateRequest{All: true, Strategy: dto.StrategyStable})
+	if err != nil {
+		t.Fatalf("Update() unexpected error: %v", err)
+	}
+	assertUpdateSummary(t, resp, 2, 1, 1)
+	if resp.Summary.TotalPackagesUpdated != 3 {
+		t.Errorf("Summary.TotalPackagesUpdated = %d, want 3", resp.Summary.TotalPackagesUpdated)
+	}
+	if len(resp.Results) != 2 || resp.Results[0].ID != manager.ManagerHomebrew || resp.Results[1].ID != manager.ManagerNPM {
+		t.Fatalf("result order = %#v, want Homebrew then NPM", resp.Results)
+	}
+	first := resp.Results[0]
+	if len(first.UpdatedPackages) != 2 {
+		t.Fatalf("updated packages = %#v, want git then curl", first.UpdatedPackages)
+	}
+	if first.UpdatedPackages[0].Name != testGitPackageName || first.UpdatedPackages[1].Name != "curl" {
+		t.Errorf("updated package order = %#v, want git then curl", first.UpdatedPackages)
+	}
+	if first.UpdatedPackages[0].OldVersion != "unknown" || first.UpdatedPackages[0].NewVersion != "unknown" || first.UpdatedPackages[0].UpdateType != manager.UpdateMinor || first.UpdatedPackages[0].SizeBytes != 0 {
+		t.Errorf("package update = %#v, want unknown/minor/zero conversion", first.UpdatedPackages[0])
+	}
+	if !slices.Equal(first.SkippedPackages, []string{"openssl"}) {
+		t.Errorf("SkippedPackages = %v, want [openssl]", first.SkippedPackages)
 	}
 }
 

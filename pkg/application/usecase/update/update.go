@@ -53,35 +53,9 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 		output.Field{Key: "strategy", Value: string(req.Strategy)},
 	)
 
-	// Determine which managers to update
-	var managers []*manager.Manager
-	var err error
-
-	switch {
-	case req.All:
-		// Update all installed managers
-		managers, err = uc.managerRepo.FindInstalled(ctx)
-		if err != nil {
-			uc.logger.Error(ctx, "Failed to find installed managers", err)
-			return nil, fmt.Errorf("failed to find installed managers: %w", err)
-		}
-	case len(req.ManagerIDs) > 0:
-		// Update specific managers
-		managers = make([]*manager.Manager, 0, len(req.ManagerIDs))
-		for _, id := range req.ManagerIDs {
-			mgr, fetchErr := uc.managerRepo.FindByID(ctx, id)
-			if fetchErr != nil {
-				uc.logger.Error(ctx, "Failed to fetch manager", fetchErr, output.Field{Key: managerIDFieldKey, Value: id})
-				return nil, fmt.Errorf("failed to fetch manager %s: %w", id, fetchErr)
-			}
-			if !mgr.Installed {
-				uc.logger.Warn(ctx, "Manager not installed, skipping", output.Field{Key: managerIDFieldKey, Value: id})
-				continue
-			}
-			managers = append(managers, mgr)
-		}
-	default:
-		return nil, fmt.Errorf("either --all flag or --managers must be specified")
+	managers, err := uc.selectManagers(ctx, req)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(managers) == 0 {
@@ -170,6 +144,35 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 		Summary: summary,
 		DryRun:  req.DryRun,
 	}, nil
+}
+
+func (uc *UseCase) selectManagers(ctx context.Context, req *dto.UpdateRequest) ([]*manager.Manager, error) {
+	switch {
+	case req.All:
+		managers, err := uc.managerRepo.FindInstalled(ctx)
+		if err != nil {
+			uc.logger.Error(ctx, "Failed to find installed managers", err)
+			return nil, fmt.Errorf("failed to find installed managers: %w", err)
+		}
+		return managers, nil
+	case len(req.ManagerIDs) > 0:
+		managers := make([]*manager.Manager, 0, len(req.ManagerIDs))
+		for _, id := range req.ManagerIDs {
+			mgr, err := uc.managerRepo.FindByID(ctx, id)
+			if err != nil {
+				uc.logger.Error(ctx, "Failed to fetch manager", err, output.Field{Key: managerIDFieldKey, Value: id})
+				return nil, fmt.Errorf("failed to fetch manager %s: %w", id, err)
+			}
+			if !mgr.Installed {
+				uc.logger.Warn(ctx, "Manager not installed, skipping", output.Field{Key: managerIDFieldKey, Value: id})
+				continue
+			}
+			managers = append(managers, mgr)
+		}
+		return managers, nil
+	default:
+		return nil, fmt.Errorf("either --all flag or --managers must be specified")
+	}
 }
 
 // updateManager updates a single manager.
