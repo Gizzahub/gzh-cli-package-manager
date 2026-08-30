@@ -9,10 +9,10 @@ import (
 
 func TestScanVersionsFromPackages_MultiVersion(t *testing.T) {
 	pkgs := []manager.Package{
-		{Name: testPythonPackageName, CurrentVersion: "3.11.0"},
+		{Name: testPythonPackageName, CurrentVersion: testPythonOldVersion},
 		{Name: testPythonPackageName, CurrentVersion: "3.12.0"},
 		{Name: testGitPackageName, CurrentVersion: testGitCurrentVersion},
-		{Name: testPythonPackageName, CurrentVersion: "3.11.0"}, // duplicate ignored
+		{Name: testPythonPackageName, CurrentVersion: testPythonOldVersion}, // duplicate ignored
 	}
 
 	got := ScanVersionsFromPackages(testASDFManagerID, pkgs)
@@ -55,7 +55,7 @@ func TestHeuristicVersionScanner_Scan(t *testing.T) {
 			{Name: testNodePackageName, CurrentVersion: "18.0.0"},
 			{Name: testNodePackageName, CurrentVersion: "20.0.0"},
 			{Name: testPythonPackageName, CurrentVersion: "3.12.0"},
-			{Name: testPythonPackageName, CurrentVersion: "3.11.0"},
+			{Name: testPythonPackageName, CurrentVersion: testPythonOldVersion},
 		}},
 	})
 

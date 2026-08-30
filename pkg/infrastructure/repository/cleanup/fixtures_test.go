@@ -7,6 +7,7 @@ const (
 	testHomebrewManagerID = "homebrew"
 	testNPMManagerID      = "npm"
 	testNodePackageName   = "node"
+	testPythonOldVersion  = "3.11.0"
 	testPythonPackageName = "python"
 	testScoopManagerID    = "scoop"
 	testVersionOne        = "1.0"
