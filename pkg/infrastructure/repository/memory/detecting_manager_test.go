@@ -368,96 +368,143 @@ func TestDetectingManagerRepository_FindInstalled(t *testing.T) {
 
 func TestDetectingManagerRepository_FindByID(t *testing.T) {
 	tests := []struct {
-		name          string
-		managerID     manager.ManagerID
-		execFunc      func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-		wantInstalled bool
-		wantErr       bool
+		name      string
+		managerID manager.ManagerID
+		executor  *scriptedExecutor
+		configure func(*DetectingManagerRepository)
+		wantErr   string
+		want      findAllManagerExpectation
+		calls     []string
+		noCalls   bool
 	}{
 		{
-			name:      "npm not installed",
+			name:      "returns unavailable NPM after a failed probe",
 			managerID: manager.ManagerNPM,
-			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return &output.ExecutionResult{ExitCode: 1}, nil
+			executor:  newScriptedExecutor(nil),
+			want: findAllManagerExpectation{
+				status: manager.StatusUnavailable,
 			},
-			wantInstalled: false,
-			wantErr:       false,
+			calls: []string{
+				scriptCommand(whichCommand, npmCommand),
+			},
 		},
 		{
-			name:      "npm installed",
+			name:      "persists complete NPM details through the canonical manager pointer",
 			managerID: manager.ManagerNPM,
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == whichCommand && args[0] == npmCommand {
-					return &output.ExecutionResult{
-						Stdout:   "/usr/bin/npm\n",
-						ExitCode: 0,
-					}, nil
-				}
-				if command == npmCommand && args[0] == versionFlag {
-					return &output.ExecutionResult{
-						Stdout:   "10.0.0\n",
-						ExitCode: 0,
-					}, nil
-				}
-				if command == npmCommand && args[0] == "config" {
-					return &output.ExecutionResult{
-						Stdout:   "/usr/local\n",
-						ExitCode: 0,
-					}, nil
-				}
-				if command == npmCommand && args[0] == listCommand {
-					return &output.ExecutionResult{
-						Stdout:   `{"dependencies": {}}`,
-						ExitCode: 0,
-					}, nil
-				}
-				if command == npmCommand && args[0] == "outdated" {
-					return &output.ExecutionResult{
-						Stdout:   "{}",
-						ExitCode: 0,
-					}, nil
-				}
-				if command == npmCommand && args[0] == "doctor" {
-					return &output.ExecutionResult{
-						Stdout:   "ok\n",
-						ExitCode: 0,
-					}, nil
-				}
-				return &output.ExecutionResult{ExitCode: 1}, nil
+			executor: newScriptedExecutor(map[string]scriptedCommandResult{
+				scriptCommand(whichCommand, npmCommand): {
+					result: &output.ExecutionResult{Stdout: "/usr/bin/npm\n"},
+				},
+				scriptCommand(npmCommand, versionFlag): {
+					result: &output.ExecutionResult{Stdout: "10.0.0\n"},
+				},
+				scriptCommand(npmCommand, "config", "get", "prefix"): {
+					result: &output.ExecutionResult{Stdout: "/usr/local\n"},
+				},
+				scriptCommand(npmCommand, listCommand, "-g", "--depth=0", "--json"): {
+					result: &output.ExecutionResult{Stdout: `{"dependencies":{"typescript":{"version":"5.0.0"}}}`},
+				},
+				scriptCommand(npmCommand, "outdated", "-g", "--json"): {
+					result: &output.ExecutionResult{Stdout: "{}"},
+				},
+				scriptCommand(npmCommand, "doctor"): {
+					result: &output.ExecutionResult{Stdout: "ok\n"},
+				},
+			}),
+			want: findAllManagerExpectation{
+				installed:  true,
+				status:     manager.StatusHealthy,
+				version:    "10.0.0",
+				binaryPath: "/usr/bin/npm",
+				configPath: "/usr/local",
+				packages: []manager.Package{
+					{
+						Name:           "typescript",
+						CurrentVersion: "5.0.0",
+						Manager:        manager.ManagerNPM,
+						IsGlobal:       true,
+						UpdateType:     manager.UpdateNone,
+					},
+				},
 			},
-			wantInstalled: true,
-			wantErr:       false,
+			calls: []string{
+				scriptCommand(whichCommand, npmCommand),
+				scriptCommand(npmCommand, versionFlag),
+				scriptCommand(whichCommand, npmCommand),
+				scriptCommand(npmCommand, "config", "get", "prefix"),
+				scriptCommand(npmCommand, listCommand, "-g", "--depth=0", "--json"),
+				scriptCommand(npmCommand, "outdated", "-g", "--json"),
+				scriptCommand(npmCommand, "doctor"),
+			},
 		},
 		{
-			name:      "invalid manager ID",
+			name:      "returns the lookup error without probing an invalid manager",
 			managerID: "invalid-manager",
-			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return &output.ExecutionResult{ExitCode: 1}, nil
+			executor:  newScriptedExecutor(nil),
+			wantErr:   "manager not found: invalid-manager",
+		},
+		{
+			name:      "keeps a detection failure as partial manager state",
+			managerID: manager.ManagerNPM,
+			executor:  newScriptedExecutor(nil),
+			configure: func(repo *DetectingManagerRepository) {
+				repo.adapters[manager.ManagerNPM] = detectErrorAdapter{err: errFindAllDetect}
 			},
-			wantInstalled: false,
-			wantErr:       true,
+			want: findAllManagerExpectation{
+				status: manager.StatusError,
+			},
+			noCalls: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			executor := &mockExecutor{execFunc: tt.execFunc}
-			logger := &mockLogger{}
-			repo := NewDetectingManagerRepository(executor, logger)
+			repo := NewDetectingManagerRepository(tt.executor, &mockLogger{})
+			if tt.configure != nil {
+				tt.configure(repo)
+			}
+
+			stored, storedErr := repo.ManagerRepository.FindByID(context.Background(), tt.managerID)
+			var storedName string
+			var storedType manager.ManagerType
+			var storedPlatform manager.Platform
+			if tt.wantErr == "" {
+				if storedErr != nil {
+					t.Fatalf("base FindByID() error = %v", storedErr)
+				}
+				storedName = stored.Name
+				storedType = stored.Type
+				storedPlatform = stored.Platform
+				stored.LastChecked = time.Time{}
+			}
 
 			mgr, err := repo.FindByID(context.Background(), tt.managerID)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("FindByID() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr != "" {
+				if err == nil || err.Error() != tt.wantErr {
+					t.Errorf("FindByID() error = %v, want %q", err, tt.wantErr)
+				}
+				if mgr != nil {
+					t.Errorf("FindByID() manager = %#v, want nil", mgr)
+				}
+				if len(tt.executor.calls) != 0 {
+					t.Errorf("FindByID() executed commands = %q, want none", tt.executor.calls)
+				}
 				return
 			}
 
-			if err == nil {
-				if mgr.Installed != tt.wantInstalled {
-					t.Errorf("FindByID() installed = %v, want %v", mgr.Installed, tt.wantInstalled)
-				}
-				if mgr.ID != tt.managerID {
-					t.Errorf("FindByID() ID = %v, want %v", mgr.ID, tt.managerID)
-				}
+			if err != nil {
+				t.Fatalf("FindByID() error = %v", err)
+			}
+			if mgr != stored {
+				t.Error("FindByID() did not return the stored manager pointer")
+			}
+			if mgr.ID != tt.managerID || mgr.Name != storedName || mgr.Type != storedType || mgr.Platform != storedPlatform {
+				t.Errorf("FindByID() identity = %#v, want NPM language manager", mgr)
+			}
+			assertFindAllManager(t, mgr, &tt.want)
+			assertCommandSubsequence(t, tt.executor.calls, tt.calls)
+			if tt.noCalls && len(tt.executor.calls) != 0 {
+				t.Errorf("FindByID() executed commands = %q, want none", tt.executor.calls)
 			}
 		})
 	}
