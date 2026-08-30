@@ -85,6 +85,7 @@ func (uc *UseCase) Bootstrap(ctx context.Context, req *dto.BootstrapRequest) (*d
 		TotalManagers: len(config.Managers),
 	}
 
+managerLoop:
 	for _, mgrConfig := range config.Managers {
 		if !mgrConfig.Enabled {
 			uc.logger.Debug(ctx, "Manager disabled in config, skipping", output.Field{Key: managerIDLogKey, Value: mgrConfig.ID})
@@ -105,17 +106,18 @@ func (uc *UseCase) Bootstrap(ctx context.Context, req *dto.BootstrapRequest) (*d
 		results = append(results, result)
 
 		// Update summary
-		if result.AlreadyInstalled {
+		switch {
+		case result.AlreadyInstalled:
 			summary.AlreadyInstalledManagers++
-		} else if result.Skipped {
+		case result.Skipped:
 			summary.SkippedManagers++
-		} else if result.Success {
+		case result.Success:
 			summary.InstalledManagers++
-		} else {
+		default:
 			summary.FailedManagers++
 			if config.Preferences.FailOnError {
 				uc.logger.Warn(ctx, "Bootstrap failed, stopping due to fail-on-error policy")
-				break
+				break managerLoop
 			}
 		}
 	}

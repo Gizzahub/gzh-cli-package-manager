@@ -138,6 +138,10 @@ preferences:
 	assert.True(t, npmResult.AlreadyInstalled)
 	assert.True(t, npmResult.Skipped)
 	assert.Equal(t, "already installed", npmResult.SkipReason)
+	assert.Equal(t, 1, resp.Summary.AlreadyInstalledManagers)
+	assert.Equal(t, 0, resp.Summary.SkippedManagers)
+	assert.Equal(t, 1, resp.Summary.InstalledManagers)
+	assert.Equal(t, 0, resp.Summary.FailedManagers)
 }
 
 func TestBootstrap_DisabledManager(t *testing.T) {
