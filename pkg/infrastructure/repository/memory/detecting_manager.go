@@ -5,6 +5,7 @@ package memory
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
@@ -139,7 +140,7 @@ func (r *DetectingManagerRepository) detectAndUpdate(ctx context.Context, mgr *m
 	if err != nil {
 		mgr.Status = manager.StatusError
 		mgr.LastChecked = now
-		return err
+		return fmt.Errorf("detect %s: %w", mgr.ID, err)
 	}
 
 	if !detected {

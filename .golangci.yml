@@ -111,6 +111,12 @@ linters:
         - .WithMessage(
         - .WithMessagef(
         - .WithStack(
+      # cmdutil helpers already attach operation context. Returning those
+      # errors from adapters is a policy exception, not a missing wrap.
+      extra-ignore-sigs:
+        - github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cmdutil.CheckResult(
+        - github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cmdutil.UnmarshalJSON(
+        - github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cmdutil.ExtractVersionField(
   exclusions:
     generated: lax
     presets:
