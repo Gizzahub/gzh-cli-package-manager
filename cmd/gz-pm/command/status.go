@@ -17,6 +17,8 @@ var (
 	statusUseCase input.StatusUseCase
 )
 
+const statusPackageDisplayLimit = 10
+
 // SetStatusUseCase injects the status use case dependency.
 func SetStatusUseCase(uc input.StatusUseCase) {
 	statusUseCase = uc
@@ -71,57 +73,65 @@ Example:
 }
 
 func displayText(resp *dto.StatusResponse) {
-	// Display results
 	fmt.Println("📋 Package Manager Status")
 	fmt.Println()
 
 	for _, mgr := range resp.Managers {
-		statusIcon := "⛔"
-		if mgr.Installed {
-			statusIcon = "✅"
-		}
-
-		fmt.Printf("%s %s (%s)\n", statusIcon, mgr.Name, mgr.Type)
-		if mgr.Installed {
-			fmt.Printf("   Version: %s\n", mgr.Version)
-			fmt.Printf("   Status: %s\n", mgr.Status)
-			fmt.Printf("   Packages: %d (Updates: %d)\n", mgr.PackageCount, mgr.UpdatableCount)
-
-			// Show package details in verbose mode
-			if statusVerbose && len(mgr.Packages) > 0 {
-				fmt.Println("   ")
-				// Show up to 10 packages
-				limit := min(len(mgr.Packages), 10)
-
-				for i := range limit {
-					pkg := mgr.Packages[i]
-					updateIcon := "  "
-					if pkg.UpdateType != "" && pkg.UpdateType != "none" {
-						updateIcon = "⬆️ "
-					}
-
-					fmt.Printf("   %s %s %s", updateIcon, pkg.Name, pkg.CurrentVersion)
-					if pkg.AvailableVersion != "" {
-						fmt.Printf(" → %s", pkg.AvailableVersion)
-					}
-					fmt.Println()
-				}
-
-				if len(mgr.Packages) > 10 {
-					fmt.Printf("   ... and %d more packages\n", len(mgr.Packages)-10)
-				}
-			}
-		}
+		displayManagerText(mgr, statusVerbose)
 		fmt.Println()
 	}
 
-	// Display summary
+	displaySummaryText(resp.Summary)
+}
+
+func displayManagerText(mgr *dto.ManagerStatus, verbose bool) {
+	if !mgr.Installed {
+		fmt.Printf("⛔ %s (%s)\n", mgr.Name, mgr.Type)
+		return
+	}
+
+	fmt.Printf("✅ %s (%s)\n", mgr.Name, mgr.Type)
+	fmt.Printf("   Version: %s\n", mgr.Version)
+	fmt.Printf("   Status: %s\n", mgr.Status)
+	fmt.Printf("   Packages: %d (Updates: %d)\n", mgr.PackageCount, mgr.UpdatableCount)
+	displayPackagesText(mgr.Packages, verbose)
+}
+
+func displayPackagesText(packages []dto.PackageInfo, verbose bool) {
+	if !verbose || len(packages) == 0 {
+		return
+	}
+
+	fmt.Println("   ")
+	limit := min(len(packages), statusPackageDisplayLimit)
+	for i := range limit {
+		displayPackageText(&packages[i])
+	}
+	if len(packages) > statusPackageDisplayLimit {
+		fmt.Printf("   ... and %d more packages\n", len(packages)-statusPackageDisplayLimit)
+	}
+}
+
+func displayPackageText(pkg *dto.PackageInfo) {
+	updateIcon := "  "
+	if pkg.UpdateType != "" && pkg.UpdateType != "none" {
+		updateIcon = "⬆️ "
+	}
+
+	fmt.Printf("   %s %s %s", updateIcon, pkg.Name, pkg.CurrentVersion)
+	if pkg.AvailableVersion != "" {
+		fmt.Printf(" → %s", pkg.AvailableVersion)
+	}
+	fmt.Println()
+}
+
+func displaySummaryText(summary *dto.StatusSummary) {
 	fmt.Println("📊 Summary")
-	fmt.Printf("   Total Managers: %d\n", resp.Summary.TotalManagers)
-	fmt.Printf("   Installed: %d\n", resp.Summary.InstalledManagers)
-	fmt.Printf("   Healthy: %d\n", resp.Summary.HealthyManagers)
-	fmt.Printf("   Total Packages: %d\n", resp.Summary.TotalPackages)
-	fmt.Printf("   Updates Available: %d\n", resp.Summary.UpdatablePackages)
+	fmt.Printf("   Total Managers: %d\n", summary.TotalManagers)
+	fmt.Printf("   Installed: %d\n", summary.InstalledManagers)
+	fmt.Printf("   Healthy: %d\n", summary.HealthyManagers)
+	fmt.Printf("   Total Packages: %d\n", summary.TotalPackages)
+	fmt.Printf("   Updates Available: %d\n", summary.UpdatablePackages)
 }
 
 func displayJSON(resp *dto.StatusResponse) {
