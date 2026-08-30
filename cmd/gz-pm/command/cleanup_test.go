@@ -199,7 +199,7 @@ func TestCleanupOrphansList(t *testing.T) {
 	})
 	t.Cleanup(func() { SetManagerAdapters(nil) })
 
-	cleanupManagerID = "scoop"
+	cleanupManagerID = string(manager.ManagerScoop)
 	cleanupDryRun = true
 	t.Cleanup(func() {
 		cleanupManagerID = ""
@@ -294,7 +294,7 @@ func TestCleanupRunEWrapsPackageListFailures(t *testing.T) {
 	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{manager.ManagerScoop: stub})
 	t.Cleanup(func() { SetManagerAdapters(nil) })
 
-	cleanupManagerID = "scoop"
+	cleanupManagerID = string(manager.ManagerScoop)
 	removeDryRun = true
 	t.Cleanup(func() {
 		cleanupManagerID = ""
@@ -340,7 +340,7 @@ func TestCleanupOrphansRemoveReportsInstallerFailureWithoutDuplicateContext(t *t
 	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{manager.ManagerScoop: stub})
 	t.Cleanup(func() { SetManagerAdapters(nil) })
 
-	cleanupManagerID = "scoop"
+	cleanupManagerID = string(manager.ManagerScoop)
 	removeDryRun = false
 	t.Cleanup(func() {
 		cleanupManagerID = ""
@@ -447,7 +447,7 @@ func TestCleanupOrphansRemove_DryRunDefault(t *testing.T) {
 	})
 	t.Cleanup(func() { SetManagerAdapters(nil) })
 
-	cleanupManagerID = "scoop"
+	cleanupManagerID = string(manager.ManagerScoop)
 	removeDryRun = true
 	t.Cleanup(func() {
 		cleanupManagerID = ""
@@ -477,7 +477,7 @@ func TestCleanupOrphansRemove_Live(t *testing.T) {
 	})
 	t.Cleanup(func() { SetManagerAdapters(nil) })
 
-	cleanupManagerID = "scoop"
+	cleanupManagerID = string(manager.ManagerScoop)
 	removeDryRun = false
 	t.Cleanup(func() {
 		cleanupManagerID = ""
