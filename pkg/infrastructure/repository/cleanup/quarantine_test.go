@@ -56,7 +56,7 @@ func TestQuarantineRepository_List(t *testing.T) {
 
 	packages := []*cleanup.QuarantinedPackage{
 		{Name: "pkg1", Version: "1.0", ManagerID: "homebrew", Status: cleanup.StatusQuarantined},
-		{Name: "pkg2", Version: "2.0", ManagerID: "npm", Status: cleanup.StatusQuarantined},
+		{Name: "pkg2", Version: "2.0", ManagerID: testNPMManagerID, Status: cleanup.StatusQuarantined},
 		{Name: "pkg3", Version: "3.0", ManagerID: "homebrew", Status: cleanup.StatusRestored},
 	}
 
@@ -81,7 +81,7 @@ func TestQuarantineRepository_ListByManager(t *testing.T) {
 
 	packages := []*cleanup.QuarantinedPackage{
 		{Name: "pkg1", Version: "1.0", ManagerID: "homebrew", Status: cleanup.StatusQuarantined},
-		{Name: "pkg2", Version: "2.0", ManagerID: "npm", Status: cleanup.StatusQuarantined},
+		{Name: "pkg2", Version: "2.0", ManagerID: testNPMManagerID, Status: cleanup.StatusQuarantined},
 		{Name: "pkg3", Version: "3.0", ManagerID: "homebrew", Status: cleanup.StatusQuarantined},
 	}
 

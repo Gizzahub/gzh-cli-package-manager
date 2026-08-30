@@ -26,7 +26,7 @@ func TestDetectOrphansFromPackages(t *testing.T) {
 		{Name: "-", CurrentVersion: "1"},
 	}
 
-	orphans := DetectOrphansFromPackages("npm", pkgs)
+	orphans := DetectOrphansFromPackages(testNPMManagerID, pkgs)
 	if len(orphans) != 4 {
 		t.Fatalf("orphans = %d, want 4", len(orphans))
 	}
@@ -34,7 +34,7 @@ func TestDetectOrphansFromPackages(t *testing.T) {
 	reasons := map[string]string{}
 	for _, o := range orphans {
 		reasons[o.Name] = o.Reason
-		if o.ManagerID != "npm" {
+		if o.ManagerID != testNPMManagerID {
 			t.Errorf("ManagerID = %q, want npm", o.ManagerID)
 		}
 	}
@@ -76,7 +76,7 @@ func TestHeuristicOrphanDetector_Detect(t *testing.T) {
 
 func TestHeuristicOrphanDetector_DetectAll_Error(t *testing.T) {
 	d := NewHeuristicOrphanDetector(map[string]PackageLister{
-		"npm": &stubLister{err: errors.New("boom")},
+		testNPMManagerID: &stubLister{err: errors.New("boom")},
 	})
 	_, err := d.DetectAll(context.Background())
 	if err == nil {

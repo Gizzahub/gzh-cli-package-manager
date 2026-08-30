@@ -94,7 +94,7 @@ func TestResolveCachePaths(t *testing.T) {
 	home := "/home/user"
 	paths := ResolveCachePaths(home, "linux", nil, DefaultKnownCachePaths())
 
-	if got := paths["npm"]; got != filepath.Join(home, ".npm") {
+	if got := paths[testNPMManagerID]; got != filepath.Join(home, ".npm") {
 		t.Fatalf("npm path: got %q", got)
 	}
 	if got := paths["homebrew"]; got != filepath.Join(home, ".cache/Homebrew") {
@@ -112,8 +112,8 @@ func TestResolveCachePaths(t *testing.T) {
 		}
 		return ""
 	}, DefaultKnownCachePaths())
-	if paths["npm"] != "/custom/npm-cache" {
-		t.Fatalf("npm AbsEnv: got %q", paths["npm"])
+	if paths[testNPMManagerID] != "/custom/npm-cache" {
+		t.Fatalf("npm AbsEnv: got %q", paths[testNPMManagerID])
 	}
 
 	// darwin homebrew
@@ -157,7 +157,7 @@ func TestCacheScanner_Scan(t *testing.T) {
 		count int
 	}
 	for _, r := range results {
-		if r.ManagerID == "npm" {
+		if r.ManagerID == testNPMManagerID {
 			npmInfo = &struct {
 				size  float64
 				count int
@@ -176,7 +176,7 @@ func TestCacheScanner_Scan(t *testing.T) {
 	}
 
 	// Repo was updated
-	stored, err := repo.GetInfo(context.Background(), "npm")
+	stored, err := repo.GetInfo(context.Background(), testNPMManagerID)
 	if err != nil {
 		t.Fatalf("GetInfo: %v", err)
 	}
@@ -200,11 +200,11 @@ func TestCacheScanner_ScanManagerFilter(t *testing.T) {
 		WithCacheRepository(NewCacheRepository()),
 	)
 
-	results, err := scanner.Scan(context.Background(), "npm")
+	results, err := scanner.Scan(context.Background(), testNPMManagerID)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
-	if len(results) != 1 || results[0].ManagerID != "npm" {
+	if len(results) != 1 || results[0].ManagerID != testNPMManagerID {
 		t.Fatalf("filter failed: %+v", results)
 	}
 }
@@ -214,7 +214,7 @@ func TestCacheScanner_ScanWrapsStatErrorAndSkipsMissingRoot(t *testing.T) {
 
 	const (
 		home      = "/home/user"
-		managerID = "npm"
+		managerID = testNPMManagerID
 		relPath   = ".npm"
 	)
 	cachePath := filepath.Join(home, relPath)
@@ -268,7 +268,7 @@ func TestCacheScanner_PropagatesWalkErrorsAndPreventsClean(t *testing.T) {
 
 	const (
 		home          = "/home/user"
-		managerID     = "npm"
+		managerID     = testNPMManagerID
 		secondManager = "pip"
 	)
 	cachePath := filepath.Join(home, ".npm")
@@ -403,7 +403,7 @@ func TestCacheScanner_CleanFallbackReportsOnlyRemoveAllResult(t *testing.T) {
 
 	const (
 		home      = "/home/user"
-		managerID = "npm"
+		managerID = testNPMManagerID
 		relPath   = ".npm"
 	)
 	cachePath := filepath.Join(home, relPath)
@@ -484,7 +484,7 @@ func TestCacheScanner_CleanDryRun(t *testing.T) {
 		WithCacheRepository(NewCacheRepository()),
 	)
 
-	summary, err := scanner.Clean(context.Background(), "npm", true)
+	summary, err := scanner.Clean(context.Background(), testNPMManagerID, true)
 	if err != nil {
 		t.Fatalf("Clean dry-run: %v", err)
 	}
@@ -519,7 +519,7 @@ func TestCacheScanner_CleanExecutes(t *testing.T) {
 		WithCacheRepository(NewCacheRepository()),
 	)
 
-	summary, err := scanner.Clean(context.Background(), "npm", false)
+	summary, err := scanner.Clean(context.Background(), testNPMManagerID, false)
 	if err != nil {
 		t.Fatalf("Clean: %v", err)
 	}
@@ -551,7 +551,7 @@ func TestCacheScanner_CleanReportsRepositoryRefreshFailure(t *testing.T) {
 		WithCacheRepository(failingRepo),
 	)
 
-	summary, err := scanner.Clean(context.Background(), "npm", false)
+	summary, err := scanner.Clean(context.Background(), testNPMManagerID, false)
 	if !errors.Is(err, domaincleanup.ErrCacheClearFailed) {
 		t.Fatalf("Clean() error = %v, want ErrCacheClearFailed", err)
 	}

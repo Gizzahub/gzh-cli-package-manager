@@ -61,7 +61,7 @@ func TestCacheRepository_ListAll(t *testing.T) {
 
 	caches := []*cleanup.CacheInfo{
 		{ManagerID: "homebrew", TotalSizeMB: 100},
-		{ManagerID: "npm", TotalSizeMB: 200},
+		{ManagerID: testNPMManagerID, TotalSizeMB: 200},
 		{ManagerID: "pip", TotalSizeMB: 50},
 	}
 
@@ -95,14 +95,14 @@ func TestCacheRepository_UpdateExisting(t *testing.T) {
 
 	// First update
 	info := &cleanup.CacheInfo{
-		ManagerID:   "npm",
+		ManagerID:   testNPMManagerID,
 		TotalSizeMB: 100,
 	}
 	_ = repo.UpdateInfo(ctx, info)
 
 	// Second update (same manager)
 	info2 := &cleanup.CacheInfo{
-		ManagerID:   "npm",
+		ManagerID:   testNPMManagerID,
 		TotalSizeMB: 200,
 	}
 	_ = repo.UpdateInfo(ctx, info2)
@@ -113,7 +113,7 @@ func TestCacheRepository_UpdateExisting(t *testing.T) {
 		t.Errorf("got %d entries, want 1", len(all))
 	}
 
-	got, _ := repo.GetInfo(ctx, "npm")
+	got, _ := repo.GetInfo(ctx, testNPMManagerID)
 	if got.TotalSizeMB != 200 {
 		t.Errorf("got TotalSizeMB %f, want 200", got.TotalSizeMB)
 	}

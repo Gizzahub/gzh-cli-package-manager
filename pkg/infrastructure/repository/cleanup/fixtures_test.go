@@ -1,3 +1,6 @@
 package cleanup
 
-const testGitPackageName = "git"
+const (
+	testGitPackageName = "git"
+	testNPMManagerID   = "npm"
+)
