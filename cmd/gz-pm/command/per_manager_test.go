@@ -68,7 +68,7 @@ Git        Git.Git   2.43.0  winget
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "winget" && len(args) == 1 && args[0] == "--version":
+		case command == "winget" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v1.6.0\n"), nil
 		case command == "winget" && len(args) > 0 && args[0] == listCommand:
 			return testutil.SuccessResult(listOutput), nil
@@ -97,7 +97,7 @@ Git        Git.Git   2.43.0  winget
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "winget" && len(args) == 1 && args[0] == "--version":
+		case command == "winget" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v1.6.0\n"), nil
 		case command == "winget" && len(args) >= 2 && args[0] == "search" && args[1] == testGitPackageName:
 			return testutil.SuccessResult(searchOutput), nil
@@ -132,7 +132,7 @@ git   2.43.0  main   2024-01-01 00:00:00
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "scoop" && len(args) == 1 && args[0] == "--version":
+		case command == "scoop" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v0.3.1\n"), nil
 		case command == "scoop" && len(args) == 1 && args[0] == listCommand:
 			return testutil.SuccessResult(listOutput), nil
@@ -158,7 +158,7 @@ git  2.43.0  main
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "scoop" && len(args) == 1 && args[0] == "--version":
+		case command == "scoop" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v0.3.1\n"), nil
 		case command == "scoop" && len(args) == 2 && args[0] == "search" && args[1] == testGitPackageName:
 			return testutil.SuccessResult(searchOutput), nil
@@ -181,7 +181,7 @@ func TestPerManager_ChocolateyList(t *testing.T) {
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "choco" && len(args) == 1 && args[0] == "--version":
+		case command == "choco" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("2.2.2\n"), nil
 		case command == "choco" && len(args) == 2 && args[0] == listCommand && args[1] == "-r":
 			return testutil.SuccessResult(listOutput), nil
@@ -212,7 +212,7 @@ func TestPerManager_ChocolateySearch(t *testing.T) {
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "choco" && len(args) == 1 && args[0] == "--version":
+		case command == "choco" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("2.2.2\n"), nil
 		case command == "choco" && len(args) == 3 && args[0] == "search" && args[1] == testGitPackageName && args[2] == "-r":
 			return testutil.SuccessResult(searchOutput), nil
@@ -233,7 +233,7 @@ func TestPerManager_ChocolateySearch(t *testing.T) {
 func TestPerManager_NotDetected(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		// Detect uses --version; return failure for all managers.
-		if len(args) == 1 && args[0] == "--version" {
+		if len(args) == 1 && args[0] == testVersionFlag {
 			return testutil.FailureResult(1, command+": not found"), errors.New("not found")
 		}
 		return nil, errors.New("unexpected command")
@@ -265,7 +265,7 @@ func TestPerManager_AdapterNotInitialized(t *testing.T) {
 
 func TestPerManager_UnknownOutputFormat(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == "winget" && len(args) == 1 && args[0] == "--version" {
+		if command == "winget" && len(args) == 1 && args[0] == testVersionFlag {
 			return testutil.SuccessResult("v1.6.0\n"), nil
 		}
 		if command == "winget" && len(args) > 0 && args[0] == listCommand {
@@ -285,7 +285,7 @@ func TestPerManager_UnknownOutputFormat(t *testing.T) {
 
 func TestPerManager_WingetInstallDryRun(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == "winget" && len(args) == 1 && args[0] == "--version" {
+		if command == "winget" && len(args) == 1 && args[0] == testVersionFlag {
 			return testutil.SuccessResult("v1.6.0\n"), nil
 		}
 		return nil, errors.New("unexpected install call on dry-run: " + strings.Join(args, " "))
@@ -304,7 +304,7 @@ func TestPerManager_WingetUninstall(t *testing.T) {
 	var uninstallCalled bool
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "winget" && len(args) == 1 && args[0] == "--version":
+		case command == "winget" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v1.6.0\n"), nil
 		case command == "winget" && len(args) > 0 && args[0] == "uninstall":
 			uninstallCalled = true
@@ -328,7 +328,7 @@ func TestPerManager_WingetUninstall(t *testing.T) {
 
 func TestPerManager_WingetUpgradeAllDryRun(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == "winget" && len(args) == 1 && args[0] == "--version" {
+		if command == "winget" && len(args) == 1 && args[0] == testVersionFlag {
 			return testutil.SuccessResult("v1.6.0\n"), nil
 		}
 		// Update dry-run does not call executor
@@ -352,7 +352,7 @@ winget  https://cdn.winget.microsoft.com/cache
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "winget" && len(args) == 1 && args[0] == "--version":
+		case command == "winget" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v1.6.0\n"), nil
 		case command == "winget" && len(args) == 2 && args[0] == "source" && args[1] == "list":
 			return testutil.SuccessResult(sourceOutput), nil
@@ -373,7 +373,7 @@ winget  https://cdn.winget.microsoft.com/cache
 func TestPerManager_ScoopInstallUninstall(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "scoop" && len(args) == 1 && args[0] == "--version":
+		case command == "scoop" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v0.3.1\n"), nil
 		case command == "scoop" && len(args) == 2 && args[0] == "install" && args[1] == testGitPackageName:
 			return testutil.SuccessResult("Installing 'git'"), nil
@@ -405,7 +405,7 @@ main https://github.com/ScoopInstaller/Main
 
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "scoop" && len(args) == 1 && args[0] == "--version":
+		case command == "scoop" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("v0.3.1\n"), nil
 		case command == "scoop" && len(args) == 2 && args[0] == "bucket" && args[1] == "list":
 			return testutil.SuccessResult(bucketOutput), nil
@@ -443,7 +443,7 @@ main https://github.com/ScoopInstaller/Main
 func TestPerManager_ChocolateyInstallElevation(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		switch {
-		case command == "choco" && len(args) == 1 && args[0] == "--version":
+		case command == "choco" && len(args) == 1 && args[0] == testVersionFlag:
 			return testutil.SuccessResult("2.2.2\n"), nil
 		case command == "choco" && len(args) >= 1 && args[0] == "install":
 			return testutil.FailureResult(1, "Access is denied. Requires elevation."), nil
@@ -463,7 +463,7 @@ func TestPerManager_ChocolateyInstallElevation(t *testing.T) {
 
 func TestPerManager_ChocolateyUpgradeDryRun(t *testing.T) {
 	installTestAdapters(t, func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-		if command == "choco" && len(args) == 1 && args[0] == "--version" {
+		if command == "choco" && len(args) == 1 && args[0] == testVersionFlag {
 			return testutil.SuccessResult("2.2.2\n"), nil
 		}
 		return nil, errors.New("unexpected on dry-run")

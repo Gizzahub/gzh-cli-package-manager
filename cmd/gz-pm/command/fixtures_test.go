@@ -6,4 +6,5 @@ const (
 	testNPMManagerID      = "npm"
 	testPythonPackageName = "python"
 	testQuarantineVersion = "1.0"
+	testVersionFlag       = "--version"
 )
