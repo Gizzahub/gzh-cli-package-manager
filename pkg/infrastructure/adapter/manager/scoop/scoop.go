@@ -269,8 +269,8 @@ func parseScoopQuotedResult(line string) (string, string) {
 	version := ""
 	if open := strings.Index(rest[end:], "("); open >= 0 {
 		frag := rest[end+open+1:]
-		if close := strings.Index(frag, ")"); close >= 0 {
-			version = strings.TrimSpace(frag[:close])
+		if closeIndex := strings.Index(frag, ")"); closeIndex >= 0 {
+			version = strings.TrimSpace(frag[:closeIndex])
 		}
 	}
 	return name, version
