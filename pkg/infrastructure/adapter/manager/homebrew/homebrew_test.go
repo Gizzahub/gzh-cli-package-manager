@@ -3,6 +3,7 @@ package homebrew
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
@@ -22,6 +23,74 @@ const (
 	testCommandExecutionErrorCaseName = "command execution error"
 	testBrewStableStrategy            = "stable"
 )
+
+type homebrewUpdateCall struct {
+	args   []string
+	err    error
+	result *output.ExecutionResult
+}
+
+type homebrewUpdateExpectation struct {
+	err     error
+	message string
+	success bool
+	updated []string
+	wantErr bool
+}
+
+func newHomebrewUpdateExecutor(t *testing.T, calls []homebrewUpdateCall) (executor testutil.ExecutorFunc, verify func()) {
+	t.Helper()
+	callIndex := 0
+	executor = func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		t.Helper()
+		if callIndex == len(calls) {
+			t.Fatalf("unexpected command %q %v", command, args)
+		}
+		call := calls[callIndex]
+		callIndex++
+		if command != brewCommand || !slices.Equal(args, call.args) {
+			t.Errorf("command = %q %v, want %q %v", command, args, brewCommand, call.args)
+		}
+		return call.result, call.err
+	}
+	verify = func() {
+		t.Helper()
+		if callIndex != len(calls) {
+			t.Errorf("command calls = %d, want %d", callIndex, len(calls))
+		}
+	}
+	return executor, verify
+}
+
+func assertHomebrewUpdateResult(t *testing.T, result *adapterm.UpdateResult, err error, want homebrewUpdateExpectation) {
+	t.Helper()
+	switch {
+	case want.err != nil:
+		if !errors.Is(err, want.err) {
+			t.Fatalf("Update() error = %v, want errors.Is(..., %v)", err, want.err)
+		}
+	case want.wantErr:
+		if err == nil {
+			t.Fatal("Update() error = nil, want error")
+		}
+	default:
+		if err != nil {
+			t.Fatalf("Update() error = %v, want nil", err)
+		}
+	}
+	if result == nil {
+		t.Fatal("Update() result = nil")
+	}
+	if result.Success != want.success {
+		t.Errorf("Success = %v, want %v", result.Success, want.success)
+	}
+	if result.Message != want.message {
+		t.Errorf("Message = %q, want %q", result.Message, want.message)
+	}
+	if !slices.Equal(result.UpdatedPackages, want.updated) {
+		t.Errorf("UpdatedPackages = %v, want %v", result.UpdatedPackages, want.updated)
+	}
+}
 
 func TestAdapter_GetConfigPath(t *testing.T) {
 	execFunc := func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
@@ -556,150 +625,109 @@ func TestAdapter_ListPackages_EdgeCases(t *testing.T) {
 }
 
 func TestAdapter_Update(t *testing.T) {
+	updateErr := errors.New("network error")
+	upgradeErr := errors.New("upgrade error")
 	tests := []struct {
-		name        string
-		dryRun      bool
-		strategy    string
-		execFunc    func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-		wantSuccess bool
-		wantErr     bool
+		name  string
+		opts  adapterm.UpdateOptions
+		calls []homebrewUpdateCall
+		want  homebrewUpdateExpectation
 	}{
 		{
-			name:   "dry run mode",
-			dryRun: true,
-			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-				return &output.ExecutionResult{ExitCode: 0}, nil
+			name: "dry run mode",
+			opts: adapterm.UpdateOptions{DryRun: true},
+			want: homebrewUpdateExpectation{
+				success: true,
+				updated: []string{},
+				message: "Dry-run: would update Homebrew and packages",
 			},
-			wantSuccess: true,
-			wantErr:     false,
 		},
 		{
-			name:     "update and upgrade success",
-			dryRun:   false,
-			strategy: testBrewStableStrategy,
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand {
-					if len(args) == 1 && args[0] == testBrewUpdateCommand {
-						return &output.ExecutionResult{
-							ExitCode: 0,
-							Stdout:   "Updated Homebrew\n",
-						}, nil
-					}
-					if len(args) == 1 && args[0] == testBrewUpgradeCommand {
-						return &output.ExecutionResult{
-							ExitCode: 0,
-							Stdout:   "Upgrading git\n==> Upgrading 1 outdated package:\ngit 2.42.0 -> 2.43.0\n",
-						}, nil
-					}
-				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+			name: "update and upgrade success",
+			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyStable},
+			calls: []homebrewUpdateCall{
+				{args: []string{testBrewUpdateCommand}, result: testutil.SuccessResult("Updated Homebrew\n")},
+				{args: []string{testBrewUpgradeCommand}, result: testutil.SuccessResult("Upgrading git\n==> Upgrading 1 outdated package:\ngit 2.42.0 -> 2.43.0\n")},
 			},
-			wantSuccess: true,
-			wantErr:     false,
+			want: homebrewUpdateExpectation{
+				success: true,
+				updated: []string{"git"},
+				message: "Homebrew and 1 packages updated successfully",
+			},
 		},
 		{
-			name:     "update fails",
-			dryRun:   false,
-			strategy: testBrewStableStrategy,
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == testBrewUpdateCommand {
-					return nil, errors.New("network error")
-				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+			name: "update fails",
+			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyStable},
+			calls: []homebrewUpdateCall{
+				{args: []string{testBrewUpdateCommand}, err: updateErr},
 			},
-			wantSuccess: false,
-			wantErr:     true,
+			want: homebrewUpdateExpectation{
+				err:     updateErr,
+				success: false,
+				updated: []string{},
+				message: "brew update failed: network error",
+			},
 		},
 		{
-			name:     "update non-zero exit code",
-			dryRun:   false,
-			strategy: testBrewStableStrategy,
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == testBrewUpdateCommand {
-					return &output.ExecutionResult{
-						ExitCode: 1,
-						Stderr:   "update failed",
-					}, nil
-				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+			name: "update non-zero exit code",
+			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyStable},
+			calls: []homebrewUpdateCall{
+				{args: []string{testBrewUpdateCommand}, result: testutil.FailureResult(1, "update failed")},
 			},
-			wantSuccess: false,
-			wantErr:     true,
+			want: homebrewUpdateExpectation{
+				success: false,
+				updated: []string{},
+				message: "brew update failed: update failed",
+				wantErr: true,
+			},
 		},
 		{
-			name:     "fixed strategy skips upgrade",
-			dryRun:   false,
-			strategy: "fixed",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand && len(args) == 1 && args[0] == testBrewUpdateCommand {
-					return &output.ExecutionResult{
-						ExitCode: 0,
-						Stdout:   "Updated Homebrew\n",
-					}, nil
-				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+			name: "fixed strategy skips upgrade",
+			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyFixed},
+			calls: []homebrewUpdateCall{
+				{args: []string{testBrewUpdateCommand}, result: testutil.SuccessResult("Updated Homebrew\n")},
 			},
-			wantSuccess: true,
-			wantErr:     false,
+			want: homebrewUpdateExpectation{
+				success: true,
+				updated: []string{},
+				message: "Strategy 'fixed': Homebrew updated, packages not upgraded",
+			},
 		},
 		{
-			name:     "upgrade fails with error",
-			dryRun:   false,
-			strategy: testBrewStableStrategy,
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand {
-					if len(args) == 1 && args[0] == testBrewUpdateCommand {
-						return &output.ExecutionResult{ExitCode: 0}, nil
-					}
-					if len(args) == 1 && args[0] == testBrewUpgradeCommand {
-						return nil, errors.New("upgrade error")
-					}
-				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+			name: "upgrade fails with error",
+			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyStable},
+			calls: []homebrewUpdateCall{
+				{args: []string{testBrewUpdateCommand}, result: testutil.SuccessResult("")},
+				{args: []string{testBrewUpgradeCommand}, err: upgradeErr},
 			},
-			wantSuccess: true, // Update succeeded, upgrade failed but not fatal.
-			wantErr:     false,
+			want: homebrewUpdateExpectation{
+				success: true,
+				updated: []string{},
+				message: "Homebrew updated, but package upgrade failed",
+			},
 		},
 		{
-			name:     "upgrade non-zero exit code",
-			dryRun:   false,
-			strategy: testBrewStableStrategy,
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == brewCommand {
-					if len(args) == 1 && args[0] == testBrewUpdateCommand {
-						return &output.ExecutionResult{ExitCode: 0}, nil
-					}
-					if len(args) == 1 && args[0] == testBrewUpgradeCommand {
-						return &output.ExecutionResult{
-							ExitCode: 1,
-							Stderr:   "some packages failed",
-						}, nil
-					}
-				}
-				return &output.ExecutionResult{ExitCode: 0}, nil
+			name: "upgrade non-zero exit code",
+			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyStable},
+			calls: []homebrewUpdateCall{
+				{args: []string{testBrewUpdateCommand}, result: testutil.SuccessResult("")},
+				{args: []string{testBrewUpgradeCommand}, result: testutil.FailureResult(1, "some packages failed")},
 			},
-			wantSuccess: true,
-			wantErr:     false,
+			want: homebrewUpdateExpectation{
+				success: true,
+				updated: []string{},
+				message: "Homebrew updated, but some packages failed to upgrade",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
+			executor, verify := newHomebrewUpdateExecutor(t, tt.calls)
+			result, err := NewAdapter(testutil.NewMockExecutor(executor), testutil.NewMockLogger()).Update(context.Background(), tt.opts)
+			verify()
 
-			opts := adapterm.UpdateOptions{
-				DryRun:   tt.dryRun,
-				Strategy: adapterm.UpdateStrategy(tt.strategy),
-			}
-
-			result, err := adapter.Update(context.Background(), opts)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Update() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if result != nil && result.Success != tt.wantSuccess {
-				t.Errorf("Update() success = %v, want %v", result.Success, tt.wantSuccess)
-			}
+			assertHomebrewUpdateResult(t, result, err, tt.want)
 		})
 	}
 }
