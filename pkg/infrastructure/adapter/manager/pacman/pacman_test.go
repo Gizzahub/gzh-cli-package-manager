@@ -3,6 +3,7 @@ package pacman
 import (
 	"context"
 	"errors"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -36,6 +37,87 @@ type pacmanListPackagesExpectation struct {
 	packages []manager.Package
 	err      error
 	wantErr  bool
+}
+
+type pacmanHealthCall struct {
+	command string
+	args    []string
+	result  *output.ExecutionResult
+	err     error
+}
+
+type pacmanHealthWarning struct {
+	message string
+	fields  []output.Field
+}
+
+type pacmanHealthExpectation struct {
+	status   manager.Status
+	warnings []pacmanHealthWarning
+}
+
+type pacmanHealthLogger struct {
+	warnings []pacmanHealthWarning
+}
+
+func (l *pacmanHealthLogger) Debug(_ context.Context, _ string, _ ...output.Field) {}
+func (l *pacmanHealthLogger) Info(_ context.Context, _ string, _ ...output.Field)  {}
+func (l *pacmanHealthLogger) Error(_ context.Context, _ string, _ error, _ ...output.Field) {
+}
+
+func (l *pacmanHealthLogger) Warn(_ context.Context, message string, fields ...output.Field) {
+	l.warnings = append(l.warnings, pacmanHealthWarning{
+		message: message,
+		fields:  append([]output.Field(nil), fields...),
+	})
+}
+
+func newPacmanHealthExecutor(t *testing.T, calls []pacmanHealthCall) (executor testutil.ExecutorFunc, verify func()) {
+	t.Helper()
+
+	callIndex := 0
+	executor = func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		t.Helper()
+		if callIndex == len(calls) {
+			t.Fatalf("unexpected command %q %v", command, args)
+		}
+
+		call := calls[callIndex]
+		callIndex++
+		if command != call.command || !slices.Equal(args, call.args) {
+			t.Errorf("command = %q %v, want %q %v", command, args, call.command, call.args)
+		}
+		return call.result, call.err
+	}
+	verify = func() {
+		t.Helper()
+		if callIndex != len(calls) {
+			t.Errorf("command calls = %d, want %d", callIndex, len(calls))
+		}
+	}
+	return executor, verify
+}
+
+func pacmanLockFileCall(result *output.ExecutionResult, err error) pacmanHealthCall {
+	return pacmanHealthCall{
+		command: "test",
+		args:    []string{"-f", "/var/lib/pacman/db.lck"},
+		result:  result,
+		err:     err,
+	}
+}
+
+func assertPacmanHealth(t *testing.T, status manager.Status, err error, logger *pacmanHealthLogger, want pacmanHealthExpectation) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("CheckHealth() error = %v, want nil", err)
+	}
+	if status != want.status {
+		t.Errorf("CheckHealth() status = %v, want %v", status, want.status)
+	}
+	if !reflect.DeepEqual(logger.warnings, want.warnings) {
+		t.Errorf("CheckHealth() warnings = %#v, want %#v", logger.warnings, want.warnings)
+	}
 }
 
 func newPacmanListPackagesExecutor(t *testing.T, calls []pacmanListPackagesCall) (executor testutil.ExecutorFunc, verify func()) {
@@ -367,77 +449,95 @@ func TestAdapter_ListPackages(t *testing.T) {
 
 func TestAdapter_CheckHealth(t *testing.T) {
 	tests := []struct {
-		name     string
-		execFunc func(ctx context.Context, command string, args ...string) (*output.ExecutionResult, error)
-		want     manager.Status
-		wantErr  bool
+		name  string
+		calls []pacmanHealthCall
+		want  pacmanHealthExpectation
 	}{
 		{
 			name: "healthy system",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == pacmanCommand && len(args) == 1 && args[0] == queryFlag {
-					return &output.ExecutionResult{
-						ExitCode: 0,
-						Stdout:   "git\nfirefox\n",
-					}, nil
-				}
-				if command == "test" && len(args) == 2 && args[0] == "-f" {
-					return &output.ExecutionResult{
-						ExitCode: 1, // Lock file doesn't exist
-					}, nil
-				}
-				return nil, errors.New("unexpected command")
+			calls: []pacmanHealthCall{
+				{
+					command: pacmanCommand,
+					args:    []string{queryFlag},
+					result:  &output.ExecutionResult{Stdout: "git\nfirefox\n"},
+				},
+				pacmanLockFileCall(&output.ExecutionResult{ExitCode: 1}, nil),
 			},
-			want:    manager.StatusHealthy,
-			wantErr: false,
+			want: pacmanHealthExpectation{status: manager.StatusHealthy},
 		},
 		{
-			name: "degraded with lock file",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == pacmanCommand && len(args) == 1 && args[0] == queryFlag {
-					return &output.ExecutionResult{
-						ExitCode: 0,
-						Stdout:   "git\n",
-					}, nil
-				}
-				if command == "test" && len(args) == 2 && args[0] == "-f" {
-					return &output.ExecutionResult{
-						ExitCode: 0, // Lock file exists
-					}, nil
-				}
-				return nil, errors.New("unexpected command")
+			name: "degraded with a database lock file",
+			calls: []pacmanHealthCall{
+				{
+					command: pacmanCommand,
+					args:    []string{queryFlag},
+					result:  &output.ExecutionResult{},
+				},
+				pacmanLockFileCall(&output.ExecutionResult{}, nil),
 			},
-			want:    manager.StatusDegraded,
-			wantErr: false,
+			want: pacmanHealthExpectation{
+				status: manager.StatusDegraded,
+				warnings: []pacmanHealthWarning{
+					{
+						message: "Pacman database lock file exists",
+						fields:  []output.Field{{Key: "lockfile", Value: "/var/lib/pacman/db.lck"}},
+					},
+				},
+			},
 		},
 		{
-			name: "database query fails",
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == pacmanCommand && len(args) == 1 && args[0] == queryFlag {
-					return &output.ExecutionResult{
-						ExitCode: 1,
-						Stderr:   "database error",
-					}, nil
-				}
-				return nil, errors.New("unexpected command")
+			name: "reports an inaccessible database as an error without probing the lock file",
+			calls: []pacmanHealthCall{
+				{
+					command: pacmanCommand,
+					args:    []string{queryFlag},
+					result:  &output.ExecutionResult{ExitCode: 1, Stdout: "ignored", Stderr: "database error"},
+				},
 			},
-			want:    manager.StatusError,
-			wantErr: false,
+			want: pacmanHealthExpectation{status: manager.StatusError},
+		},
+		{
+			name: "reports a database executor error as degraded",
+			calls: []pacmanHealthCall{
+				{
+					command: pacmanCommand,
+					args:    []string{queryFlag},
+					err:     errPacmanListPackages,
+				},
+			},
+			want: pacmanHealthExpectation{
+				status: manager.StatusDegraded,
+				warnings: []pacmanHealthWarning{
+					{
+						message: "Failed to query pacman database",
+						fields:  []output.Field{{Key: "error", Value: errPacmanListPackages.Error()}},
+					},
+				},
+			},
+		},
+		{
+			name: "keeps a lock probe execution error healthy",
+			calls: []pacmanHealthCall{
+				{
+					command: pacmanCommand,
+					args:    []string{queryFlag},
+					result:  &output.ExecutionResult{},
+				},
+				pacmanLockFileCall(nil, errPacmanListPackages),
+			},
+			want: pacmanHealthExpectation{status: manager.StatusHealthy},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
+			executor, verify := newPacmanHealthExecutor(t, tt.calls)
+			defer verify()
+			logger := &pacmanHealthLogger{}
+			adapter := NewAdapter(testutil.NewMockExecutor(executor), logger)
 
-			got, err := adapter.CheckHealth(context.Background())
-			if (err != nil) != tt.wantErr {
-				t.Errorf("CheckHealth() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("CheckHealth() = %v, want %v", got, tt.want)
-			}
+			status, err := adapter.CheckHealth(context.Background())
+			assertPacmanHealth(t, status, err, logger, tt.want)
 		})
 	}
 }
@@ -478,22 +578,6 @@ func TestAdapter_GetBinaryPath_Error(t *testing.T) {
 	_, err := adapter.GetBinaryPath(context.Background())
 	if err == nil {
 		t.Error("Expected error for executor failure")
-	}
-}
-
-func TestAdapter_CheckHealth_ExecutorError(t *testing.T) {
-	execFunc := func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
-		return nil, errors.New("execution failed")
-	}
-	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
-
-	status, err := adapter.CheckHealth(context.Background())
-	if err != nil {
-		t.Errorf("CheckHealth() should not return error, got %v", err)
-	}
-
-	if status != manager.StatusDegraded {
-		t.Errorf("CheckHealth() = %v, want StatusDegraded", status)
 	}
 }
 
