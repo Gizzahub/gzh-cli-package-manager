@@ -24,6 +24,11 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
 
+const (
+	managerFieldKey = "manager"
+	errorFieldKey   = "error"
+)
+
 // DetectingManagerRepository extends ManagerRepository with real detection.
 // It uses adapters to detect and query actual package managers on the system.
 type DetectingManagerRepository struct {
@@ -83,8 +88,8 @@ func (r *DetectingManagerRepository) FindAll(ctx context.Context) ([]*manager.Ma
 	for _, mgr := range managers {
 		if err := r.detectAndUpdate(ctx, mgr); err != nil {
 			r.logger.Warn(ctx, "Failed to detect manager",
-				output.Field{Key: "manager", Value: string(mgr.ID)},
-				output.Field{Key: "error", Value: err.Error()})
+				output.Field{Key: managerFieldKey, Value: string(mgr.ID)},
+				output.Field{Key: errorFieldKey, Value: err.Error()})
 			// Continue with other managers even if one fails
 		}
 	}
@@ -118,8 +123,8 @@ func (r *DetectingManagerRepository) FindByID(ctx context.Context, id manager.Ma
 
 	if err := r.detectAndUpdate(ctx, mgr); err != nil {
 		r.logger.Warn(ctx, "Failed to detect manager",
-			output.Field{Key: "manager", Value: string(id)},
-			output.Field{Key: "error", Value: err.Error()})
+			output.Field{Key: managerFieldKey, Value: string(id)},
+			output.Field{Key: errorFieldKey, Value: err.Error()})
 	}
 
 	return mgr, nil
@@ -158,8 +163,8 @@ func (r *DetectingManagerRepository) detectAndUpdate(ctx context.Context, mgr *m
 		mgr.Version = version
 	} else {
 		r.logger.Warn(ctx, "Failed to get version",
-			output.Field{Key: "manager", Value: string(mgr.ID)},
-			output.Field{Key: "error", Value: err.Error()})
+			output.Field{Key: managerFieldKey, Value: string(mgr.ID)},
+			output.Field{Key: errorFieldKey, Value: err.Error()})
 	}
 
 	// Get binary path
@@ -181,8 +186,8 @@ func (r *DetectingManagerRepository) detectAndUpdate(ctx context.Context, mgr *m
 		mgr.Packages = packages
 	} else {
 		r.logger.Warn(ctx, "Failed to list packages",
-			output.Field{Key: "manager", Value: string(mgr.ID)},
-			output.Field{Key: "error", Value: err.Error()})
+			output.Field{Key: managerFieldKey, Value: string(mgr.ID)},
+			output.Field{Key: errorFieldKey, Value: err.Error()})
 	}
 
 	// Check health
@@ -191,8 +196,8 @@ func (r *DetectingManagerRepository) detectAndUpdate(ctx context.Context, mgr *m
 	} else {
 		mgr.Status = manager.StatusDegraded
 		r.logger.Warn(ctx, "Failed to check health",
-			output.Field{Key: "manager", Value: string(mgr.ID)},
-			output.Field{Key: "error", Value: err.Error()})
+			output.Field{Key: managerFieldKey, Value: string(mgr.ID)},
+			output.Field{Key: errorFieldKey, Value: err.Error()})
 	}
 
 	mgr.LastChecked = now
