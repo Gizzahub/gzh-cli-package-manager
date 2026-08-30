@@ -99,14 +99,14 @@ Git        Git.Git   2.43.0  winget
 		switch {
 		case command == "winget" && len(args) == 1 && args[0] == "--version":
 			return testutil.SuccessResult("v1.6.0\n"), nil
-		case command == "winget" && len(args) >= 2 && args[0] == "search" && args[1] == "git":
+		case command == "winget" && len(args) >= 2 && args[0] == "search" && args[1] == testGitPackageName:
 			return testutil.SuccessResult(searchOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "winget", "search", "git", "--output", "json")
+	out, err := executePerManagerCmd(t, "winget", "search", testGitPackageName, "--output", "json")
 	if err != nil {
 		t.Fatalf("winget search failed: %v\noutput: %s", err, out)
 	}
@@ -145,7 +145,7 @@ git   2.43.0  main   2024-01-01 00:00:00
 	if err != nil {
 		t.Fatalf("scoop list failed: %v\noutput: %s", err, out)
 	}
-	if !strings.Contains(out, "git") || !strings.Contains(out, "7zip") {
+	if !strings.Contains(out, testGitPackageName) || !strings.Contains(out, "7zip") {
 		t.Errorf("expected packages in output, got: %s", out)
 	}
 }
@@ -160,18 +160,18 @@ git  2.43.0  main
 		switch {
 		case command == "scoop" && len(args) == 1 && args[0] == "--version":
 			return testutil.SuccessResult("v0.3.1\n"), nil
-		case command == "scoop" && len(args) == 2 && args[0] == "search" && args[1] == "git":
+		case command == "scoop" && len(args) == 2 && args[0] == "search" && args[1] == testGitPackageName:
 			return testutil.SuccessResult(searchOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "scoop", "search", "git")
+	out, err := executePerManagerCmd(t, "scoop", "search", testGitPackageName)
 	if err != nil {
 		t.Fatalf("scoop search failed: %v\noutput: %s", err, out)
 	}
-	if !strings.Contains(out, "git") {
+	if !strings.Contains(out, testGitPackageName) {
 		t.Errorf("expected git in output, got: %s", out)
 	}
 }
@@ -214,18 +214,18 @@ func TestPerManager_ChocolateySearch(t *testing.T) {
 		switch {
 		case command == "choco" && len(args) == 1 && args[0] == "--version":
 			return testutil.SuccessResult("2.2.2\n"), nil
-		case command == "choco" && len(args) == 3 && args[0] == "search" && args[1] == "git" && args[2] == "-r":
+		case command == "choco" && len(args) == 3 && args[0] == "search" && args[1] == testGitPackageName && args[2] == "-r":
 			return testutil.SuccessResult(searchOutput), nil
 		default:
 			return nil, errors.New("unexpected command: " + command + " " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "chocolatey", "search", "git")
+	out, err := executePerManagerCmd(t, "chocolatey", "search", testGitPackageName)
 	if err != nil {
 		t.Fatalf("chocolatey search failed: %v\noutput: %s", err, out)
 	}
-	if !strings.Contains(out, "git") {
+	if !strings.Contains(out, testGitPackageName) {
 		t.Errorf("expected git in output, got: %s", out)
 	}
 }
@@ -375,20 +375,20 @@ func TestPerManager_ScoopInstallUninstall(t *testing.T) {
 		switch {
 		case command == "scoop" && len(args) == 1 && args[0] == "--version":
 			return testutil.SuccessResult("v0.3.1\n"), nil
-		case command == "scoop" && len(args) == 2 && args[0] == "install" && args[1] == "git":
+		case command == "scoop" && len(args) == 2 && args[0] == "install" && args[1] == testGitPackageName:
 			return testutil.SuccessResult("Installing 'git'"), nil
-		case command == "scoop" && len(args) == 2 && args[0] == "uninstall" && args[1] == "git":
+		case command == "scoop" && len(args) == 2 && args[0] == "uninstall" && args[1] == testGitPackageName:
 			return testutil.SuccessResult("Uninstalling 'git'"), nil
 		default:
 			return nil, errors.New("unexpected: " + strings.Join(args, " "))
 		}
 	})
 
-	out, err := executePerManagerCmd(t, "scoop", "install", "git")
+	out, err := executePerManagerCmd(t, "scoop", "install", testGitPackageName)
 	if err != nil {
 		t.Fatalf("scoop install: %v\n%s", err, out)
 	}
-	out, err = executePerManagerCmd(t, "scoop", "uninstall", "git", "--dry-run")
+	out, err = executePerManagerCmd(t, "scoop", "uninstall", testGitPackageName, "--dry-run")
 	if err != nil {
 		t.Fatalf("scoop uninstall dry-run: %v\n%s", err, out)
 	}
@@ -452,7 +452,7 @@ func TestPerManager_ChocolateyInstallElevation(t *testing.T) {
 		}
 	})
 
-	_, err := executePerManagerCmd(t, "chocolatey", "install", "git")
+	_, err := executePerManagerCmd(t, "chocolatey", "install", testGitPackageName)
 	if err == nil {
 		t.Fatal("expected elevation error")
 	}
@@ -517,7 +517,7 @@ func TestPerManagerOutputWriteErrorsPreserveCauseAndContext(t *testing.T) {
 			name:    "packages JSON",
 			context: packagesOutputContext,
 			write: func(out io.Writer) error {
-				return writePackages(out, "json", "winget", "list", []manager.Package{{Name: "git"}})
+				return writePackages(out, "json", "winget", "list", []manager.Package{{Name: testGitPackageName}})
 			},
 		},
 		{
@@ -531,7 +531,7 @@ func TestPerManagerOutputWriteErrorsPreserveCauseAndContext(t *testing.T) {
 			name:    "packages item text",
 			context: packagesOutputContext,
 			write: func(out io.Writer) error {
-				return writePackages(out, "text", "winget", "list", []manager.Package{{Name: "git"}})
+				return writePackages(out, "text", "winget", "list", []manager.Package{{Name: testGitPackageName}})
 			},
 		},
 	}

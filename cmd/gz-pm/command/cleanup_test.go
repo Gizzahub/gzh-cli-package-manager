@@ -192,7 +192,7 @@ func TestCleanupQuarantinePurge(t *testing.T) {
 func TestCleanupOrphansList(t *testing.T) {
 	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{
 		manager.ManagerScoop: &stubListAdapter{packages: []manager.Package{
-			{Name: "git", CurrentVersion: "2.43.0"},
+			{Name: testGitPackageName, CurrentVersion: "2.43.0"},
 			{Name: "", CurrentVersion: "1.0"},
 			{Name: "unknown", CurrentVersion: "0.1"},
 		}},
@@ -228,7 +228,7 @@ func TestCleanupVersionsList(t *testing.T) {
 		manager.ManagerWinget: &stubListAdapter{packages: []manager.Package{
 			{Name: "python", CurrentVersion: "3.11.0"},
 			{Name: "python", CurrentVersion: "3.12.0"},
-			{Name: "git", CurrentVersion: "2.43.0"},
+			{Name: testGitPackageName, CurrentVersion: "2.43.0"},
 		}},
 	})
 	t.Cleanup(func() { SetManagerAdapters(nil) })
@@ -440,7 +440,7 @@ func (s *stubListAdapter) Uninstall(_ context.Context, pkgID string, dryRun bool
 func TestCleanupOrphansRemove_DryRunDefault(t *testing.T) {
 	stub := &stubListAdapter{packages: []manager.Package{
 		{Name: "ghost", CurrentVersion: ""},
-		{Name: "git", CurrentVersion: "2.0"},
+		{Name: testGitPackageName, CurrentVersion: "2.0"},
 	}}
 	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{
 		manager.ManagerScoop: stub,
