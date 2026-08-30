@@ -10,7 +10,7 @@ import (
 func TestScanVersionsFromPackages_MultiVersion(t *testing.T) {
 	pkgs := []manager.Package{
 		{Name: testPythonPackageName, CurrentVersion: testPythonOldVersion},
-		{Name: testPythonPackageName, CurrentVersion: "3.12.0"},
+		{Name: testPythonPackageName, CurrentVersion: testPythonCurrentVersion},
 		{Name: testGitPackageName, CurrentVersion: testGitCurrentVersion},
 		{Name: testPythonPackageName, CurrentVersion: testPythonOldVersion}, // duplicate ignored
 	}
@@ -30,7 +30,7 @@ func TestScanVersionsFromPackages_MultiVersion(t *testing.T) {
 		}
 		if v.IsCurrent {
 			currentCount++
-			if v.Version != "3.12.0" {
+			if v.Version != testPythonCurrentVersion {
 				t.Errorf("current version = %q, want 3.12.0 (lexicographic last)", v.Version)
 			}
 		}
@@ -54,7 +54,7 @@ func TestHeuristicVersionScanner_Scan(t *testing.T) {
 		testASDFManagerID: &stubLister{packages: []manager.Package{
 			{Name: testNodePackageName, CurrentVersion: "18.0.0"},
 			{Name: testNodePackageName, CurrentVersion: "20.0.0"},
-			{Name: testPythonPackageName, CurrentVersion: "3.12.0"},
+			{Name: testPythonPackageName, CurrentVersion: testPythonCurrentVersion},
 			{Name: testPythonPackageName, CurrentVersion: testPythonOldVersion},
 		}},
 	})
