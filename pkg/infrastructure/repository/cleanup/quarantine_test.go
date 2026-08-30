@@ -55,7 +55,7 @@ func TestQuarantineRepository_List(t *testing.T) {
 	ctx := context.Background()
 
 	packages := []*cleanup.QuarantinedPackage{
-		{Name: "pkg1", Version: "1.0", ManagerID: testHomebrewManagerID, Status: cleanup.StatusQuarantined},
+		{Name: "pkg1", Version: testVersionOne, ManagerID: testHomebrewManagerID, Status: cleanup.StatusQuarantined},
 		{Name: "pkg2", Version: "2.0", ManagerID: testNPMManagerID, Status: cleanup.StatusQuarantined},
 		{Name: "pkg3", Version: "3.0", ManagerID: testHomebrewManagerID, Status: cleanup.StatusRestored},
 	}
@@ -80,7 +80,7 @@ func TestQuarantineRepository_ListByManager(t *testing.T) {
 	ctx := context.Background()
 
 	packages := []*cleanup.QuarantinedPackage{
-		{Name: "pkg1", Version: "1.0", ManagerID: testHomebrewManagerID, Status: cleanup.StatusQuarantined},
+		{Name: "pkg1", Version: testVersionOne, ManagerID: testHomebrewManagerID, Status: cleanup.StatusQuarantined},
 		{Name: "pkg2", Version: "2.0", ManagerID: testNPMManagerID, Status: cleanup.StatusQuarantined},
 		{Name: "pkg3", Version: "3.0", ManagerID: testHomebrewManagerID, Status: cleanup.StatusQuarantined},
 	}
@@ -129,8 +129,8 @@ func TestQuarantineRepository_FindExpired(t *testing.T) {
 
 	now := time.Now()
 	packages := []*cleanup.QuarantinedPackage{
-		{Name: "old", Version: "1.0", ManagerID: "brew", QuarantinedAt: now.AddDate(0, 0, -31), Status: cleanup.StatusQuarantined},
-		{Name: "recent", Version: "1.0", ManagerID: "brew", QuarantinedAt: now.AddDate(0, 0, -5), Status: cleanup.StatusQuarantined},
+		{Name: "old", Version: testVersionOne, ManagerID: "brew", QuarantinedAt: now.AddDate(0, 0, -31), Status: cleanup.StatusQuarantined},
+		{Name: "recent", Version: testVersionOne, ManagerID: "brew", QuarantinedAt: now.AddDate(0, 0, -5), Status: cleanup.StatusQuarantined},
 	}
 
 	for _, pkg := range packages {

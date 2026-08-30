@@ -20,7 +20,7 @@ func (s *stubLister) ListPackages(_ context.Context) ([]manager.Package, error) 
 func TestDetectOrphansFromPackages(t *testing.T) {
 	pkgs := []manager.Package{
 		{Name: testGitPackageName, CurrentVersion: "2.43.0"},
-		{Name: "", CurrentVersion: "1.0"},
+		{Name: "", CurrentVersion: testVersionOne},
 		{Name: "unknown", CurrentVersion: "0.1"},
 		{Name: "broken", CurrentVersion: ""},
 		{Name: "-", CurrentVersion: "1"},
