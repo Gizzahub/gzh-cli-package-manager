@@ -452,8 +452,14 @@ func TestAdapter_ListPackages_PluginListError(t *testing.T) {
 	}), testutil.NewMockLogger())
 
 	_, err := adapter.ListPackages(context.Background())
+	if err == nil {
+		t.Fatal("ListPackages() error = nil, want plugin list error")
+	}
 	if !errors.Is(err, errMockExecution) {
 		t.Errorf("ListPackages() error = %v, want cause %v", err, errMockExecution)
+	}
+	if !strings.Contains(err.Error(), "failed to list plugins") {
+		t.Errorf("ListPackages() error = %q, want plugin list context", err)
 	}
 }
 
