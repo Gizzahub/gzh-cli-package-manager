@@ -147,7 +147,7 @@ func newPerManagerListCmd(spec perManagerSpec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&outputFormat, "output", "o", "text", "Output format (text|json)")
+	cmd.Flags().StringVarP(&outputFormat, "output", "o", outputFormatText, "Output format (text|json)")
 	return cmd
 }
 
@@ -164,7 +164,7 @@ func newPerManagerSearchCmd(spec perManagerSpec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&outputFormat, "output", "o", "text", "Output format (text|json)")
+	cmd.Flags().StringVarP(&outputFormat, "output", "o", outputFormatText, "Output format (text|json)")
 	return cmd
 }
 
@@ -252,7 +252,7 @@ func newWingetSourceListCmd(spec perManagerSpec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&outputFormat, "output", "o", "text", "Output format (text|json)")
+	cmd.Flags().StringVarP(&outputFormat, "output", "o", outputFormatText, "Output format (text|json)")
 	return cmd
 }
 
@@ -278,7 +278,7 @@ func newScoopBucketListCmd(spec perManagerSpec) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&outputFormat, "output", "o", "text", "Output format (text|json)")
+	cmd.Flags().StringVarP(&outputFormat, "output", "o", outputFormatText, "Output format (text|json)")
 	return cmd
 }
 
@@ -543,7 +543,7 @@ func runScoopBucketRemove(ctx context.Context, spec perManagerSpec, name string,
 
 func writeSources(out io.Writer, format string, sources []adapterm.Source) error {
 	switch strings.ToLower(format) {
-	case "json":
+	case outputFormatJSON:
 		type srcView struct {
 			Name string `json:"name"`
 			Arg  string `json:"arg,omitempty"`
@@ -558,7 +558,7 @@ func writeSources(out io.Writer, format string, sources []adapterm.Source) error
 			"count":   len(views),
 			"sources": views,
 		}))
-	case "text", "":
+	case outputFormatText, "":
 		if len(sources) == 0 {
 			_, err := fmt.Fprintln(out, "No sources configured.")
 			return wrapOutputError("sources", err)
@@ -579,7 +579,7 @@ func writeSources(out io.Writer, format string, sources []adapterm.Source) error
 
 func writeBuckets(out io.Writer, format string, buckets []adapterm.Bucket) error {
 	switch strings.ToLower(format) {
-	case "json":
+	case outputFormatJSON:
 		type bucketView struct {
 			Name   string `json:"name"`
 			Source string `json:"source,omitempty"`
@@ -594,7 +594,7 @@ func writeBuckets(out io.Writer, format string, buckets []adapterm.Bucket) error
 			"count":   len(views),
 			"buckets": views,
 		}))
-	case "text", "":
+	case outputFormatText, "":
 		if len(buckets) == 0 {
 			_, err := fmt.Fprintln(out, "No buckets configured.")
 			return wrapOutputError("buckets", err)
@@ -664,7 +664,7 @@ func writePackages(out io.Writer, format, managerName, action string, packages [
 	}
 
 	switch strings.ToLower(format) {
-	case "json":
+	case outputFormatJSON:
 		resp := packagesResponse{
 			Manager:  managerName,
 			Action:   action,
@@ -674,7 +674,7 @@ func writePackages(out io.Writer, format, managerName, action string, packages [
 		enc := json.NewEncoder(out)
 		enc.SetIndent("", "  ")
 		return wrapOutputError("packages", enc.Encode(resp))
-	case "text", "":
+	case outputFormatText, "":
 		if len(views) == 0 {
 			_, err := fmt.Fprintf(out, "No packages found (%s %s).\n", managerName, action)
 			return wrapOutputError("packages", err)

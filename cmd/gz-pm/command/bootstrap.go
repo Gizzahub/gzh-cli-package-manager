@@ -66,9 +66,9 @@ Examples:
 
 		// Display results
 		switch bootstrapOutput {
-		case "json":
+		case outputFormatJSON:
 			displayBootstrapJSON(resp)
-		case "text":
+		case outputFormatText:
 			displayBootstrapText(resp)
 		default:
 			fmt.Printf("❌ Error: Unknown output format: %s\n", bootstrapOutput)
@@ -156,5 +156,5 @@ func init() {
 	bootstrapCmd.Flags().StringVarP(&bootstrapConfig, "config", "c", "", "Configuration file path")
 	bootstrapCmd.Flags().BoolVarP(&bootstrapInteractive, "interactive", "i", false, "Interactive setup wizard")
 	bootstrapCmd.Flags().BoolVar(&bootstrapDryRun, "dry-run", false, "Preview changes without executing")
-	bootstrapCmd.Flags().StringVarP(&bootstrapOutput, "output", "o", "text", "Output format (text|json)")
+	bootstrapCmd.Flags().StringVarP(&bootstrapOutput, "output", "o", outputFormatText, "Output format (text|json)")
 }

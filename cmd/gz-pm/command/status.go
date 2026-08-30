@@ -59,9 +59,9 @@ Example:
 
 		// Handle output format
 		switch statusOutput {
-		case "json":
+		case outputFormatJSON:
 			displayJSON(resp)
-		case "text":
+		case outputFormatText:
 			displayText(resp)
 		default:
 			fmt.Printf("❌ Error: Unknown output format: %s\n", statusOutput)
@@ -137,5 +137,5 @@ func init() {
 
 	// Flags
 	statusCmd.Flags().BoolVarP(&statusVerbose, "verbose", "v", false, "Show detailed status information")
-	statusCmd.Flags().StringVarP(&statusOutput, "output", "o", "text", "Output format (text|json)")
+	statusCmd.Flags().StringVarP(&statusOutput, "output", "o", outputFormatText, "Output format (text|json)")
 }

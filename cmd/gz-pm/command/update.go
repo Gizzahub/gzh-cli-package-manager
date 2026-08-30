@@ -97,9 +97,9 @@ Examples:
 
 		// Display results
 		switch updateOutput {
-		case "json":
+		case outputFormatJSON:
 			displayUpdateJSON(resp)
-		case "text":
+		case outputFormatText:
 			displayUpdateText(resp)
 		default:
 			fmt.Printf("❌ Error: Unknown output format: %s\n", updateOutput)
@@ -190,6 +190,6 @@ func init() {
 	updateCmd.Flags().BoolVar(&updateDryRun, "dry-run", false, "Preview changes without executing")
 	updateCmd.Flags().StringVarP(&updateManagers, "managers", "m", "", "Comma-separated list of managers to update")
 	updateCmd.Flags().StringVar(&updateStrategy, "strategy", "stable", "Update strategy (latest|stable|minor|fixed)")
-	updateCmd.Flags().StringVarP(&updateOutput, "output", "o", "text", "Output format (text|json|simple)")
+	updateCmd.Flags().StringVarP(&updateOutput, "output", "o", outputFormatText, "Output format (text|json|simple)")
 	updateCmd.Flags().BoolVar(&updatePipAllowConda, "pip-allow-conda", false, "Allow pip updates in conda environments")
 }
