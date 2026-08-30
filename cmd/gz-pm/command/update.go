@@ -135,9 +135,10 @@ func displayUpdateText(resp *dto.UpdateResponse) {
 		}
 
 		fmt.Printf("%s %s\n", statusIcon, result.Name)
-		if result.Skipped {
+		switch {
+		case result.Skipped:
 			fmt.Printf("   Skipped: %s\n", result.SkipReason)
-		} else if result.Success {
+		case result.Success:
 			fmt.Printf("   Duration: %.1fs\n", result.Duration)
 			if len(result.UpdatedPackages) > 0 {
 				fmt.Printf("   Updated: %d packages\n", len(result.UpdatedPackages))
@@ -150,7 +151,7 @@ func displayUpdateText(resp *dto.UpdateResponse) {
 			if result.SpaceFreed > 0 {
 				fmt.Printf("   Space freed: %.1f MB\n", float64(result.SpaceFreed)/(1024*1024))
 			}
-		} else {
+		default:
 			fmt.Printf("   Error: %s\n", result.Error)
 		}
 		fmt.Println()
