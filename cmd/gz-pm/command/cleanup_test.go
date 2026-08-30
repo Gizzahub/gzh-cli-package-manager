@@ -36,6 +36,33 @@ func captureStdout(t *testing.T, fn func() error) (string, error) {
 	return buf.String(), runErr
 }
 
+func captureOutput(t *testing.T, fn func() error) (stdoutText, stderrText string, runErr error) {
+	t.Helper()
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("stdout pipe: %v", err)
+	}
+	stderrReader, stderrWriter, err := os.Pipe()
+	if err != nil {
+		_ = stdoutReader.Close()
+		_ = stdoutWriter.Close()
+		t.Fatalf("stderr pipe: %v", err)
+	}
+	oldStdout, oldStderr := os.Stdout, os.Stderr
+	os.Stdout, os.Stderr = stdoutWriter, stderrWriter
+	runErr = fn()
+	_ = stdoutWriter.Close()
+	_ = stderrWriter.Close()
+	os.Stdout, os.Stderr = oldStdout, oldStderr
+
+	var stdout, stderr bytes.Buffer
+	_, _ = io.Copy(&stdout, stdoutReader)
+	_, _ = io.Copy(&stderr, stderrReader)
+	_ = stdoutReader.Close()
+	_ = stderrReader.Close()
+	return stdout.String(), stderr.String(), runErr
+}
+
 func TestCleanupCacheScanAndStatus(t *testing.T) {
 	home := t.TempDir()
 	npmCache := filepath.Join(home, ".npm")
@@ -291,6 +318,56 @@ func TestCleanupRunEWrapsPackageListFailures(t *testing.T) {
 	}
 }
 
+func TestAdapterPackageListerPreservesAdapterError(t *testing.T) {
+	sentinel := errors.New("adapter list unavailable")
+	lister := adapterPackageLister{adapter: &failingListAdapter{err: sentinel}}
+
+	_, err := lister.ListPackages(context.Background())
+	if !errors.Is(err, sentinel) {
+		t.Fatalf("errors.Is(%v, sentinel) = false", err)
+	}
+	if errors.Unwrap(err) != nil || err.Error() != sentinel.Error() {
+		t.Fatalf("ListPackages() error = %v, want unchanged sentinel", err)
+	}
+}
+
+func TestCleanupOrphansRemoveReportsInstallerFailureWithoutDuplicateContext(t *testing.T) {
+	sentinel := errors.New("uninstall unavailable")
+	stub := &failingUninstallAdapter{
+		stubListAdapter: &stubListAdapter{packages: []manager.Package{{Name: "ghost"}}},
+		err:             sentinel,
+	}
+	SetManagerAdapters(map[manager.ManagerID]adapterm.Adapter{manager.ManagerScoop: stub})
+	t.Cleanup(func() { SetManagerAdapters(nil) })
+
+	cleanupManagerID = "scoop"
+	removeDryRun = false
+	t.Cleanup(func() {
+		cleanupManagerID = ""
+		removeDryRun = true
+	})
+
+	stdout, stderr, err := captureOutput(t, func() error {
+		return orphansRemoveCmd.RunE(orphansRemoveCmd, nil)
+	})
+	if err != nil {
+		t.Fatalf("orphans remove: %v", err)
+	}
+	if !strings.Contains(stdout, "Orphan remove complete [LIVE]") {
+		t.Fatalf("summary output missing success: %q", stdout)
+	}
+	want := "ghost@- (scoop): " + sentinel.Error()
+	if !strings.Contains(stderr, "Errors/skips:") || !strings.Contains(stderr, want) {
+		t.Fatalf("stderr = %q, want Errors/skips and %q", stderr, want)
+	}
+	if strings.Count(stderr, "ghost@- (scoop)") != 1 {
+		t.Fatalf("stderr duplicated package context: %q", stderr)
+	}
+	if strings.Count(stderr, sentinel.Error()) != 1 {
+		t.Fatalf("stderr duplicated installer context: %q", stderr)
+	}
+}
+
 type failingCacheFileSystem struct {
 	err error
 }
@@ -334,6 +411,15 @@ type failingListAdapter struct {
 
 func (a *failingListAdapter) ListPackages(context.Context) ([]manager.Package, error) {
 	return nil, a.err
+}
+
+type failingUninstallAdapter struct {
+	*stubListAdapter
+	err error
+}
+
+func (a *failingUninstallAdapter) Uninstall(context.Context, string, bool) error {
+	return a.err
 }
 
 // Install/Uninstall satisfy adapterm.Installer for remove-path tests.

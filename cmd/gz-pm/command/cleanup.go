@@ -470,6 +470,7 @@ type adapterPackageLister struct {
 }
 
 func (a adapterPackageLister) ListPackages(ctx context.Context) ([]manager.Package, error) {
+	//nolint:wrapcheck // Cleanup callers add operation context with %w; preserve the adapter error identity for errors.Is.
 	return a.adapter.ListPackages(ctx)
 }
 
@@ -505,6 +506,7 @@ func (adapterUninstaller) Uninstall(ctx context.Context, managerID, pkgID string
 	if !okDetected {
 		return fmt.Errorf("%s is not available on this system", managerID)
 	}
+	//nolint:wrapcheck // The executor records package@version (manager) in Summary.Errors; preserve the installer error identity for errors.Is.
 	return installer.Uninstall(ctx, pkgID, dryRun)
 }
 
