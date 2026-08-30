@@ -541,27 +541,79 @@ func TestAdapter_Install(t *testing.T) {
 
 	t.Run("empty name", func(t *testing.T) {
 		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
-		if err := adapter.Install(context.Background(), "", false); err == nil {
+		err := adapter.Install(context.Background(), " ", false)
+		if err == nil {
 			t.Fatal("expected error")
+		}
+		if got, want := err.Error(), "install scoop package: package name is required"; got != want {
+			t.Errorf("error = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("executor error keeps install context", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("executor unavailable")
+		}), testutil.NewMockLogger())
+		err := adapter.Install(context.Background(), testGitPackageName, false)
+		if err == nil {
+			t.Fatal("expected executor error")
+		}
+		if !strings.Contains(err.Error(), "install scoop package "+testGitPackageName) {
+			t.Errorf("error should retain install context: %v", err)
 		}
 	})
 }
 
 func TestAdapter_Uninstall(t *testing.T) {
-	var gotArgs []string
-	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, args ...string) (*output.ExecutionResult, error) {
-		gotArgs = args
-		return testutil.SuccessResult("Uninstalling 'git'"), nil
-	}), testutil.NewMockLogger())
-	if err := adapter.Uninstall(context.Background(), testGitPackageName, false); err != nil {
-		t.Fatalf("Uninstall: %v", err)
-	}
-	if gotArgs[0] != "uninstall" || gotArgs[1] != testGitPackageName {
-		t.Fatalf("args = %v", gotArgs)
-	}
-	if err := adapter.Uninstall(context.Background(), testGitPackageName, true); err != nil {
-		t.Fatalf("Uninstall dry-run: %v", err)
-	}
+	t.Run("uninstall success", func(t *testing.T) {
+		var gotArgs []string
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+			if command != scoopCommand {
+				return nil, errors.New("unexpected command")
+			}
+			gotArgs = args
+			return testutil.SuccessResult("Uninstalling 'git'"), nil
+		}), testutil.NewMockLogger())
+		if err := adapter.Uninstall(context.Background(), testGitPackageName, false); err != nil {
+			t.Fatalf("Uninstall: %v", err)
+		}
+		if len(gotArgs) != 2 || gotArgs[0] != "uninstall" || gotArgs[1] != testGitPackageName {
+			t.Fatalf("args = %v", gotArgs)
+		}
+	})
+
+	t.Run("dry-run skips executor", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("should not be called")
+		}), testutil.NewMockLogger())
+		if err := adapter.Uninstall(context.Background(), testGitPackageName, true); err != nil {
+			t.Fatalf("Uninstall dry-run: %v", err)
+		}
+	})
+
+	t.Run("empty name keeps uninstall context", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
+		err := adapter.Uninstall(context.Background(), "", false)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if got, want := err.Error(), "uninstall scoop package: package name is required"; got != want {
+			t.Errorf("error = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("executor error keeps uninstall context", func(t *testing.T) {
+		adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+			return nil, errors.New("executor unavailable")
+		}), testutil.NewMockLogger())
+		err := adapter.Uninstall(context.Background(), testGitPackageName, false)
+		if err == nil {
+			t.Fatal("expected executor error")
+		}
+		if !strings.Contains(err.Error(), "uninstall scoop package "+testGitPackageName) {
+			t.Errorf("error should retain uninstall context: %v", err)
+		}
+	})
 }
 
 func TestAdapter_ListBuckets(t *testing.T) {

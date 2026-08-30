@@ -19,8 +19,10 @@ import (
 )
 
 const (
-	scoopCommand   = "scoop"
-	dryRunFieldKey = "dry_run"
+	scoopCommand           = "scoop"
+	dryRunFieldKey         = "dry_run"
+	installPackageAction   = "install"
+	uninstallPackageAction = "uninstall"
 )
 
 // Adapter implements the manager.Adapter interface for Scoop.
@@ -279,35 +281,23 @@ func parseScoopQuotedResult(line string) (packageName, packageVersion string) {
 // Install installs a package by Scoop name.
 // dryRun skips the native install.
 func (a *Adapter) Install(ctx context.Context, pkgID string, dryRun bool) error {
-	pkgID = strings.TrimSpace(pkgID)
-	if pkgID == "" {
-		return fmt.Errorf("install scoop package: package name is required")
-	}
-
-	a.logger.Info(ctx, "Scoop install",
-		output.Field{Key: "package", Value: pkgID},
-		output.Field{Key: dryRunFieldKey, Value: dryRun})
-
-	if dryRun {
-		return nil
-	}
-
-	result, err := a.executor.Execute(ctx, scoopCommand, "install", pkgID)
-	if resultErr := cmdutil.CheckResult(result, err, "install scoop package "+pkgID); resultErr != nil {
-		return resultErr
-	}
-	return nil
+	return a.runPackageAction(ctx, installPackageAction, pkgID, dryRun)
 }
 
 // Uninstall removes a package by Scoop name.
 // dryRun skips the native uninstall.
 func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) error {
+	return a.runPackageAction(ctx, uninstallPackageAction, pkgID, dryRun)
+}
+
+// runPackageAction executes an install or uninstall while preserving its action-specific contract.
+func (a *Adapter) runPackageAction(ctx context.Context, action, pkgID string, dryRun bool) error {
 	pkgID = strings.TrimSpace(pkgID)
 	if pkgID == "" {
-		return fmt.Errorf("uninstall scoop package: package name is required")
+		return fmt.Errorf("%s scoop package: package name is required", action)
 	}
 
-	a.logger.Info(ctx, "Scoop uninstall",
+	a.logger.Info(ctx, "Scoop "+action,
 		output.Field{Key: "package", Value: pkgID},
 		output.Field{Key: dryRunFieldKey, Value: dryRun})
 
@@ -315,8 +305,8 @@ func (a *Adapter) Uninstall(ctx context.Context, pkgID string, dryRun bool) erro
 		return nil
 	}
 
-	result, err := a.executor.Execute(ctx, scoopCommand, "uninstall", pkgID)
-	if resultErr := cmdutil.CheckResult(result, err, "uninstall scoop package "+pkgID); resultErr != nil {
+	result, err := a.executor.Execute(ctx, scoopCommand, action, pkgID)
+	if resultErr := cmdutil.CheckResult(result, err, action+" scoop package "+pkgID); resultErr != nil {
 		return resultErr
 	}
 	return nil
