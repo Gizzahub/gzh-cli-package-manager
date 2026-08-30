@@ -11,6 +11,13 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/testutil"
 )
 
+const (
+	testVersionArg       = "--version"
+	testNameCommandFails = "command fails"
+	testPackageGit       = "Git"
+	testPackageGitQuery  = "git"
+)
+
 func TestAdapter_Detect(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -21,7 +28,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "winget installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == wingetCommand && len(args) == 1 && args[0] == "--version" {
+				if command == wingetCommand && len(args) == 1 && args[0] == testVersionArg {
 					return testutil.SuccessResult("v1.6.3482\n"), nil
 				}
 				return nil, errors.New("unexpected command")
@@ -32,7 +39,7 @@ func TestAdapter_Detect(t *testing.T) {
 		{
 			name: "winget not installed",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == wingetCommand && len(args) == 1 && args[0] == "--version" {
+				if command == wingetCommand && len(args) == 1 && args[0] == testVersionArg {
 					return testutil.FailureResult(1, "winget: command not found"), errors.New("exit code 1")
 				}
 				return nil, errors.New("unexpected command")
@@ -68,7 +75,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "version with v prefix",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == wingetCommand && len(args) == 1 && args[0] == "--version" {
+				if command == wingetCommand && len(args) == 1 && args[0] == testVersionArg {
 					return testutil.SuccessResult("v1.6.3482\n"), nil
 				}
 				return nil, errors.New("unexpected command")
@@ -79,7 +86,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 		{
 			name: "version without v prefix",
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == wingetCommand && len(args) == 1 && args[0] == "--version" {
+				if command == wingetCommand && len(args) == 1 && args[0] == testVersionArg {
 					return testutil.SuccessResult("1.5.1234\n"), nil
 				}
 				return nil, errors.New("unexpected command")
@@ -88,7 +95,7 @@ func TestAdapter_GetVersion(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "command fails",
+			name: testNameCommandFails,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("command failed")
 			},
@@ -211,7 +218,7 @@ func TestAdapter_ListPackages_JSON(t *testing.T) {
 	}
 
 	// Check first package has update available
-	if packages[0].Name != "Git" {
+	if packages[0].Name != testPackageGit {
 		t.Errorf("First package name = %v, want Git", packages[0].Name)
 	}
 	if packages[0].UpdateType != manager.UpdateMinor {
@@ -278,7 +285,7 @@ func TestAdapter_CheckHealth(t *testing.T) {
 			want: manager.StatusError,
 		},
 		{
-			name: "command fails",
+			name: testNameCommandFails,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("network error")
 			},
@@ -350,7 +357,7 @@ func TestAdapter_Update(t *testing.T) {
 			want: &adapterm.UpdateResult{
 				Success:         true,
 				Message:         "1 packages updated successfully",
-				UpdatedPackages: []string{"Git"},
+				UpdatedPackages: []string{testPackageGit},
 				FailedPackages:  []string{},
 			},
 			wantErr: false,
@@ -446,15 +453,15 @@ GitHub CLI          GitHub.cli           2.40.0             winget
 	}{
 		{
 			name:  "text search results",
-			query: "git",
+			query: testPackageGitQuery,
 			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == wingetCommand && len(args) >= 2 && args[0] == "search" && args[1] == "git" {
+				if command == wingetCommand && len(args) >= 2 && args[0] == "search" && args[1] == testPackageGitQuery {
 					return testutil.SuccessResult(textOutput), nil
 				}
 				return nil, errors.New("unexpected command")
 			},
 			wantCount: 2,
-			wantFirst: "Git",
+			wantFirst: testPackageGit,
 		},
 		{
 			name:  "empty query",
@@ -466,8 +473,8 @@ GitHub CLI          GitHub.cli           2.40.0             winget
 			wantErr: true,
 		},
 		{
-			name:  "command fails",
-			query: "git",
+			name:  testNameCommandFails,
+			query: testPackageGitQuery,
 			execFunc: func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
 				return nil, errors.New("search failed")
 			},
