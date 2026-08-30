@@ -39,12 +39,12 @@ func TestStructuredLogger_Debug(t *testing.T) {
 
 	logger.Debug(context.Background(), "debug message")
 
-	output := buf.String()
-	if !strings.Contains(output, "[DEBUG]") {
-		t.Errorf("output missing [DEBUG]: %q", output)
+	gotOutput := buf.String()
+	if !strings.Contains(gotOutput, "[DEBUG]") {
+		t.Errorf("output missing [DEBUG]: %q", gotOutput)
 	}
-	if !strings.Contains(output, "debug message") {
-		t.Errorf("output missing message: %q", output)
+	if !strings.Contains(gotOutput, "debug message") {
+		t.Errorf("output missing message: %q", gotOutput)
 	}
 }
 
@@ -61,18 +61,18 @@ func TestStructuredLogger_DebugWithFields(t *testing.T) {
 		output.Field{Key: "key2", Value: 42},
 	)
 
-	output := buf.String()
-	if !strings.Contains(output, "[DEBUG]") {
-		t.Errorf("output missing [DEBUG]: %q", output)
+	gotOutput := buf.String()
+	if !strings.Contains(gotOutput, "[DEBUG]") {
+		t.Errorf("output missing [DEBUG]: %q", gotOutput)
 	}
-	if !strings.Contains(output, "debug with fields") {
-		t.Errorf("output missing message: %q", output)
+	if !strings.Contains(gotOutput, "debug with fields") {
+		t.Errorf("output missing message: %q", gotOutput)
 	}
-	if !strings.Contains(output, "key1=value1") {
-		t.Errorf("output missing field key1: %q", output)
+	if !strings.Contains(gotOutput, "key1=value1") {
+		t.Errorf("output missing field key1: %q", gotOutput)
 	}
-	if !strings.Contains(output, "key2=42") {
-		t.Errorf("output missing field key2: %q", output)
+	if !strings.Contains(gotOutput, "key2=42") {
+		t.Errorf("output missing field key2: %q", gotOutput)
 	}
 }
 
@@ -85,12 +85,12 @@ func TestStructuredLogger_Info(t *testing.T) {
 
 	logger.Info(context.Background(), "info message")
 
-	output := buf.String()
-	if !strings.Contains(output, "[INFO]") {
-		t.Errorf("output missing [INFO]: %q", output)
+	gotOutput := buf.String()
+	if !strings.Contains(gotOutput, "[INFO]") {
+		t.Errorf("output missing [INFO]: %q", gotOutput)
 	}
-	if !strings.Contains(output, "info message") {
-		t.Errorf("output missing message: %q", output)
+	if !strings.Contains(gotOutput, "info message") {
+		t.Errorf("output missing message: %q", gotOutput)
 	}
 }
 
@@ -106,15 +106,15 @@ func TestStructuredLogger_Warn(t *testing.T) {
 		output.Field{Key: "component", Value: "adapter"},
 	)
 
-	output := buf.String()
-	if !strings.Contains(output, "[WARN]") {
-		t.Errorf("output missing [WARN]: %q", output)
+	gotOutput := buf.String()
+	if !strings.Contains(gotOutput, "[WARN]") {
+		t.Errorf("output missing [WARN]: %q", gotOutput)
 	}
-	if !strings.Contains(output, "warning message") {
-		t.Errorf("output missing message: %q", output)
+	if !strings.Contains(gotOutput, "warning message") {
+		t.Errorf("output missing message: %q", gotOutput)
 	}
-	if !strings.Contains(output, "component=adapter") {
-		t.Errorf("output missing field: %q", output)
+	if !strings.Contains(gotOutput, "component=adapter") {
+		t.Errorf("output missing field: %q", gotOutput)
 	}
 }
 
@@ -131,18 +131,18 @@ func TestStructuredLogger_Error(t *testing.T) {
 		output.Field{Key: "operation", Value: "detect"},
 	)
 
-	output := buf.String()
-	if !strings.Contains(output, "[ERROR]") {
-		t.Errorf("output missing [ERROR]: %q", output)
+	gotOutput := buf.String()
+	if !strings.Contains(gotOutput, "[ERROR]") {
+		t.Errorf("output missing [ERROR]: %q", gotOutput)
 	}
-	if !strings.Contains(output, "error occurred") {
-		t.Errorf("output missing message: %q", output)
+	if !strings.Contains(gotOutput, "error occurred") {
+		t.Errorf("output missing message: %q", gotOutput)
 	}
-	if !strings.Contains(output, "error=test error") {
-		t.Errorf("output missing error field: %q", output)
+	if !strings.Contains(gotOutput, "error=test error") {
+		t.Errorf("output missing error field: %q", gotOutput)
 	}
-	if !strings.Contains(output, "operation=detect") {
-		t.Errorf("output missing operation field: %q", output)
+	if !strings.Contains(gotOutput, "operation=detect") {
+		t.Errorf("output missing operation field: %q", gotOutput)
 	}
 }
 
@@ -160,15 +160,15 @@ func TestStructuredLogger_MultipleFields(t *testing.T) {
 		output.Field{Key: "field3", Value: 123},
 	)
 
-	output := buf.String()
-	if !strings.Contains(output, "field1=value1") {
-		t.Errorf("output missing field1: %q", output)
+	gotOutput := buf.String()
+	if !strings.Contains(gotOutput, "field1=value1") {
+		t.Errorf("output missing field1: %q", gotOutput)
 	}
-	if !strings.Contains(output, "field2=value2") {
-		t.Errorf("output missing field2: %q", output)
+	if !strings.Contains(gotOutput, "field2=value2") {
+		t.Errorf("output missing field2: %q", gotOutput)
 	}
-	if !strings.Contains(output, "field3=123") {
-		t.Errorf("output missing field3: %q", output)
+	if !strings.Contains(gotOutput, "field3=123") {
+		t.Errorf("output missing field3: %q", gotOutput)
 	}
 }
 
@@ -181,16 +181,16 @@ func TestStructuredLogger_NoFields(t *testing.T) {
 
 	logger.Info(context.Background(), "message without fields")
 
-	output := buf.String()
-	if !strings.Contains(output, "[INFO]") {
-		t.Errorf("output missing [INFO]: %q", output)
+	gotOutput := buf.String()
+	if !strings.Contains(gotOutput, "[INFO]") {
+		t.Errorf("output missing [INFO]: %q", gotOutput)
 	}
-	if !strings.Contains(output, "message without fields") {
-		t.Errorf("output missing message: %q", output)
+	if !strings.Contains(gotOutput, "message without fields") {
+		t.Errorf("output missing message: %q", gotOutput)
 	}
 	// Should not contain pipe separator when no fields
-	if strings.Contains(output, " | ") {
-		t.Errorf("output should not contain pipe separator: %q", output)
+	if strings.Contains(gotOutput, " | ") {
+		t.Errorf("output should not contain pipe separator: %q", gotOutput)
 	}
 }
 
@@ -215,9 +215,9 @@ func TestStructuredLogger_AllLevels(t *testing.T) {
 
 			tt.fn(logger, context.Background(), "test message")
 
-			output := buf.String()
-			if !strings.Contains(output, tt.want) {
-				t.Errorf("output missing %s: %q", tt.want, output)
+			gotOutput := buf.String()
+			if !strings.Contains(gotOutput, tt.want) {
+				t.Errorf("output missing %s: %q", tt.want, gotOutput)
 			}
 		})
 	}
