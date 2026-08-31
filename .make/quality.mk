@@ -44,9 +44,13 @@ fmt-diff: ## Format only changed Go files
 	fi
 	@echo "✅ Changed files formatted"
 
-lint-diff: install-lint ## Lint only changed Go files
-	@echo "Linting changed files..."
-	@"$(GOLANGCI_LINT_BIN)" run --new-from-rev=HEAD~1 ./...
+# Base is the integration branch tip (not HEAD~1): multi-commit task
+# branches and the first commit on a branch both need that baseline.
+LINT_DIFF_BASE ?= origin/master
+
+lint-diff: install-lint ## Lint changes since origin/master (LINT_DIFF_BASE=...)
+	@echo "Linting changes since $(LINT_DIFF_BASE)..."
+	@"$(GOLANGCI_LINT_BIN)" run --new-from-rev="$(LINT_DIFF_BASE)" ./...
 
 fmt-check: ## Check if code is formatted (for CI)
 	@echo "Checking code format..."

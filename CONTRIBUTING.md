@@ -100,7 +100,11 @@ export CGO_ENABLED=0
 ### 3. Install Development Tools
 
 ```bash
-# Linting and formatting
+# Preferred: pin golangci-lint into the gitignored repo-local bin/tools
+make install-lint
+# → ./bin/tools/golangci-lint (v2.13.1); Make targets use this binary
+
+# Or install the same pin on PATH
 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1
 
 # Testing tools
@@ -415,15 +419,24 @@ type PackageManager interface {
 
 ### Linting
 
-We use `golangci-lint` with strict settings:
+We use pinned `golangci-lint` **v2.13.1** with strict settings. Make installs it
+under `./bin/tools/` via `make install-lint` so every target uses the same binary
+even when PATH is empty or carries another version.
 
 ```bash
-# Run linter
+# Incremental gate (primary local check): issues new since origin/master
+make lint-diff
+
+# Full lint (same pin; slower)
 make lint
 
 # Auto-fix issues where possible
-golangci-lint run --fix
+./bin/tools/golangci-lint run --fix
 ```
+
+Use `make lint-diff` as the first regression check on task branches. GitHub
+Actions hosted Lint is confirmation of the full tree, not the day-to-day gate.
+Override the diff base when needed: `make lint-diff LINT_DIFF_BASE=<rev>` (default `origin/master`).
 
 **Enabled Linters**:
 - `gofmt`, `goimports` - Formatting
@@ -433,6 +446,9 @@ golangci-lint run --fix
 - `gosec` - Security issues
 - `ineffassign` - Ineffectual assignments
 - `misspell` - Spelling errors
+- `wrapcheck` - Error wrapping; `extra-ignore-sigs` lists only cmdutil helpers
+  that already attach operation context (`CheckResult`, `UnmarshalJSON`,
+  `ExtractVersionField`)
 
 **Linter Configuration**: `.golangci.yml`
 

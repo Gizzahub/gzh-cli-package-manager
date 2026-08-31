@@ -27,11 +27,11 @@ Think of it as a "package manager for package managers" - unified interface for:
 | `make quality` | fmt + lint + test | Pre-commit |
 | `make test-coverage` | Full coverage report | Coverage check |
 | `make fmt` | Format code (required) | Before commit |
-| `make lint` | Run golangci-lint | Fix issues |
+| `make lint` | Full golangci-lint (pinned) | Fix issues |
+| `make lint-diff` | Incremental lint vs origin/master | First regression check |
 | `make install` | Install to $GOPATH/bin | Local install |
 | `make dev ARGS="..."` | Run in dev mode | Quick test |
 | `make clean` | Clean artifacts | Fresh start |
-| `make version` | Show version info | Debug builds |
 
 ---
 
@@ -41,6 +41,8 @@ Think of it as a "package manager for package managers" - unified interface for:
 - ✅ Use `gzh-cli-core` for common utilities (logger, testutil, errors, config)
 - ✅ Follow Clean Architecture layers (Domain → Application → Infrastructure → Presentation)
 - ✅ Run `make quality` before every commit
+- ✅ Run `make lint-diff` first (compares against `origin/master`); treat hosted Lint as confirmation
+- ✅ Use golangci-lint **v2.13.1** via `make install-lint` (`bin/tools/`) or a matching PATH binary
 - ✅ Maintain 90%+ test coverage
 - ✅ Keep files < 300 lines (~10KB)
 
@@ -50,6 +52,7 @@ Think of it as a "package manager for package managers" - unified interface for:
 - ❌ Bypass use cases (CLI → infrastructure directly)
 - ❌ Create large God files (> 500 lines)
 - ❌ Mock in domain layer tests (pure functions only)
+- ❌ Expand wrapcheck `extra-ignore-sigs` unless the cmdutil helper already attaches operation context
 
 ---
 
@@ -88,9 +91,11 @@ Think of it as a "package manager for package managers" - unified interface for:
    - ⚠️ Violates Clean Architecture
    - ✅ Check: `go list -test -deps ./pkg/domain/... | grep infrastructure`
 
-2. **Skipping `make quality` before commit**
-   - ⚠️ CI will fail
-   - ✅ Run: `make quality` (includes fmt + lint + test)
+2. **Skipping `make quality` / incremental lint before commit**
+   - ⚠️ CI will fail; local `HEAD~1` baseline misses multi-commit branches
+   - ✅ Run: `make lint-diff` (vs `origin/master`), then `make quality`
+   - ✅ Hosted Lint confirms; it is not the first review pass
+   - ✅ Missing `./bin/tools/golangci-lint`: `make install-lint` or PATH pin `v2.13.1`
 
 3. **Adding CGO dependencies**
    - ⚠️ Breaks cross-compilation
@@ -153,4 +158,4 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-**Last Updated**: 2026-08-30
+**Last Updated**: 2026-08-31
