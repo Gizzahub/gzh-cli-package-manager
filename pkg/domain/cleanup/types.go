@@ -126,17 +126,23 @@ type Summary struct {
 }
 
 // IsExpired returns true if the quarantined package has exceeded the retention period.
+//
+//nolint:gocritic // Preserve the exported value-receiver method set for Go consumers.
 func (q QuarantinedPackage) IsExpired(retentionDays int) bool {
 	expiry := q.QuarantinedAt.AddDate(0, 0, retentionDays)
 	return time.Now().After(expiry)
 }
 
 // DaysSinceQuarantine returns the number of days since quarantine.
+//
+//nolint:gocritic // Preserve the exported value-receiver method set for Go consumers.
 func (q QuarantinedPackage) DaysSinceQuarantine() int {
 	return int(time.Since(q.QuarantinedAt).Hours() / 24)
 }
 
 // AgeInDays returns the age of the oldest cache entry in days.
+//
+//nolint:gocritic // Preserve the exported value-receiver method set for Go consumers.
 func (c CacheInfo) AgeInDays() int {
 	if c.OldestEntry.IsZero() {
 		return 0

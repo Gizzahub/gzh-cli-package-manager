@@ -1,6 +1,8 @@
 package manager
 
 // ManagerID is a unique identifier for a package manager.
+//
+//nolint:revive // Preserve the exported identifier used by Go consumers.
 type ManagerID string
 
 // Common package manager identifiers.
@@ -20,6 +22,8 @@ const (
 )
 
 // ManagerType represents the category of package manager.
+//
+//nolint:revive // Preserve the exported identifier used by Go consumers.
 type ManagerType string
 
 const (
