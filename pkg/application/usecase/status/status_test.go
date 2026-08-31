@@ -73,6 +73,30 @@ func (m *mockLogger) Error(_ context.Context, msg string, _ error, _ ...output.F
 	m.errorMessages = append(m.errorMessages, msg)
 }
 
+type statusSummaryExpectation struct {
+	managers  int
+	installed int
+	healthy   int
+	packages  int
+	updatable int
+}
+
+type allManagersStatusCase struct {
+	name         string
+	mockManagers []*manager.Manager
+	mockError    error
+	want         statusSummaryExpectation
+	wantErr      bool
+}
+
+type specificManagersStatusCase struct {
+	name         string
+	requestIDs   []manager.ManagerID
+	mockManagers map[manager.ManagerID]*manager.Manager
+	wantManagers int
+	wantErr      bool
+}
+
 func TestNewUseCase(t *testing.T) {
 	repo := &mockRepository{}
 	logger := &mockLogger{}
@@ -93,26 +117,11 @@ func TestNewUseCase(t *testing.T) {
 func TestUseCase_GetStatus_AllManagers(t *testing.T) {
 	now := time.Now()
 
-	tests := []struct {
-		name            string
-		mockManagers    []*manager.Manager
-		mockError       error
-		wantManagersLen int
-		wantInstalled   int
-		wantHealthy     int
-		wantPackages    int
-		wantUpdatable   int
-		wantErr         bool
-	}{
+	tests := []allManagersStatusCase{
 		{
-			name:            "no managers",
-			mockManagers:    []*manager.Manager{},
-			wantManagersLen: 0,
-			wantInstalled:   0,
-			wantHealthy:     0,
-			wantPackages:    0,
-			wantUpdatable:   0,
-			wantErr:         false,
+			name:         "no managers",
+			mockManagers: []*manager.Manager{},
+			want:         statusSummaryExpectation{},
 		},
 		{
 			name: "single healthy manager with packages",
@@ -143,12 +152,13 @@ func TestUseCase_GetStatus_AllManagers(t *testing.T) {
 					},
 				},
 			},
-			wantManagersLen: 1,
-			wantInstalled:   1,
-			wantHealthy:     1,
-			wantPackages:    2,
-			wantUpdatable:   1,
-			wantErr:         false,
+			want: statusSummaryExpectation{
+				managers:  1,
+				installed: 1,
+				healthy:   1,
+				packages:  2,
+				updatable: 1,
+			},
 		},
 		{
 			name: "multiple managers mixed states",
@@ -188,84 +198,25 @@ func TestUseCase_GetStatus_AllManagers(t *testing.T) {
 					},
 				},
 			},
-			wantManagersLen: 3,
-			wantInstalled:   2,
-			wantHealthy:     1, // Only Homebrew is healthy
-			wantPackages:    3,
-			wantUpdatable:   2,
-			wantErr:         false,
+			want: statusSummaryExpectation{
+				managers:  3,
+				installed: 2,
+				healthy:   1, // Only Homebrew is healthy
+				packages:  3,
+				updatable: 2,
+			},
 		},
 		{
-			name:            "repository error",
-			mockError:       errors.New("database connection failed"),
-			wantManagersLen: 0,
-			wantErr:         true,
+			name:      "repository error",
+			mockError: errors.New("database connection failed"),
+			wantErr:   true,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			repo := &mockRepository{
-				findAllFunc: func(_ context.Context) ([]*manager.Manager, error) {
-					if tt.mockError != nil {
-						return nil, tt.mockError
-					}
-					return tt.mockManagers, nil
-				},
-			}
-			logger := &mockLogger{}
-			uc := NewUseCase(repo, logger)
-
-			req := &dto.StatusRequest{
-				Verbose: false,
-				Refresh: false,
-			}
-
-			resp, err := uc.GetStatus(context.Background(), req)
-
-			// Check error expectation
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetStatus() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.wantErr {
-				return // No need to check response if we expected an error
-			}
-
-			// Validate response
-			if resp == nil {
-				t.Fatal("GetStatus() returned nil response")
-			}
-
-			if len(resp.Managers) != tt.wantManagersLen {
-				t.Errorf("GetStatus() returned %d managers, want %d", len(resp.Managers), tt.wantManagersLen)
-			}
-
-			if resp.Summary.TotalManagers != tt.wantManagersLen {
-				t.Errorf("Summary.TotalManagers = %d, want %d", resp.Summary.TotalManagers, tt.wantManagersLen)
-			}
-
-			if resp.Summary.InstalledManagers != tt.wantInstalled {
-				t.Errorf("Summary.InstalledManagers = %d, want %d", resp.Summary.InstalledManagers, tt.wantInstalled)
-			}
-
-			if resp.Summary.HealthyManagers != tt.wantHealthy {
-				t.Errorf("Summary.HealthyManagers = %d, want %d", resp.Summary.HealthyManagers, tt.wantHealthy)
-			}
-
-			if resp.Summary.TotalPackages != tt.wantPackages {
-				t.Errorf("Summary.TotalPackages = %d, want %d", resp.Summary.TotalPackages, tt.wantPackages)
-			}
-
-			if resp.Summary.UpdatablePackages != tt.wantUpdatable {
-				t.Errorf("Summary.UpdatablePackages = %d, want %d", resp.Summary.UpdatablePackages, tt.wantUpdatable)
-			}
-
-			// Verify logger was called
-			if len(logger.infoMessages) < 2 {
-				t.Error("Expected at least 2 info log messages")
-			}
+	for i := range tests {
+		testCase := &tests[i]
+		t.Run(testCase.name, func(t *testing.T) {
+			runAllManagersStatusCase(t, testCase)
 		})
 	}
 }
@@ -273,13 +224,7 @@ func TestUseCase_GetStatus_AllManagers(t *testing.T) {
 func TestUseCase_GetStatus_SpecificManagers(t *testing.T) {
 	now := time.Now()
 
-	tests := []struct {
-		name            string
-		requestIDs      []manager.ManagerID
-		mockManagers    map[manager.ManagerID]*manager.Manager
-		wantManagersLen int
-		wantErr         bool
-	}{
+	tests := []specificManagersStatusCase{
 		{
 			name:       "single manager by ID",
 			requestIDs: []manager.ManagerID{manager.ManagerHomebrew},
@@ -294,8 +239,7 @@ func TestUseCase_GetStatus_SpecificManagers(t *testing.T) {
 					Packages:    []manager.Package{},
 				},
 			},
-			wantManagersLen: 1,
-			wantErr:         false,
+			wantManagers: 1,
 		},
 		{
 			name: "multiple managers by ID",
@@ -323,60 +267,108 @@ func TestUseCase_GetStatus_SpecificManagers(t *testing.T) {
 					Packages:    []manager.Package{},
 				},
 			},
-			wantManagersLen: 2,
-			wantErr:         false,
+			wantManagers: 2,
 		},
 		{
-			name:            "manager not found",
-			requestIDs:      []manager.ManagerID{manager.ManagerHomebrew},
-			mockManagers:    map[manager.ManagerID]*manager.Manager{},
-			wantManagersLen: 0,
-			wantErr:         true,
+			name:         "manager not found",
+			requestIDs:   []manager.ManagerID{manager.ManagerHomebrew},
+			mockManagers: map[manager.ManagerID]*manager.Manager{},
+			wantErr:      true,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			repo := &mockRepository{
-				findByIDFunc: func(_ context.Context, id manager.ManagerID) (*manager.Manager, error) {
-					if mgr, exists := tt.mockManagers[id]; exists {
-						return mgr, nil
-					}
-					return nil, errors.New("manager not found")
-				},
-			}
-			logger := &mockLogger{}
-			uc := NewUseCase(repo, logger)
-
-			req := &dto.StatusRequest{
-				ManagerIDs: tt.requestIDs,
-				Verbose:    false,
-				Refresh:    false,
-			}
-
-			resp, err := uc.GetStatus(context.Background(), req)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetStatus() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.wantErr {
-				// Verify error was logged
-				if len(logger.errorMessages) == 0 {
-					t.Error("Expected error to be logged")
-				}
-				return
-			}
-
-			if resp == nil {
-				t.Fatal("GetStatus() returned nil response")
-			}
-
-			if len(resp.Managers) != tt.wantManagersLen {
-				t.Errorf("GetStatus() returned %d managers, want %d", len(resp.Managers), tt.wantManagersLen)
-			}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			runSpecificManagersStatusCase(t, testCase)
 		})
+	}
+}
+
+func runAllManagersStatusCase(t *testing.T, testCase *allManagersStatusCase) {
+	t.Helper()
+
+	repo := &mockRepository{
+		findAllFunc: func(_ context.Context) ([]*manager.Manager, error) {
+			if testCase.mockError != nil {
+				return nil, testCase.mockError
+			}
+			return testCase.mockManagers, nil
+		},
+	}
+	logger := &mockLogger{}
+	uc := NewUseCase(repo, logger)
+
+	resp, err := uc.GetStatus(context.Background(), &dto.StatusRequest{})
+	if (err != nil) != testCase.wantErr {
+		t.Errorf("GetStatus() error = %v, wantErr %v", err, testCase.wantErr)
+		return
+	}
+	if testCase.wantErr {
+		return
+	}
+	if resp == nil {
+		t.Fatal("GetStatus() returned nil response")
+	}
+
+	assertStatusSummary(t, resp, testCase.want)
+	if len(logger.infoMessages) < 2 {
+		t.Error("Expected at least 2 info log messages")
+	}
+}
+
+func runSpecificManagersStatusCase(t *testing.T, testCase specificManagersStatusCase) {
+	t.Helper()
+
+	repo := &mockRepository{
+		findByIDFunc: func(_ context.Context, id manager.ManagerID) (*manager.Manager, error) {
+			if mgr, exists := testCase.mockManagers[id]; exists {
+				return mgr, nil
+			}
+			return nil, errors.New("manager not found")
+		},
+	}
+	logger := &mockLogger{}
+	uc := NewUseCase(repo, logger)
+
+	resp, err := uc.GetStatus(context.Background(), &dto.StatusRequest{ManagerIDs: testCase.requestIDs})
+	if (err != nil) != testCase.wantErr {
+		t.Errorf("GetStatus() error = %v, wantErr %v", err, testCase.wantErr)
+		return
+	}
+	if testCase.wantErr {
+		if len(logger.errorMessages) == 0 {
+			t.Error("Expected error to be logged")
+		}
+		return
+	}
+	if resp == nil {
+		t.Fatal("GetStatus() returned nil response")
+	}
+	if len(resp.Managers) != testCase.wantManagers {
+		t.Errorf("GetStatus() returned %d managers, want %d", len(resp.Managers), testCase.wantManagers)
+	}
+}
+
+func assertStatusSummary(t *testing.T, response *dto.StatusResponse, want statusSummaryExpectation) {
+	t.Helper()
+
+	if len(response.Managers) != want.managers {
+		t.Errorf("GetStatus() returned %d managers, want %d", len(response.Managers), want.managers)
+	}
+	if response.Summary.TotalManagers != want.managers {
+		t.Errorf("Summary.TotalManagers = %d, want %d", response.Summary.TotalManagers, want.managers)
+	}
+	if response.Summary.InstalledManagers != want.installed {
+		t.Errorf("Summary.InstalledManagers = %d, want %d", response.Summary.InstalledManagers, want.installed)
+	}
+	if response.Summary.HealthyManagers != want.healthy {
+		t.Errorf("Summary.HealthyManagers = %d, want %d", response.Summary.HealthyManagers, want.healthy)
+	}
+	if response.Summary.TotalPackages != want.packages {
+		t.Errorf("Summary.TotalPackages = %d, want %d", response.Summary.TotalPackages, want.packages)
+	}
+	if response.Summary.UpdatablePackages != want.updatable {
+		t.Errorf("Summary.UpdatablePackages = %d, want %d", response.Summary.UpdatablePackages, want.updatable)
 	}
 }
 
