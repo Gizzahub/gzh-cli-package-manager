@@ -19,6 +19,8 @@ const (
 	testNPMManagerName      = "NPM"
 	testPipManagerName      = "Pip"
 	testGitPackageName      = "git"
+	condaEnvironmentWarning = "Conda environment detected. Using pip may cause dependency conflicts with conda packages."
+	condaPipSkipWarning     = "Skipping pip update in conda environment"
 )
 
 // mockRepository implements manager.Repository for testing.
@@ -542,14 +544,15 @@ func TestUseCase_Update_AllowsPipInCondaWhenRequested(t *testing.T) {
 			return []*manager.Manager{{ID: manager.ManagerPip, Name: testPipManagerName, Installed: true}}, nil
 		},
 	}
-	uc := NewUseCase(repo, &mockLogger{}, map[manager.ManagerID]adapterm.Adapter{
+	logger := &mockLogger{}
+	uc := NewUseCase(repo, logger, map[manager.ManagerID]adapterm.Adapter{
 		manager.ManagerPip: &mockAdapter{
 			updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
 				pipAdapterCalls++
 				return &adapterm.UpdateResult{Success: true}, nil
 			},
 		},
-	}, detector.NewDetector(nil, &mockLogger{}))
+	}, detector.NewDetector(nil, logger))
 
 	resp, err := uc.Update(context.Background(), &dto.UpdateRequest{
 		All:           true,
@@ -564,6 +567,9 @@ func TestUseCase_Update_AllowsPipInCondaWhenRequested(t *testing.T) {
 	}
 	if pipAdapterCalls != 1 || resp.Results[0].Skipped {
 		t.Errorf("pip calls/skipped = %d/%t, want 1/false", pipAdapterCalls, resp.Results[0].Skipped)
+	}
+	if !slices.Equal(logger.warnMessages, []string{condaEnvironmentWarning}) {
+		t.Errorf("warnings = %q, want %q", logger.warnMessages, []string{condaEnvironmentWarning})
 	}
 	assertUpdateSummary(t, resp, 1, 1, 0)
 }
@@ -678,6 +684,9 @@ func TestUseCase_Update_SkipsPipInCondaEnvironment(t *testing.T) {
 			resp.Summary.SuccessfulManagers,
 			resp.Summary.FailedManagers,
 		)
+	}
+	if !slices.Equal(logger.warnMessages, []string{condaEnvironmentWarning, condaPipSkipWarning}) {
+		t.Errorf("warnings = %q, want environment then skip warning", logger.warnMessages)
 	}
 }
 

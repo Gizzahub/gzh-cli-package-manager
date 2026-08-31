@@ -3,10 +3,13 @@ package detector
 import (
 	"context"
 	"os"
+	"slices"
 	"testing"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 )
+
+const condaEnvironmentWarning = "Conda environment detected. Using pip may cause dependency conflicts with conda packages."
 
 // mockLogger implements a mock Logger for testing.
 type mockLogger struct{}
@@ -77,8 +80,8 @@ func TestDetector_Detect_CondaEnvironment(t *testing.T) {
 		t.Error("Expected IsPipSafe to be false for conda environment")
 	}
 
-	if len(env.Warnings) == 0 {
-		t.Error("Expected warnings for conda environment")
+	if !slices.Equal(env.Warnings, []string{condaEnvironmentWarning}) {
+		t.Errorf("Warnings = %q, want %q", env.Warnings, []string{condaEnvironmentWarning})
 	}
 }
 
@@ -221,11 +224,10 @@ func TestDetector_IsPipUpdateSafe(t *testing.T) {
 
 func TestDetector_GetEnvironmentWarnings(t *testing.T) {
 	tests := []struct {
-		name            string
-		setup           func()
-		cleanup         func()
-		expectWarnings  bool
-		expectedContain string
+		name             string
+		setup            func()
+		cleanup          func()
+		expectedWarnings []string
 	}{
 		{
 			name: "normal_no_warnings",
@@ -233,8 +235,8 @@ func TestDetector_GetEnvironmentWarnings(t *testing.T) {
 				os.Unsetenv("CONDA_DEFAULT_ENV")
 				os.Unsetenv("VIRTUAL_ENV")
 			},
-			cleanup:        func() {},
-			expectWarnings: false,
+			cleanup:          func() {},
+			expectedWarnings: nil,
 		},
 		{
 			name: "conda_has_warnings",
@@ -244,8 +246,7 @@ func TestDetector_GetEnvironmentWarnings(t *testing.T) {
 			cleanup: func() {
 				os.Unsetenv("CONDA_DEFAULT_ENV")
 			},
-			expectWarnings:  true,
-			expectedContain: "Conda",
+			expectedWarnings: []string{condaEnvironmentWarning},
 		},
 	}
 
@@ -257,25 +258,8 @@ func TestDetector_GetEnvironmentWarnings(t *testing.T) {
 			detector := NewDetector(nil, &mockLogger{})
 			warnings := detector.GetEnvironmentWarnings(context.Background())
 
-			if tt.expectWarnings && len(warnings) == 0 {
-				t.Error("Expected warnings, got none")
-			}
-
-			if !tt.expectWarnings && len(warnings) > 0 {
-				t.Errorf("Expected no warnings, got %v", warnings)
-			}
-
-			if tt.expectedContain != "" && len(warnings) > 0 {
-				found := false
-				for _, w := range warnings {
-					if contains(w, tt.expectedContain) {
-						found = true
-						break
-					}
-				}
-				if !found {
-					t.Errorf("Expected warning containing %q, got %v", tt.expectedContain, warnings)
-				}
+			if !slices.Equal(warnings, tt.expectedWarnings) {
+				t.Errorf("GetEnvironmentWarnings() = %q, want %q", warnings, tt.expectedWarnings)
 			}
 		})
 	}
@@ -300,21 +284,6 @@ func TestEnvironmentType_String(t *testing.T) {
 			}
 		})
 	}
-}
-
-// contains checks if s contains substr (case-sensitive).
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || substr == "" ||
-		(s != "" && substr != "" && findSubstring(s, substr)))
-}
-
-func findSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 func TestDetector_DetectConda_WithCondaExeButNoPrefix(t *testing.T) {
