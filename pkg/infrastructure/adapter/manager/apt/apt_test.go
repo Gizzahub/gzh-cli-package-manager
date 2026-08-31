@@ -506,7 +506,9 @@ func TestAdapter_GetBinaryPath_Error(t *testing.T) {
 }
 
 func TestAdapter_Update(t *testing.T) {
+	var calls int
 	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, _ string, _ ...string) (*output.ExecutionResult, error) {
+		calls++
 		return testutil.SuccessResult(""), nil
 	}), testutil.NewMockLogger())
 	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{DryRun: true})
@@ -515,6 +517,9 @@ func TestAdapter_Update(t *testing.T) {
 	}
 	if result == nil || !result.Success {
 		t.Fatalf("Update dry-run expected success result, got %#v", result)
+	}
+	if calls != 0 {
+		t.Fatalf("Update dry-run executed %d commands, want 0", calls)
 	}
 }
 
