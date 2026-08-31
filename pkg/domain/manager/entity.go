@@ -79,28 +79,28 @@ const (
 
 // IsUpdateAvailable returns true if an update is available for the package.
 //
-//nolint:gocritic // Preserve the exported value-receiver method set for Go consumers.
+//nolint:gocritic // Preserve the exported value-receiver method set; no measured hot-path benefit justifies an API change.
 func (p Package) IsUpdateAvailable() bool {
 	return p.UpdateType != UpdateNone && p.AvailableVersion != "" && p.AvailableVersion != p.CurrentVersion
 }
 
 // IsHealthy returns true if the manager is in a healthy state.
 //
-//nolint:gocritic // Preserve the exported value-receiver method set for Go consumers.
+//nolint:gocritic // Preserve the exported value-receiver method set; no measured hot-path benefit justifies an API change.
 func (m Manager) IsHealthy() bool {
 	return m.Status == StatusHealthy
 }
 
 // PackageCount returns the number of packages managed by this manager.
 //
-//nolint:gocritic // Preserve the exported value-receiver method set for Go consumers.
+//nolint:gocritic // Preserve the exported value-receiver method set; no measured hot-path benefit justifies an API change.
 func (m Manager) PackageCount() int {
 	return len(m.Packages)
 }
 
 // UpdatableCount returns the number of packages with available updates.
 //
-//nolint:gocritic // Preserve the exported value-receiver method set for Go consumers.
+//nolint:gocritic // Preserve the exported value-receiver method set; no measured hot-path benefit justifies an API change.
 func (m Manager) UpdatableCount() int {
 	count := 0
 	for _, pkg := range m.Packages {
