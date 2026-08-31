@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -17,7 +18,24 @@ const (
 	testVersionArg       = "--version"
 	testNameCommandFails = "command fails"
 	testPackageGit       = "git"
+	testAllPackagesArg   = "all"
+	testUpgradeArg       = "upgrade"
 )
+
+type chocolateyUpdateCall struct {
+	command string
+	args    []string
+	result  *output.ExecutionResult
+	err     error
+}
+
+type chocolateyUpdateCase struct {
+	name    string
+	opts    adapterm.UpdateOptions
+	calls   []chocolateyUpdateCall
+	want    *adapterm.UpdateResult
+	wantErr error
+}
 
 func TestAdapter_Detect(t *testing.T) {
 	tests := []struct {
@@ -331,110 +349,142 @@ func TestAdapter_CheckHealth(t *testing.T) {
 }
 
 func TestAdapter_Update(t *testing.T) {
-	tests := []struct {
-		name     string
-		opts     adapterm.UpdateOptions
-		execFunc testutil.ExecutorFunc
-		want     *adapterm.UpdateResult
-		wantErr  bool
-	}{
+	networkErr := errors.New("network error")
+	tests := []chocolateyUpdateCase{
 		{
 			name: "dry run",
 			opts: adapterm.UpdateOptions{DryRun: true},
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				return testutil.SuccessResult(""), nil
-			},
 			want: &adapterm.UpdateResult{
 				Success:         true,
 				Message:         "Dry-run: would upgrade all chocolatey packages",
 				UpdatedPackages: []string{},
 				FailedPackages:  []string{},
 			},
-			wantErr: false,
 		},
 		{
 			name: "fixed strategy",
 			opts: adapterm.UpdateOptions{Strategy: adapterm.StrategyFixed},
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				return testutil.SuccessResult(""), nil
-			},
 			want: &adapterm.UpdateResult{
 				Success:         true,
 				Message:         "Strategy 'fixed': chocolatey upgrade skipped",
 				UpdatedPackages: []string{},
 				FailedPackages:  []string{},
 			},
-			wantErr: false,
 		},
 		{
 			name: "successful upgrade",
 			opts: adapterm.UpdateOptions{},
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == chocoCommand && len(args) >= 2 && args[0] == "upgrade" && args[1] == "all" {
-					return testutil.SuccessResult("git has been upgraded to v2.43.0\n1 packages upgraded.\n"), nil
-				}
-				return nil, errors.New("unexpected command")
-			},
+			calls: []chocolateyUpdateCall{{
+				command: chocoCommand,
+				args:    []string{testUpgradeArg, testAllPackagesArg, "-y"},
+				result:  testutil.SuccessResult("git has been upgraded to v2.43.0\n1 packages upgraded.\n"),
+			}},
 			want: &adapterm.UpdateResult{
 				Success:         true,
 				Message:         "1 packages updated successfully",
 				UpdatedPackages: []string{testPackageGit},
 				FailedPackages:  []string{},
 			},
-			wantErr: false,
 		},
 		{
 			name: "already up to date",
 			opts: adapterm.UpdateOptions{},
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				if command == chocoCommand && len(args) >= 2 && args[0] == "upgrade" && args[1] == "all" {
-					return testutil.SuccessResult("Chocolatey upgraded 0 packages.\n"), nil
-				}
-				return nil, errors.New("unexpected command")
-			},
+			calls: []chocolateyUpdateCall{{
+				command: chocoCommand,
+				args:    []string{testUpgradeArg, testAllPackagesArg, "-y"},
+				result:  testutil.SuccessResult("Chocolatey upgraded 0 packages.\n"),
+			}},
 			want: &adapterm.UpdateResult{
 				Success:         true,
 				Message:         "0 packages updated successfully",
 				UpdatedPackages: []string{},
 				FailedPackages:  []string{},
 			},
-			wantErr: false,
 		},
 		{
 			name: "upgrade fails",
 			opts: adapterm.UpdateOptions{},
-			execFunc: func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
-				return nil, errors.New("network error")
+			calls: []chocolateyUpdateCall{{
+				command: chocoCommand,
+				args:    []string{testUpgradeArg, testAllPackagesArg, "-y"},
+				err:     networkErr,
+			}},
+			want: &adapterm.UpdateResult{
+				Success:         false,
+				Message:         "chocolatey upgrade failed: network error",
+				UpdatedPackages: []string{},
+				FailedPackages:  []string{},
 			},
-			want:    nil,
-			wantErr: true,
+			wantErr: networkErr,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			adapter := NewAdapter(testutil.NewMockExecutor(tt.execFunc), testutil.NewMockLogger())
-
-			got, err := adapter.Update(context.Background(), tt.opts)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Update() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.want == nil {
-				return
-			}
-
-			if got.Success != tt.want.Success {
-				t.Errorf("Update() Success = %v, want %v", got.Success, tt.want.Success)
-			}
-			if got.Message != tt.want.Message {
-				t.Errorf("Update() Message = %v, want %v", got.Message, tt.want.Message)
-			}
-			if len(got.UpdatedPackages) != len(tt.want.UpdatedPackages) {
-				t.Errorf("Update() UpdatedPackages len = %v, want %v", len(got.UpdatedPackages), len(tt.want.UpdatedPackages))
-			}
+	for i := range tests {
+		testCase := &tests[i]
+		t.Run(testCase.name, func(t *testing.T) {
+			runChocolateyUpdateCase(t, testCase)
 		})
+	}
+}
+
+func runChocolateyUpdateCase(t *testing.T, testCase *chocolateyUpdateCase) {
+	t.Helper()
+
+	execFunc, assertCalls := newChocolateyUpdateExecutor(t, testCase.calls)
+	adapter := NewAdapter(testutil.NewMockExecutor(execFunc), testutil.NewMockLogger())
+
+	got, err := adapter.Update(context.Background(), testCase.opts)
+	assertCalls()
+	if !errors.Is(err, testCase.wantErr) {
+		t.Errorf("Update() error = %v, want error matching %v", err, testCase.wantErr)
+		return
+	}
+	assertChocolateyUpdateResult(t, got, testCase.want)
+}
+
+func newChocolateyUpdateExecutor(t *testing.T, calls []chocolateyUpdateCall) (execFunc testutil.ExecutorFunc, assertCalls func()) {
+	t.Helper()
+
+	callIndex := 0
+	execFunc = func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if callIndex == len(calls) {
+			t.Errorf("unexpected executor call: %s %s", command, strings.Join(args, " "))
+			return nil, errors.New("unexpected executor call")
+		}
+
+		want := calls[callIndex]
+		callIndex++
+		if command != want.command || !slices.Equal(args, want.args) {
+			t.Errorf("executor call = %s %v, want %s %v", command, args, want.command, want.args)
+		}
+		return want.result, want.err
+	}
+	assertCalls = func() {
+		t.Helper()
+		if callIndex != len(calls) {
+			t.Errorf("executor call count = %d, want %d", callIndex, len(calls))
+		}
+	}
+	return execFunc, assertCalls
+}
+
+func assertChocolateyUpdateResult(t *testing.T, got, want *adapterm.UpdateResult) {
+	t.Helper()
+
+	if got == nil {
+		t.Fatal("Update() returned nil result")
+	}
+	if got.Success != want.Success {
+		t.Errorf("Update() Success = %v, want %v", got.Success, want.Success)
+	}
+	if got.Message != want.Message {
+		t.Errorf("Update() Message = %v, want %v", got.Message, want.Message)
+	}
+	if !slices.Equal(got.UpdatedPackages, want.UpdatedPackages) {
+		t.Errorf("Update() UpdatedPackages = %v, want %v", got.UpdatedPackages, want.UpdatedPackages)
+	}
+	if !slices.Equal(got.FailedPackages, want.FailedPackages) {
+		t.Errorf("Update() FailedPackages = %v, want %v", got.FailedPackages, want.FailedPackages)
 	}
 }
 
