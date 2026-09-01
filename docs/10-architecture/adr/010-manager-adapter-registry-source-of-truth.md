@@ -1,8 +1,8 @@
 # ADR-010: Manager Adapter Registry Source of Truth
 
 **Date**: 2026-09-01
-**Status**: Proposed — design prepared; implementation approval pending
-**Deciders**: package-manager maintainer (design review pending)
+**Status**: Accepted — implemented in `53e8ed5`
+**Deciders**: package-manager maintainer
 **Related**: TASK-121, TASK-120, [ADR-002](002-clean-architecture.md),
 [ADR-003](003-hexagonal-ports-adapters.md)
 
@@ -80,13 +80,13 @@ move adapter construction into the presentation layer.
 - `sdkman` and `yay` remain out of the registry until their support is separately
   approved and implemented.
 
-## Deferred Implementation and Verification
+## Implementation and Verification
 
-Implementation is a separate follow-up after this design review. The follow-up must
-extract the factory, wire both consumers, and add key-set/non-nil constructor tests.
-It must then run the existing focused repository and CLI tests, the adapter tests,
-`make test-unit`, and `make lint`. Native package-manager update commands and
-privilege-sensitive E2E remain outside this refactor.
+Commit `53e8ed5` implemented the preferred separate infrastructure registry package,
+wired both consumers, and added key-set/non-nil constructor tests. The focused repository,
+CLI, and adapter tests, `make test-unit`, `make lint-diff`, and `make lint` all pass.
+Native package-manager update commands and privilege-sensitive E2E remain outside this
+refactor.
 
 ## Consequences
 
