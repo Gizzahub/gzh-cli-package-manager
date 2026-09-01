@@ -8,16 +8,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/usecase/update"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/apt"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/asdf"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cargo"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/chocolatey"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/homebrew"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/npm"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/pacman"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/pip"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/scoop"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/winget"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/registry"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/detector"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/executor"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/logger"
@@ -55,19 +46,8 @@ func main() {
 	command.Execute()
 }
 
-// newManagerAdapters constructs the complete adapter registry used by the CLI.
-// Keeping registration in one factory makes omissions visible in a focused test.
+// newManagerAdapters delegates to the infrastructure registry so the CLI and
+// detecting repository share one supported-manager constructor set.
 func newManagerAdapters(exec output.CommandExecutor, log output.Logger) map[manager.ManagerID]adapterm.Adapter {
-	return map[manager.ManagerID]adapterm.Adapter{
-		manager.ManagerApt:        apt.NewAdapter(exec, log),
-		manager.ManagerHomebrew:   homebrew.NewAdapter(exec, log),
-		manager.ManagerASDF:       asdf.NewAdapter(exec, log),
-		manager.ManagerNPM:        npm.NewAdapter(exec, log),
-		manager.ManagerCargo:      cargo.NewAdapter(exec, log),
-		manager.ManagerPip:        pip.NewAdapter(exec, log),
-		manager.ManagerWinget:     winget.NewAdapter(exec, log),
-		manager.ManagerScoop:      scoop.NewAdapter(exec, log),
-		manager.ManagerChocolatey: chocolatey.NewAdapter(exec, log),
-		manager.ManagerPacman:     pacman.NewAdapter(exec, log),
-	}
+	return registry.New(exec, log)
 }

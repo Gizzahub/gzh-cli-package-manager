@@ -9,7 +9,9 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/usecase/update"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/testutil"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/registry"
 )
 
 func TestNewManagerAdaptersRegistersSupportedManagers(t *testing.T) {
@@ -35,6 +37,20 @@ func TestNewManagerAdaptersRegistersSupportedManagers(t *testing.T) {
 	for _, id := range expected {
 		if adapters[id] == nil {
 			t.Errorf("adapter registry is missing %q", id)
+		}
+	}
+
+	assertAdapterKeySetEqual(t, adapters, registry.New(nil, nil))
+}
+
+func assertAdapterKeySetEqual(t *testing.T, got, want map[manager.ManagerID]adapterm.Adapter) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("adapter key sets have different sizes: got %d, want %d", len(got), len(want))
+	}
+	for id := range want {
+		if got[id] == nil {
+			t.Errorf("adapter key set is missing %q", id)
 		}
 	}
 }

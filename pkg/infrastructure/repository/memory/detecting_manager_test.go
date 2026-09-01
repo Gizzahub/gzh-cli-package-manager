@@ -12,6 +12,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterpkg "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/registry"
 )
 
 // Test-specific constants.
@@ -674,6 +675,16 @@ func TestDetectingManagerRepository_AdapterRegistration(t *testing.T) {
 	// Verify adapter count
 	if len(repo.adapters) != len(expectedAdapters) {
 		t.Errorf("Adapter count = %d, want %d", len(repo.adapters), len(expectedAdapters))
+	}
+
+	factoryAdapters := registry.New(executor, logger)
+	if len(repo.adapters) != len(factoryAdapters) {
+		t.Fatalf("detecting repository has %d adapter keys, factory has %d", len(repo.adapters), len(factoryAdapters))
+	}
+	for id := range factoryAdapters {
+		if repo.adapters[id] == nil {
+			t.Errorf("detecting repository is missing factory adapter %q", id)
+		}
 	}
 }
 

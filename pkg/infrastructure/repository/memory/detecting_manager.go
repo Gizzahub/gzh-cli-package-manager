@@ -10,16 +10,7 @@ import (
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	adapterpkg "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/apt"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/asdf"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cargo"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/chocolatey"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/homebrew"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/npm"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/pacman"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/pip"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/scoop"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/winget"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/registry"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
@@ -34,7 +25,6 @@ const (
 type DetectingManagerRepository struct {
 	*ManagerRepository
 	adapters map[manager.ManagerID]adapterpkg.Adapter
-	executor output.CommandExecutor
 	logger   output.Logger
 }
 
@@ -44,36 +34,11 @@ func NewDetectingManagerRepository(executor output.CommandExecutor, logger outpu
 
 	repo := &DetectingManagerRepository{
 		ManagerRepository: base,
-		adapters:          make(map[manager.ManagerID]adapterpkg.Adapter),
-		executor:          executor,
+		adapters:          registry.New(executor, logger),
 		logger:            logger,
 	}
 
-	// Register available adapters
-	repo.registerAdapters()
-
 	return repo
-}
-
-// registerAdapters initializes adapters for supported package managers.
-func (r *DetectingManagerRepository) registerAdapters() {
-	// Register system package managers
-	r.adapters[manager.ManagerApt] = apt.NewAdapter(r.executor, r.logger)
-	r.adapters[manager.ManagerHomebrew] = homebrew.NewAdapter(r.executor, r.logger)
-	r.adapters[manager.ManagerPacman] = pacman.NewAdapter(r.executor, r.logger)
-
-	// Register language package managers
-	r.adapters[manager.ManagerNPM] = npm.NewAdapter(r.executor, r.logger)
-	r.adapters[manager.ManagerPip] = pip.NewAdapter(r.executor, r.logger)
-	r.adapters[manager.ManagerCargo] = cargo.NewAdapter(r.executor, r.logger)
-
-	// Register version managers
-	r.adapters[manager.ManagerASDF] = asdf.NewAdapter(r.executor, r.logger)
-
-	// Register Windows package managers
-	r.adapters[manager.ManagerWinget] = winget.NewAdapter(r.executor, r.logger)
-	r.adapters[manager.ManagerScoop] = scoop.NewAdapter(r.executor, r.logger)
-	r.adapters[manager.ManagerChocolatey] = chocolatey.NewAdapter(r.executor, r.logger)
 }
 
 // FindAll returns all managers with detection performed.
