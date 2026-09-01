@@ -31,7 +31,7 @@ gzh-cli-package-manager의 상세 아키텍처 문서입니다. 개요와 진입
 | [70-testing-strategy.md](70-testing-strategy.md) | §7 | Testing Strategy — 테스트 계층, 커버리지 |
 | [80-technology-stack.md](80-technology-stack.md) | §8 | Technology Stack — 언어·라이브러리 선택 |
 | [90-deployment.md](90-deployment.md) | §9 | Deployment Architecture — 빌드·배포 |
-| [adr/](adr/) | — | Architecture Decision Records (7건) |
+| [adr/](adr/) | — | Architecture Decision Records (9건; ADR-010 registry source-of-truth design 포함) |
 
 > §2 Layer Architecture는 단일 파일 기준 14KB로 분할 기준(500줄/10KB)을 초과하여
 > 레이어별로 [`20-layers/`](20-layers/README.md) 하위에 나누었습니다.
