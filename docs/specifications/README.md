@@ -14,7 +14,8 @@ specifications/
 │   ├── UC-001-update-enhanced.md # Enhanced update spec (95% compliance target)
 │   └── UC-006-cleanup.md       # Cleanup command specification
 ├── test-scenarios.md           # Comprehensive test suite (120+ scenarios)
-└── per-manager-cli.md          # winget/scoop/chocolatey per-manager CLI (list|search)
+├── per-manager-cli.md          # winget/scoop/chocolatey per-manager CLI (list|search)
+└── update-metadata-fidelity.md # Update JSON version/size presence contract (npm/pacman pilot)
 ```
 
 ## 🎯 Specification Philosophy
@@ -172,6 +173,12 @@ gz-pm update --all --output json        # Machine-readable output
 
 See [`use-cases/UC-006-cleanup.md`](use-cases/UC-006-cleanup.md) for the maintained
 acceptance criteria and safety constraints.
+
+### Update metadata fidelity (npm/pacman pilot)
+
+See [`update-metadata-fidelity.md`](update-metadata-fidelity.md) for the owner-approved
+MVP contract: observed versions from pre-update `ListPackages`, derived update types,
+unavailable download size, additive JSON presence fields, and out-of-pilot managers.
 
 ## 🛠️ Using These Specifications
 

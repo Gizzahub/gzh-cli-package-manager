@@ -72,6 +72,14 @@ type ManagerUpdateResult struct {
 	// SkippedPackages is the list of packages that were skipped.
 	SkippedPackages []string
 
+	// PackageCorrelation reports whether updated package names could be joined
+	// with a pre-update snapshot. Empty UpdatedPackages on a successful npm or
+	// pacman update is unsupported correlation, not a fabricated package list.
+	PackageCorrelation PackageCorrelation
+
+	// MetadataPilot is true for npm and pacman, the MVP metadata-fidelity pilots.
+	MetadataPilot bool
+
 	// Duration is the time taken for the update in seconds.
 	Duration float64
 
@@ -82,22 +90,81 @@ type ManagerUpdateResult struct {
 	SpaceFreed int64
 }
 
+// FieldPresence reports whether a metadata field is an observed value,
+// a value derived from observed inputs, or unavailable.
+type FieldPresence string
+
+const (
+	// PresenceObserved means the value was read from command output.
+	PresenceObserved FieldPresence = "observed"
+	// PresenceDerived means the value was computed from observed versions.
+	PresenceDerived FieldPresence = "derived"
+	// PresenceUnavailable means no value was observed or reported.
+	PresenceUnavailable FieldPresence = "unavailable"
+)
+
+// PackageCorrelation reports how update result names were joined with a
+// pre-update ListPackages snapshot.
+type PackageCorrelation string
+
+const (
+	// CorrelationJoined means every named package had both versions observed.
+	CorrelationJoined PackageCorrelation = "joined"
+	// CorrelationPartial means some named packages had observed version fields.
+	CorrelationPartial PackageCorrelation = "partial"
+	// CorrelationUnobserved means names were reported but no version metadata joined.
+	CorrelationUnobserved PackageCorrelation = "unobserved"
+	// CorrelationUnsupported means the update result did not report package names.
+	CorrelationUnsupported PackageCorrelation = "unsupported"
+	// CorrelationOutOfPilot means this manager is outside the npm/pacman MVP pilot.
+	CorrelationOutOfPilot PackageCorrelation = "out_of_pilot"
+	// CorrelationNotApplicable means no package metadata was expected (skip or error).
+	CorrelationNotApplicable PackageCorrelation = "not_applicable"
+)
+
 // PackageUpdate represents a package update operation.
 type PackageUpdate struct {
 	// Name is the package name.
 	Name string
 
 	// OldVersion is the version before update.
+	// Empty when OldVersionPresence is unavailable; it is not a placeholder.
 	OldVersion string
 
 	// NewVersion is the version after update.
+	// Empty when NewVersionPresence is unavailable; it is not a placeholder.
 	NewVersion string
 
 	// UpdateType indicates the type of update.
+	// Empty when UpdateTypePresence is unavailable; it is not a default minor update.
 	UpdateType manager.UpdateType
 
 	// SizeBytes is the download size in bytes.
+	// Zero is meaningful only when SizeBytesPresence is observed.
 	SizeBytes int64
+
+	// OldVersionPresence distinguishes an observed old version from an unobserved one.
+	OldVersionPresence FieldPresence
+
+	// NewVersionPresence distinguishes an observed new version from an unobserved one.
+	NewVersionPresence FieldPresence
+
+	// UpdateTypePresence is derived when both versions were observed, otherwise unavailable.
+	UpdateTypePresence FieldPresence
+
+	// SizeBytesPresence is observed only when an adapter reports download size.
+	SizeBytesPresence FieldPresence
+}
+
+// UnavailablePackageUpdate returns a named package row with no observed metadata.
+func UnavailablePackageUpdate(name string) PackageUpdate {
+	return PackageUpdate{
+		Name:               name,
+		OldVersionPresence: PresenceUnavailable,
+		NewVersionPresence: PresenceUnavailable,
+		UpdateTypePresence: PresenceUnavailable,
+		SizeBytesPresence:  PresenceUnavailable,
+	}
 }
 
 // UpdateSummary provides aggregate statistics for all updates.

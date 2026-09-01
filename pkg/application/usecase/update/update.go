@@ -96,13 +96,14 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 				output.Field{Key: "env_name", Value: env.Name},
 			)
 			result := &dto.ManagerUpdateResult{
-				ID:              mgr.ID,
-				Name:            mgr.Name,
-				Success:         true, // Not a failure, intentional skip
-				Skipped:         true,
-				SkipReason:      fmt.Sprintf("Conda environment detected (%s). Use --pip-allow-conda to override.", env.Name),
-				UpdatedPackages: []dto.PackageUpdate{},
-				SkippedPackages: []string{},
+				ID:                 mgr.ID,
+				Name:               mgr.Name,
+				Success:            true, // Not a failure, intentional skip
+				Skipped:            true,
+				SkipReason:         fmt.Sprintf("Conda environment detected (%s). Use --pip-allow-conda to override.", env.Name),
+				UpdatedPackages:    []dto.PackageUpdate{},
+				SkippedPackages:    []string{},
+				PackageCorrelation: dto.CorrelationNotApplicable,
 			}
 			results = append(results, result)
 			summary.SkippedManagers++
@@ -185,10 +186,12 @@ func (uc *UseCase) updateManager(
 	startTime := time.Now()
 
 	result := &dto.ManagerUpdateResult{
-		ID:              mgr.ID,
-		Name:            mgr.Name,
-		UpdatedPackages: []dto.PackageUpdate{},
-		SkippedPackages: []string{},
+		ID:                 mgr.ID,
+		Name:               mgr.Name,
+		UpdatedPackages:    []dto.PackageUpdate{},
+		SkippedPackages:    []string{},
+		MetadataPilot:      isMetadataPilot(mgr.ID),
+		PackageCorrelation: dto.CorrelationNotApplicable,
 	}
 
 	// Get the adapter for this manager
@@ -200,6 +203,8 @@ func (uc *UseCase) updateManager(
 		uc.logger.Error(ctx, "No adapter found", fmt.Errorf("%s", errMsg), output.Field{Key: managerIDFieldKey, Value: mgr.ID})
 		return result
 	}
+
+	snapshot := uc.preUpdateSnapshot(ctx, adapter, mgr, dryRun)
 
 	// Execute update
 	opts := adapterm.UpdateOptions{
@@ -219,20 +224,7 @@ func (uc *UseCase) updateManager(
 
 	result.Success = updateResult.Success
 	result.Duration = time.Since(startTime).Seconds()
-
-	// Note: For MVP, we're using simplified package update tracking.
-	// The UpdateResult from adapters currently doesn't include detailed version info.
-	// This will be enhanced in future iterations.
-	for _, pkgName := range updateResult.UpdatedPackages {
-		result.UpdatedPackages = append(result.UpdatedPackages, dto.PackageUpdate{
-			Name:       pkgName,
-			OldVersion: "unknown", // TODO: Track actual versions
-			NewVersion: "unknown", // TODO: Track actual versions
-			UpdateType: manager.UpdateMinor,
-			SizeBytes:  0, // TODO: Track download sizes
-		})
-	}
-
+	applyUpdateMetadata(result, mgr.ID, snapshot, updateResult)
 	result.SkippedPackages = updateResult.FailedPackages
 
 	uc.logger.Info(

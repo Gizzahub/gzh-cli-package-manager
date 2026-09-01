@@ -82,7 +82,9 @@ func (m *mockLogger) Error(_ context.Context, msg string, _ error, _ ...output.F
 
 // mockAdapter implements adapterm.Adapter for testing.
 type mockAdapter struct {
-	updateFunc func(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error)
+	updateFunc        func(ctx context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error)
+	listPackagesFunc  func(ctx context.Context) ([]manager.Package, error)
+	listPackagesCalls int
 }
 
 type updateAllManagersCase struct {
@@ -121,7 +123,11 @@ func (m *mockAdapter) GetConfigPath(_ context.Context) (string, error) {
 	return "/etc/mock", nil
 }
 
-func (m *mockAdapter) ListPackages(_ context.Context) ([]manager.Package, error) {
+func (m *mockAdapter) ListPackages(ctx context.Context) ([]manager.Package, error) {
+	m.listPackagesCalls++
+	if m.listPackagesFunc != nil {
+		return m.listPackagesFunc(ctx)
+	}
 	return nil, nil
 }
 
@@ -618,8 +624,9 @@ func TestUseCase_Update_PreservesResultShapeAndOrder(t *testing.T) {
 	if first.UpdatedPackages[0].Name != testGitPackageName || first.UpdatedPackages[1].Name != "curl" {
 		t.Errorf("updated package order = %#v, want git then curl", first.UpdatedPackages)
 	}
-	if first.UpdatedPackages[0].OldVersion != "unknown" || first.UpdatedPackages[0].NewVersion != "unknown" || first.UpdatedPackages[0].UpdateType != manager.UpdateMinor || first.UpdatedPackages[0].SizeBytes != 0 {
-		t.Errorf("package update = %#v, want unknown/minor/zero conversion", first.UpdatedPackages[0])
+	assertUnavailablePackageUpdate(t, first.UpdatedPackages[0], testGitPackageName)
+	if first.PackageCorrelation != dto.CorrelationOutOfPilot || first.MetadataPilot {
+		t.Errorf("homebrew correlation/pilot = %s/%t, want out_of_pilot/false", first.PackageCorrelation, first.MetadataPilot)
 	}
 	if !slices.Equal(first.SkippedPackages, []string{"openssl"}) {
 		t.Errorf("SkippedPackages = %v, want [openssl]", first.SkippedPackages)
