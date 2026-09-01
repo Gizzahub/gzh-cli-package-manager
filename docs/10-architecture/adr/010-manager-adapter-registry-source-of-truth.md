@@ -1,8 +1,8 @@
 # ADR-010: Manager Adapter Registry Source of Truth
 
-**Date**: 2026-09-01  
-**Status**: Proposed — design prepared; implementation approval pending  
-**Deciders**: package-manager maintainer (design review pending)  
+**Date**: 2026-09-01
+**Status**: Proposed — design prepared; implementation approval pending
+**Deciders**: package-manager maintainer (design review pending)
 **Related**: TASK-121, TASK-120, [ADR-002](002-clean-architecture.md),
 [ADR-003](003-hexagonal-ports-adapters.md)
 
@@ -96,4 +96,3 @@ package will import all concrete adapters, so constructor ownership is explicit 
 the package remains an outer-layer concern. A small amount of wiring code moves from
 the composition root and repository, but no public domain or application contract
 changes.
-
