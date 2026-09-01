@@ -345,7 +345,6 @@ func TestAdapter_GetConfigPath(t *testing.T) {
 		adapter := NewAdapter(testutil.NewMockExecutor(nil), testutil.NewMockLogger())
 		adapter.homeDirResolver = &homeDirResolver{resolve: func() (string, error) { return homeDir, nil }}
 		path, err := adapter.GetConfigPath(context.Background())
-
 		if err != nil {
 			t.Fatalf("GetConfigPath() error = %v", err)
 		}
