@@ -6,25 +6,26 @@
 **Related**: TASK-121, TASK-120, [ADR-002](002-clean-architecture.md),
 [ADR-003](003-hexagonal-ports-adapters.md)
 
-## Context
+## Context (historical pre-implementation context)
 
-The CLI composition root and the in-memory detecting repository each construct a
-manager adapter registry. TASK-120 exposed the risk: APT and Pacman were already
-available to detection but were missing from the CLI map. The immediate wiring fix
-added both entries to `cmd/gz-pm/main.go`, but the two construction sites still have
-independent lists.
+At design time, the CLI composition root and the in-memory detecting repository each
+constructed a manager adapter registry. TASK-120 exposed the risk: APT and Pacman were
+already available to detection but were missing from the CLI map. The immediate wiring
+fix added both entries to `cmd/gz-pm/main.go`, but the two construction sites still had
+independent lists. Commit `53e8ed5` subsequently replaced those lists with the shared
+factory described below.
 
-The two lists currently contain the same ten registered IDs, but their declaration
-orders differ. Go map iteration order is deliberately unspecified, so declaration
-order is not a runtime contract. The contract that can drift is the supported ID
-set, the constructor associated with each ID, and the consumer path that receives
-the resulting adapter.
+At that time, the two lists contained the same ten registered IDs, but their
+declaration orders differed. Go map iteration order is deliberately unspecified, so
+declaration order is not a runtime contract. The contract that could drift was the
+supported ID set, the constructor associated with each ID, and the consumer path that
+received the resulting adapter.
 
 The domain also declares `sdkman` and `yay` IDs. They are not registered in either
 runtime map and therefore remain unsupported until a separate support decision and
 adapter implementation exist.
 
-## Inventory
+## Inventory (design-time snapshot)
 
 | Manager ID | CLI composition root | Detection repository | Constructor |
 |---|---|---|---|
