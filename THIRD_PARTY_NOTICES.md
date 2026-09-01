@@ -38,9 +38,22 @@ the Go module cache and the file served from the named upstream tag.
   mapping must therefore account for the yaml.v3 `LICENSE` and `NOTICE` plus a
   complete copy of Apache License 2.0.
 
-This section records source evidence, not a final legal determination or the
-release archive layout. The release owner must approve the obligations and
-payload mapping before license texts are copied or release packaging changes.
+## Release archive payload
+
+The 2026-09-01 release-owner mapping is implemented by
+`release/payload-files.tsv` and `scripts/release/package-archive.sh`. This is
+not legal advice.
+
+- Every platform archive includes the project `LICENSE` and
+  `THIRD_PARTY_NOTICES.md`.
+- Common runtime files are Cobra v1.10.2 `LICENSE.txt`, pflag v1.0.9
+  `LICENSE`, and yaml.v3 v3.0.1 `LICENSE`, `NOTICE`, and a complete Apache-2.0
+  text as `LICENSE-Apache-2.0`.
+- Windows archives also include mousetrap v1.1.0 `LICENSE`.
+- Test-only `testify` and `go.yaml.in/yaml/v3` are not included.
+
+This section records source evidence and the approved archive payload. It is
+not a final legal determination.
 
 ## Test-only inventory
 

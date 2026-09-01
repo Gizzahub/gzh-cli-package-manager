@@ -1,10 +1,12 @@
 #!/bin/sh
+# runtime-deps.sh: print or check the gz-pm runtime module inventory
+# usage: runtime-deps.sh [--check]
 
 set -eu
 
 script_dir=$(CDPATH='' cd -P "$(dirname "$0")" && pwd)
-repo_root=$(CDPATH='' cd -P "$script_dir/../.." && pwd)
-manifest_path="$repo_root/release/runtime-dependencies.tsv"
+# shellcheck source-path=SCRIPTDIR
+. "$script_dir/lib.sh"
 
 usage() {
 	printf 'usage: %s [--check]\n' "$0" >&2
@@ -48,14 +50,9 @@ generate_manifest() {
 		printf '%s\n' '# columns: goos<TAB>goarch<TAB>module<TAB>version'
 	} >"$output_path"
 
-	# Keep this matrix aligned with .github/workflows/build.yml and .make/build.mk.
-	for target in \
-		linux/amd64 \
-		linux/arm64 \
-		darwin/amd64 \
-		darwin/arm64 \
-		windows/amd64
-	do
+	targets_file="$runtime_deps_tmp/targets"
+	release_read_targets >"$targets_file"
+	while IFS= read -r target; do
 		target_index=$((target_index + 1))
 		goos=${target%/*}
 		goarch=${target#*/}
@@ -64,7 +61,7 @@ generate_manifest() {
 		sorted_path="$runtime_deps_tmp/$target_index.sorted"
 
 		if ! (
-			cd "$repo_root"
+			cd "$release_repo_root"
 			GOWORK=off GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 \
 				go list -mod=readonly -deps \
 				-f '{{if and .Module (not .Module.Main)}}{{.Module.Path}}{{"\t"}}{{.Module.Version}}{{end}}' \
@@ -87,7 +84,7 @@ generate_manifest() {
 
 		LC_ALL=C sort -u "$rows_path" >"$sorted_path"
 		cat "$sorted_path" >>"$output_path"
-	done
+	done <"$targets_file"
 }
 
 generated_manifest="$runtime_deps_tmp/runtime-dependencies.tsv"
@@ -98,10 +95,10 @@ print)
 	cat "$generated_manifest"
 	;;
 check)
-	if [ ! -f "$manifest_path" ]; then
-		printf 'runtime dependency manifest not found: %s\n' "$manifest_path" >&2
+	if [ ! -f "$release_inventory_path" ]; then
+		printf 'runtime dependency manifest not found: %s\n' "$release_inventory_path" >&2
 		exit 1
 	fi
-	diff -u "$manifest_path" "$generated_manifest"
+	diff -u "$release_inventory_path" "$generated_manifest"
 	;;
 esac

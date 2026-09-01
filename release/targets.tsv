@@ -1,0 +1,8 @@
+# release-targets/v1
+# columns: goos<TAB>goarch
+# Keep this list identical to .github/workflows/build.yml and .make/build.mk.
+linux	amd64
+linux	arm64
+darwin	amd64
+darwin	arm64
+windows	amd64
