@@ -22,9 +22,9 @@ func TestUseCase_Update_NPMMetadataFidelity(t *testing.T) {
 			adapter: &mockAdapter{
 				listPackagesFunc: func(_ context.Context) ([]manager.Package, error) {
 					return []manager.Package{{
-						Name:             "typescript",
-						CurrentVersion:   "5.0.0",
-						AvailableVersion: "5.1.0",
+						Name:             testTypeScriptPackageName,
+						CurrentVersion:   testTypeScriptCurrentVersion,
+						AvailableVersion: testTypeScriptAvailableVer,
 						UpdateType:       manager.UpdateMinor,
 					}}, nil
 				},
@@ -63,22 +63,22 @@ func TestUseCase_Update_NPMMetadataFidelity(t *testing.T) {
 			adapter: &mockAdapter{
 				listPackagesFunc: func(_ context.Context) ([]manager.Package, error) {
 					return []manager.Package{{
-						Name:             "typescript",
-						CurrentVersion:   "5.0.0",
-						AvailableVersion: "5.1.0",
+						Name:             testTypeScriptPackageName,
+						CurrentVersion:   testTypeScriptCurrentVersion,
+						AvailableVersion: testTypeScriptAvailableVer,
 					}}, nil
 				},
 				updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-					return &adapterm.UpdateResult{Success: true, UpdatedPackages: []string{"typescript"}}, nil
+					return &adapterm.UpdateResult{Success: true, UpdatedPackages: []string{testTypeScriptPackageName}}, nil
 				},
 			},
 			wantSuccess:     true,
 			wantPilot:       true,
 			wantCorrelation: dto.CorrelationJoined,
 			wantPackages: []dto.PackageUpdate{{
-				Name:               "typescript",
-				OldVersion:         "5.0.0",
-				NewVersion:         "5.1.0",
+				Name:               testTypeScriptPackageName,
+				OldVersion:         testTypeScriptCurrentVersion,
+				NewVersion:         testTypeScriptAvailableVer,
 				UpdateType:         manager.UpdateMinor,
 				OldVersionPresence: dto.PresenceObserved,
 				NewVersionPresence: dto.PresenceObserved,
@@ -95,12 +95,12 @@ func TestUseCase_Update_NPMMetadataFidelity(t *testing.T) {
 			adapter: &mockAdapter{
 				listPackagesFunc: func(_ context.Context) ([]manager.Package, error) {
 					return []manager.Package{
-						{Name: "typescript", CurrentVersion: "5.0.0", AvailableVersion: "5.1.0"},
-						{Name: "react", CurrentVersion: "18.0.0"},
+						{Name: testTypeScriptPackageName, CurrentVersion: testTypeScriptCurrentVersion, AvailableVersion: testTypeScriptAvailableVer},
+						{Name: testReactPackageName, CurrentVersion: "18.0.0"},
 					}, nil
 				},
 				updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-					return &adapterm.UpdateResult{Success: true, UpdatedPackages: []string{"typescript", "react", "vue"}}, nil
+					return &adapterm.UpdateResult{Success: true, UpdatedPackages: []string{testTypeScriptPackageName, testReactPackageName, "vue"}}, nil
 				},
 			},
 			wantSuccess:     true,
@@ -108,9 +108,9 @@ func TestUseCase_Update_NPMMetadataFidelity(t *testing.T) {
 			wantCorrelation: dto.CorrelationPartial,
 			wantPackages: []dto.PackageUpdate{
 				{
-					Name:               "typescript",
-					OldVersion:         "5.0.0",
-					NewVersion:         "5.1.0",
+					Name:               testTypeScriptPackageName,
+					OldVersion:         testTypeScriptCurrentVersion,
+					NewVersion:         testTypeScriptAvailableVer,
 					UpdateType:         manager.UpdateMinor,
 					OldVersionPresence: dto.PresenceObserved,
 					NewVersionPresence: dto.PresenceObserved,
@@ -118,7 +118,7 @@ func TestUseCase_Update_NPMMetadataFidelity(t *testing.T) {
 					SizeBytesPresence:  dto.PresenceUnavailable,
 				},
 				{
-					Name:               "react",
+					Name:               testReactPackageName,
 					OldVersion:         "18.0.0",
 					OldVersionPresence: dto.PresenceObserved,
 					NewVersionPresence: dto.PresenceUnavailable,
@@ -136,13 +136,13 @@ func TestUseCase_Update_NPMMetadataFidelity(t *testing.T) {
 			managerName: testNPMManagerName,
 			adapter: &mockAdapter{
 				updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-					return &adapterm.UpdateResult{Success: true, UpdatedPackages: []string{"typescript"}}, nil
+					return &adapterm.UpdateResult{Success: true, UpdatedPackages: []string{testTypeScriptPackageName}}, nil
 				},
 			},
 			wantSuccess:      true,
 			wantPilot:        true,
 			wantCorrelation:  dto.CorrelationUnobserved,
-			wantPackages:     []dto.PackageUpdate{dto.UnavailablePackageUpdate("typescript")},
+			wantPackages:     []dto.PackageUpdate{dto.UnavailablePackageUpdate(testTypeScriptPackageName)},
 			wantListCalls:    1,
 			wantUpdatedCount: 1,
 		},
@@ -155,13 +155,13 @@ func TestUseCase_Update_NPMMetadataFidelity(t *testing.T) {
 					return nil, listErr
 				},
 				updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-					return &adapterm.UpdateResult{Success: true, UpdatedPackages: []string{"typescript"}}, nil
+					return &adapterm.UpdateResult{Success: true, UpdatedPackages: []string{testTypeScriptPackageName}}, nil
 				},
 			},
 			wantSuccess:      true,
 			wantPilot:        true,
 			wantCorrelation:  dto.CorrelationUnobserved,
-			wantPackages:     []dto.PackageUpdate{dto.UnavailablePackageUpdate("typescript")},
+			wantPackages:     []dto.PackageUpdate{dto.UnavailablePackageUpdate(testTypeScriptPackageName)},
 			wantListCalls:    1,
 			wantWarn:         true,
 			wantUpdatedCount: 1,
@@ -172,7 +172,7 @@ func TestUseCase_Update_NPMMetadataFidelity(t *testing.T) {
 			managerName: testNPMManagerName,
 			adapter: &mockAdapter{
 				updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-					return &adapterm.UpdateResult{Success: false, UpdatedPackages: []string{"typescript"}}, updateErr
+					return &adapterm.UpdateResult{Success: false, UpdatedPackages: []string{testTypeScriptPackageName}}, updateErr
 				},
 			},
 			wantSuccess:      false,
@@ -186,7 +186,7 @@ func TestUseCase_Update_NPMMetadataFidelity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runMetadataFidelityCase(t, tt)
+			runMetadataFidelityCase(t, &tt)
 		})
 	}
 }

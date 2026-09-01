@@ -33,7 +33,8 @@ func (uc *UseCase) preUpdateSnapshot(
 
 	packages, err := adapter.ListPackages(ctx)
 	if err != nil {
-		uc.logger.Warn(ctx, "Pre-update package snapshot unavailable",
+		uc.logger.Warn(
+			ctx, "Pre-update package snapshot unavailable",
 			output.Field{Key: managerFieldKey, Value: mgr.Name},
 			output.Field{Key: "error", Value: err.Error()},
 		)
@@ -75,9 +76,9 @@ func applyUpdateMetadata(
 			continue
 		}
 
-		update := packageUpdateFromSnapshot(name, pkg)
+		update := packageUpdateFromSnapshot(name, &pkg)
 		result.UpdatedPackages = append(result.UpdatedPackages, update)
-		switch classifyPackageMetadata(update) {
+		switch classifyPackageMetadata(&update) {
 		case dto.CorrelationJoined:
 			joined++
 		case dto.CorrelationPartial:
@@ -90,7 +91,7 @@ func applyUpdateMetadata(
 	result.PackageCorrelation = correlationFromCounts(joined, partial, unobserved)
 }
 
-func packageUpdateFromSnapshot(name string, pkg manager.Package) dto.PackageUpdate {
+func packageUpdateFromSnapshot(name string, pkg *manager.Package) dto.PackageUpdate {
 	update := dto.UnavailablePackageUpdate(name)
 	if pkg.CurrentVersion != "" {
 		update.OldVersion = pkg.CurrentVersion
@@ -107,7 +108,7 @@ func packageUpdateFromSnapshot(name string, pkg manager.Package) dto.PackageUpda
 	return update
 }
 
-func classifyPackageMetadata(update dto.PackageUpdate) dto.PackageCorrelation {
+func classifyPackageMetadata(update *dto.PackageUpdate) dto.PackageCorrelation {
 	oldObserved := update.OldVersionPresence == dto.PresenceObserved
 	newObserved := update.NewVersionPresence == dto.PresenceObserved
 	switch {

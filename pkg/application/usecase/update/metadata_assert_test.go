@@ -26,7 +26,7 @@ type metadataFidelityCase struct {
 	wantUpdatedCount int
 }
 
-func runMetadataFidelityCase(t *testing.T, tt metadataFidelityCase) {
+func runMetadataFidelityCase(t *testing.T, tt *metadataFidelityCase) {
 	t.Helper()
 	logger := &mockLogger{}
 	repo := &mockRepository{
@@ -75,11 +75,11 @@ func runMetadataFidelityCase(t *testing.T, tt metadataFidelityCase) {
 	assertNoFabricatedMetadata(t, got.UpdatedPackages)
 }
 
-func assertUnavailablePackageUpdate(t *testing.T, got dto.PackageUpdate, name string) {
+func assertUnavailablePackageUpdate(t *testing.T, got *dto.PackageUpdate, name string) {
 	t.Helper()
 	want := dto.UnavailablePackageUpdate(name)
-	if got != want {
-		t.Errorf("package update = %#v, want unavailable %#v", got, want)
+	if *got != want {
+		t.Errorf("package update = %#v, want unavailable %#v", *got, want)
 	}
 }
 

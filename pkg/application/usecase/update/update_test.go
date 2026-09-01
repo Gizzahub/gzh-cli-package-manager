@@ -15,12 +15,17 @@ import (
 )
 
 const (
-	testHomebrewManagerName = "Homebrew"
-	testNPMManagerName      = "NPM"
-	testPipManagerName      = "Pip"
-	testGitPackageName      = "git"
-	condaEnvironmentWarning = "Conda environment detected. Using pip may cause dependency conflicts with conda packages."
-	condaPipSkipWarning     = "Skipping pip update in conda environment"
+	testHomebrewManagerName      = "Homebrew"
+	testNPMManagerName           = "NPM"
+	testPipManagerName           = "Pip"
+	testGitPackageName           = "git"
+	testTypeScriptPackageName    = "typescript"
+	testTypeScriptCurrentVersion = "5.0.0"
+	testTypeScriptAvailableVer   = "5.1.0"
+	testReactPackageName         = "react"
+	testFirefoxPackageName       = "firefox"
+	condaEnvironmentWarning      = "Conda environment detected. Using pip may cause dependency conflicts with conda packages."
+	condaPipSkipWarning          = "Skipping pip update in conda environment"
 )
 
 // mockRepository implements manager.Repository for testing.
@@ -624,7 +629,7 @@ func TestUseCase_Update_PreservesResultShapeAndOrder(t *testing.T) {
 	if first.UpdatedPackages[0].Name != testGitPackageName || first.UpdatedPackages[1].Name != "curl" {
 		t.Errorf("updated package order = %#v, want git then curl", first.UpdatedPackages)
 	}
-	assertUnavailablePackageUpdate(t, first.UpdatedPackages[0], testGitPackageName)
+	assertUnavailablePackageUpdate(t, &first.UpdatedPackages[0], testGitPackageName)
 	if first.PackageCorrelation != dto.CorrelationOutOfPilot || first.MetadataPilot {
 		t.Errorf("homebrew correlation/pilot = %s/%t, want out_of_pilot/false", first.PackageCorrelation, first.MetadataPilot)
 	}

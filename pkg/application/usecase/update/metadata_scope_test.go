@@ -19,20 +19,20 @@ func TestUseCase_Update_PilotAndOutOfPilotScope(t *testing.T) {
 			adapter: &mockAdapter{
 				listPackagesFunc: func(_ context.Context) ([]manager.Package, error) {
 					return []manager.Package{{
-						Name:             "firefox",
+						Name:             testFirefoxPackageName,
 						CurrentVersion:   "143.0.3-1",
 						AvailableVersion: "145.0-1",
 					}}, nil
 				},
 				updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-					return &adapterm.UpdateResult{Success: true, UpdatedPackages: []string{"firefox"}}, nil
+					return &adapterm.UpdateResult{Success: true, UpdatedPackages: []string{testFirefoxPackageName}}, nil
 				},
 			},
 			wantSuccess:     true,
 			wantPilot:       true,
 			wantCorrelation: dto.CorrelationJoined,
 			wantPackages: []dto.PackageUpdate{{
-				Name:               "firefox",
+				Name:               testFirefoxPackageName,
 				OldVersion:         "143.0.3-1",
 				NewVersion:         "145.0-1",
 				UpdateType:         manager.UpdateMajor,
@@ -68,7 +68,7 @@ func TestUseCase_Update_PilotAndOutOfPilotScope(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runMetadataFidelityCase(t, tt)
+			runMetadataFidelityCase(t, &tt)
 		})
 	}
 }

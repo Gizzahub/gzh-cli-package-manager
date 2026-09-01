@@ -142,8 +142,8 @@ func displayUpdateText(resp *dto.UpdateResponse) {
 			fmt.Printf("   Duration: %.1fs\n", result.Duration)
 			if len(result.UpdatedPackages) > 0 {
 				fmt.Printf("   Updated: %d packages\n", len(result.UpdatedPackages))
-				for _, pkg := range result.UpdatedPackages {
-					fmt.Printf("      • %s\n", pkg.Name)
+				for i := range result.UpdatedPackages {
+					fmt.Printf("      • %s\n", result.UpdatedPackages[i].Name)
 				}
 			} else {
 				fmt.Println("   No packages updated")
