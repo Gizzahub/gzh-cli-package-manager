@@ -597,4 +597,27 @@ func TestAdapter_Update(t *testing.T) {
 	if calls != 0 {
 		t.Fatalf("Update dry-run executed %d commands, want 0", calls)
 	}
+	if len(result.UpdatedPackages) != 0 {
+		t.Errorf("Update dry-run UpdatedPackages = %v, want empty (no fabricated names)", result.UpdatedPackages)
+	}
+}
+
+func TestAdapter_Update_SuccessDoesNotFabricatePackageNames(t *testing.T) {
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command != pacmanCommand || !slices.Equal(args, []string{"-Syu", "--noconfirm"}) {
+			t.Fatalf("Execute() = %q %q, want %q [-Syu --noconfirm]", command, args, pacmanCommand)
+		}
+		return testutil.SuccessResult("upgraded"), nil
+	}), testutil.NewMockLogger())
+
+	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{})
+	if err != nil {
+		t.Fatalf("Update() unexpected error: %v", err)
+	}
+	if result == nil || !result.Success {
+		t.Fatalf("Update() expected success, got %#v", result)
+	}
+	if len(result.UpdatedPackages) != 0 {
+		t.Errorf("UpdatedPackages = %v, want empty (pacman -Syu output is not a package list)", result.UpdatedPackages)
+	}
 }

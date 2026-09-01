@@ -361,6 +361,9 @@ Uses `~/.gz-pm/config.yaml` for:
 - Detailed logging for troubleshooting
 - Respects package manager-specific configurations
 - Environment-aware (conda, virtualenv detection)
+- JSON update metadata follows the npm/pacman pilot contract in
+  [update-metadata-fidelity.md](../update-metadata-fidelity.md). Unobserved
+  versions and sizes are not filled with `"unknown"`, `minor`, or `0` as facts.
 
 ---
 

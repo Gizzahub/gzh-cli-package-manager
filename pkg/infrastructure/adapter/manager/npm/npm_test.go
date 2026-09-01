@@ -591,6 +591,29 @@ func TestAdapter_Update(t *testing.T) {
 	if result == nil || !result.Success {
 		t.Fatalf("Update dry-run expected success result, got %#v", result)
 	}
+	if len(result.UpdatedPackages) != 0 {
+		t.Errorf("Update dry-run UpdatedPackages = %v, want empty (no fabricated names)", result.UpdatedPackages)
+	}
+}
+
+func TestAdapter_Update_SuccessDoesNotFabricatePackageNames(t *testing.T) {
+	adapter := NewAdapter(testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+		if command != npmCommand || !slices.Equal(args, []string{"update", "-g"}) {
+			t.Fatalf("Execute() = %q %q, want %q [update -g]", command, args, npmCommand)
+		}
+		return testutil.SuccessResult("updated"), nil
+	}), testutil.NewMockLogger())
+
+	result, err := adapter.Update(context.Background(), adapterm.UpdateOptions{})
+	if err != nil {
+		t.Fatalf("Update() unexpected error: %v", err)
+	}
+	if result == nil || !result.Success {
+		t.Fatalf("Update() expected success, got %#v", result)
+	}
+	if len(result.UpdatedPackages) != 0 {
+		t.Errorf("UpdatedPackages = %v, want empty (npm update output is not a package list)", result.UpdatedPackages)
+	}
 }
 
 func TestAdapter_Detect_EmptyOutput(t *testing.T) {
