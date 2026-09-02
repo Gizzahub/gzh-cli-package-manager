@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Tagless preflight binary version (SemVer without leading v)"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -60,13 +66,18 @@ jobs:
 
     - name: Get version
       id: version
+      env:
+        GZPM_REQUESTED_VERSION: ${{ github.event.inputs.version || '' }}
       run: |
+        set -euo pipefail
         if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-          VERSION=${GITHUB_REF#refs/tags/v}
+          VERSION=$(./scripts/release/validate-version.sh "${GITHUB_REF#refs/tags/v}")
+        elif [[ -n "${GZPM_REQUESTED_VERSION}" ]]; then
+          VERSION=$(./scripts/release/validate-version.sh "${GZPM_REQUESTED_VERSION}")
         else
-          VERSION=dev-$(git rev-parse --short HEAD)
+          VERSION="dev-$(git rev-parse --short HEAD)"
         fi
-        echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+        echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
 
     - name: Build archive
       env:

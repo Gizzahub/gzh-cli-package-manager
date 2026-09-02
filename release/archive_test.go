@@ -174,6 +174,10 @@ func TestReleaseWorkflowPublishesArchivesAndChecksums(t *testing.T) {
 	}
 	text := string(data)
 	needles := []string{
+		"Tagless preflight binary version (SemVer without leading v)",
+		"GZPM_REQUESTED_VERSION",
+		"github.event.inputs.version",
+		"./scripts/release/validate-version.sh",
 		"artifacts/**/*.tar.gz",
 		"artifacts/**/*.zip",
 		"artifacts/**/checksums.txt",
@@ -192,6 +196,12 @@ func TestReleaseWorkflowPublishesArchivesAndChecksums(t *testing.T) {
 	}
 	if strings.Contains(text, "files: artifacts/**/*") {
 		t.Error("GitHub Release input still points at every downloaded artifact")
+	}
+	if !strings.Contains(text, "if: startsWith(github.ref, 'refs/tags/')") {
+		t.Error("GitHub Release job is no longer restricted to tags")
+	}
+	if !strings.Contains(text, "contents: write") {
+		t.Error("GitHub Release job no longer declares contents write permission")
 	}
 }
 
