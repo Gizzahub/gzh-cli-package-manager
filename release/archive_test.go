@@ -204,10 +204,10 @@ func TestReleaseWorkflowPublishesArchivesAndChecksums(t *testing.T) {
 	assertReleaseJobIsGuarded(t, data)
 }
 
-// assertReleaseJobIsGuarded checks the publish guard and the write permission on
-// the release job itself. Searching the whole file for those strings would pass
-// even if they moved to a job that does not publish, which is the one thing this
-// contract has to rule out.
+// assertReleaseJobIsGuarded checks the publish guard, the write permission, and
+// the draft gate on the release job itself. Searching the whole file for those
+// strings would pass even if they moved to a job that does not publish, which is
+// the one thing this contract has to rule out.
 func assertReleaseJobIsGuarded(t *testing.T, data []byte) {
 	t.Helper()
 
@@ -217,6 +217,16 @@ func assertReleaseJobIsGuarded(t *testing.T, data []byte) {
 			Permissions struct {
 				Contents string `yaml:"contents"`
 			} `yaml:"permissions"`
+			Steps []struct {
+				Name string `yaml:"name"`
+				Uses string `yaml:"uses"`
+				With struct {
+					// A pointer separates an explicit false from an absent key.
+					// Both publish immediately, but only one of them looks like
+					// a decision, so the failure should say which happened.
+					Draft *bool `yaml:"draft"`
+				} `yaml:"with"`
+			} `yaml:"steps"`
 		} `yaml:"jobs"`
 	}
 	if err := yaml.Unmarshal(data, &workflow); err != nil {
@@ -240,6 +250,27 @@ func assertReleaseJobIsGuarded(t *testing.T, data []byte) {
 		if name != "release" && job.Permissions.Contents == "write" {
 			t.Errorf("job %q declares contents: write; only the release job may publish", name)
 		}
+	}
+
+	// The release is created as a draft so a human inspects it before it is
+	// public. Nothing else in this workflow fails if that flag flips, so without
+	// this assertion the gate would come off silently.
+	const releaseAction = "softprops/action-gh-release"
+	found := false
+	for _, step := range release.Steps {
+		if !strings.Contains(step.Uses, releaseAction) {
+			continue
+		}
+		found = true
+		switch {
+		case step.With.Draft == nil:
+			t.Errorf("release step %q sets no draft:; the action defaults to publishing immediately", step.Name)
+		case !*step.With.Draft:
+			t.Errorf("release step %q sets draft: false; releases must be created as drafts", step.Name)
+		}
+	}
+	if !found {
+		t.Errorf("release job has no %s step", releaseAction)
 	}
 }
 

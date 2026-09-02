@@ -175,13 +175,44 @@ jobs:
         path: artifacts
 
     - name: Create Release
+      id: release
       uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
       with:
         files: |
           artifacts/**/*.tar.gz
           artifacts/**/*.zip
           artifacts/**/checksums.txt
-        draft: false
+        # Create the release as a draft so it is inspected before it is public.
+        # A draft can be deleted; a published release may already have been
+        # fetched by watchers or polling tooling, and you cannot know which.
+        #
+        # This does NOT make tagging reversible, and it should not be read as
+        # doing so. proxy.golang.org caches a module version from the git tag
+        # alone, independent of whether a GitHub release exists at all, and
+        # sum.golang.org records its hash permanently. The tag push is the
+        # irreversible step; this covers only the release artifacts.
+        draft: true
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Report that the release awaits publication
+      env:
+        RELEASE_URL: ${{ steps.release.outputs.url }}
+      run: |
+        {
+          echo "## Draft release created -- NOT public"
+          echo
+          echo "${RELEASE_URL}"
+          echo
+          echo "The artifacts are attached to a **draft**. Drafts are invisible to"
+          echo "anyone without push access and absent from the releases list,"
+          echo "\`/releases/latest\`, and the unauthenticated API. Nothing is"
+          echo "published until a maintainer opens that URL and clicks **Publish"
+          echo "release**."
+          echo
+          echo "Do not create a second release for this tag. GitHub allows one while"
+          echo "the first is a draft, which yields a published release with no"
+          echo "artifacts beside an invisible draft that has them. Edit and publish"
+          echo "the draft above instead."
+        } >> "$GITHUB_STEP_SUMMARY"

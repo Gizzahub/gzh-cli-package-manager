@@ -1075,39 +1075,49 @@ We follow [Semantic Versioning](https://semver.org/):
 
 ### Release Checklist
 
-1. **Update Version**:
+Releases are produced by `.github/workflows/build.yml`, which triggers on a
+pushed `v*` tag. Do not build or upload release artifacts by hand.
+
+There is no version file to edit. `internal/version/version.go` declares
+`Version = "dev"` as a placeholder and the real value is stamped at build time
+from the tag via `-ldflags`, so editing it would only change what an untagged
+local build reports.
+
+1. **Choose the commit**: it must be on `master`, with its hosted Test and
+   CodeQL runs green.
+
+2. **Dry-run the release build** against that commit, so the tag is not the
+   first time the release path runs:
    ```bash
-   # Update version in version.go
-   vim internal/version/version.go
+   gh workflow run build.yml --ref master -f version=1.0.0
    ```
+   The dispatch refuses to run against a tag ref, because the tag branch would
+   silently win over the requested version.
 
-2. **Update CHANGELOG.md**:
-   ```markdown
-   ## [1.0.0] - 2025-01-27
-
-   ### Added
-   - Feature X
-   - Feature Y
-
-   ### Changed
-   - Behavior Z
-
-   ### Fixed
-   - Bug A
-   - Bug B
-   ```
-
-3. **Create Git Tag**:
+3. **Create and push the tag** — this is the irreversible step:
    ```bash
    git tag -a v1.0.0 -m "Release v1.0.0"
    git push origin v1.0.0
    ```
+   Pushing the tag is what publishes the module version: `proxy.golang.org`
+   serves it from the tag alone, with no GitHub release involved, and
+   `sum.golang.org` records its hash permanently. Deleting the tag afterwards
+   does not reclaim the version number. Nothing later in this checklist can
+   undo this step.
 
-4. **GitHub Release**:
-   - Go to GitHub Releases
-   - Create new release from tag
-   - Copy CHANGELOG section
-   - Attach binaries (from CI)
+4. **Wait for the Build workflow**, which verifies the release inputs,
+   cross-builds the five supported targets, generates `checksums.txt`, and
+   creates a **draft** release with those artifacts attached.
+
+5. **Review and publish the draft**. Open the URL from the workflow's job
+   summary, check the attached archives and checksums, write the release notes,
+   and then click **Publish release**. Until you do, the release is invisible to
+   anyone without push access — absent from the releases list,
+   `/releases/latest`, and the unauthenticated API.
+
+   Do not create a new release from the tag. GitHub permits a second release
+   object while the first is still a draft, which leaves a published release
+   carrying no artifacts alongside the invisible draft that has them.
 
 ---
 
