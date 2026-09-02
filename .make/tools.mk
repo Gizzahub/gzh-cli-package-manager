@@ -8,7 +8,14 @@ install-tools: install-lint install-fumpt ## Install all development tools
 
 # Reports the Go toolchain that built the installed linter, e.g. "go1.26.7",
 # or nothing when it is absent or unreadable.
-GOLANGCI_LINT_BUILT_WITH = "$(GOLANGCI_LINT_BIN)" version 2>/dev/null | sed -n 's/.*built with \(go[^ ]*\).*/\1/p'
+#
+# Read from the binary's embedded build info rather than from golangci-lint's
+# own `version` banner. The banner is that project's display text and it is free
+# to reword it in any release; the build info is Go's own format. A reworded
+# banner would make this probe return nothing, and the post-install assertion
+# below would then turn an upgrade into a hard build failure. This also reads
+# the binary instead of executing it.
+GOLANGCI_LINT_BUILT_WITH = $(GO) version -m "$(GOLANGCI_LINT_BIN)" 2>/dev/null | awk 'NR==1{print $$NF}'
 
 install-lint: ## Install golangci-lint
 	@want_go="$$($(GO) env GOVERSION)"; \
