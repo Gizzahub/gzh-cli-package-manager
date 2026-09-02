@@ -11,7 +11,7 @@
 
 lint: install-lint ## Run golangci-lint
 	@echo "Running golangci-lint..."
-	@"$(GOLANGCI_LINT_BIN)" run ./...
+	@"$(GOLANGCI_LINT_BIN)" run $(GOLANGCI_LINT_RUN_FLAGS) ./...
 
 fmt: ## Format code with gofmt and gofumpt
 	@echo "Formatting code..."
@@ -50,7 +50,7 @@ LINT_DIFF_BASE ?= origin/master
 
 lint-diff: install-lint ## Lint changes since origin/master (LINT_DIFF_BASE=...)
 	@echo "Linting changes since $(LINT_DIFF_BASE)..."
-	@"$(GOLANGCI_LINT_BIN)" run --new-from-rev="$(LINT_DIFF_BASE)" ./...
+	@"$(GOLANGCI_LINT_BIN)" run $(GOLANGCI_LINT_RUN_FLAGS) --new-from-rev="$(LINT_DIFF_BASE)" ./...
 
 fmt-check: ## Check if code is formatted (for CI)
 	@echo "Checking code format..."
@@ -59,7 +59,7 @@ fmt-check: ## Check if code is formatted (for CI)
 
 lint-check: install-lint ## Run lint without fixing (for CI)
 	@echo "Checking lint..."
-	@"$(GOLANGCI_LINT_BIN)" run ./...
+	@"$(GOLANGCI_LINT_BIN)" run $(GOLANGCI_LINT_RUN_FLAGS) ./...
 
 # ==============================================================================
 # Additional Quality Tools

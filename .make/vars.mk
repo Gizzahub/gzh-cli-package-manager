@@ -35,3 +35,11 @@ GOLANGCI_LINT_VERSION := v2.13.1
 GOLANGCI_LINT_BARE := $(patsubst v%,%,$(GOLANGCI_LINT_VERSION))
 GOLANGCI_LINT_DIR ?= $(CURDIR)/bin/tools
 GOLANGCI_LINT_BIN := $(GOLANGCI_LINT_DIR)/golangci-lint$(shell $(GO) env GOEXE)
+
+# golangci-lint takes a machine-global lock so concurrent runs cannot exhaust
+# memory. Without this flag a run that loses the race exits immediately with
+# "parallel golangci-lint is running", so linting any other repository on this
+# machine turns this repository's gate red. The flag makes the run wait for the
+# lock and execute serially instead, which reports on the code rather than on
+# the machine's concurrency state.
+GOLANGCI_LINT_RUN_FLAGS ?= --allow-serial-runners
