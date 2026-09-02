@@ -1,15 +1,28 @@
 [tools]
-# Must agree with the `toolchain` directive in go.mod. The pin has to live in
-# the repository, not in the surrounding devbox, because task worktrees are
-# created outside it: the devbox mise.toml then does not apply and the global
-# config supplies a different Go minor version instead.
+# The invariant is that the Go which built golangci-lint must not be older than
+# the Go whose standard library it parses; go/types refuses a stdlib newer than
+# its own compiler. This pin is what decides the parsed-stdlib side, always, and
+# it decides the built-with side too in this repository because `make
+# install-lint` provisions the linter with `go install`, which builds using the
+# active toolchain and ignores go.mod. Keeping it equal to go.mod's `toolchain`
+# directive is how that invariant is satisfied here -- but the directive is the
+# local consequence, not the rule. A repository with no `toolchain` directive,
+# or one that takes golangci-lint from PATH instead of installing it, still
+# needs this pin, because the parsed-stdlib side is never not in play.
 #
-# The failure that arrives is not a version warning. `make install-lint` builds
-# golangci-lint with whichever Go is active, and go/types refuses to parse a
-# standard library newer than the compiler that built the tool, so a worktree
-# resolving a newer Go makes lint die mid-run with
+# The pin has to live in the repository rather than in the surrounding devbox,
+# because task worktrees are created outside it: the devbox mise.toml then does
+# not apply and the global config supplies a different Go minor version instead.
+#
+# The failure that arrives is not a version warning. A worktree resolving a
+# newer Go makes lint die mid-run with
 # "panic: file requires newer Go version go1.27 (application built with go1.26)"
-# while the same command in the devbox checkout passes.
+# while the same command in the devbox checkout passes. It reads as a lint
+# failure and is a toolchain-resolution failure.
+#
+# .make/tools.mk asserts both sides agree -- it reinstalls when the linter's
+# embedded build info does not match `go env GOVERSION` -- so raising this pin
+# rebuilds the linter instead of silently reintroducing the panic.
 #
 # golangci-lint is deliberately absent here: .make/vars.mk pins it and every
 # recipe invokes $(GOLANGCI_LINT_BIN) by absolute path, so PATH does not decide
