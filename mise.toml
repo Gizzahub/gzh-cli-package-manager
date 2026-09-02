@@ -1,0 +1,17 @@
+[tools]
+# Must agree with the `toolchain` directive in go.mod. The pin has to live in
+# the repository, not in the surrounding devbox, because task worktrees are
+# created outside it: the devbox mise.toml then does not apply and the global
+# config supplies a different Go minor version instead.
+#
+# The failure that arrives is not a version warning. `make install-lint` builds
+# golangci-lint with whichever Go is active, and go/types refuses to parse a
+# standard library newer than the compiler that built the tool, so a worktree
+# resolving a newer Go makes lint die mid-run with
+# "panic: file requires newer Go version go1.27 (application built with go1.26)"
+# while the same command in the devbox checkout passes.
+#
+# golangci-lint is deliberately absent here: .make/vars.mk pins it and every
+# recipe invokes $(GOLANGCI_LINT_BIN) by absolute path, so PATH does not decide
+# which binary runs.
+go = "1.26.7"
