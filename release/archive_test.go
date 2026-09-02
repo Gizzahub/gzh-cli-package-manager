@@ -4,12 +4,16 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 type snapshotTarget struct {
@@ -197,11 +201,45 @@ func TestReleaseWorkflowPublishesArchivesAndChecksums(t *testing.T) {
 	if strings.Contains(text, "files: artifacts/**/*") {
 		t.Error("GitHub Release input still points at every downloaded artifact")
 	}
-	if !strings.Contains(text, "if: startsWith(github.ref, 'refs/tags/')") {
-		t.Error("GitHub Release job is no longer restricted to tags")
+	assertReleaseJobIsGuarded(t, data)
+}
+
+// assertReleaseJobIsGuarded checks the publish guard and the write permission on
+// the release job itself. Searching the whole file for those strings would pass
+// even if they moved to a job that does not publish, which is the one thing this
+// contract has to rule out.
+func assertReleaseJobIsGuarded(t *testing.T, data []byte) {
+	t.Helper()
+
+	var workflow struct {
+		Jobs map[string]struct {
+			If          string `yaml:"if"`
+			Permissions struct {
+				Contents string `yaml:"contents"`
+			} `yaml:"permissions"`
+		} `yaml:"jobs"`
 	}
-	if !strings.Contains(text, "contents: write") {
-		t.Error("GitHub Release job no longer declares contents write permission")
+	if err := yaml.Unmarshal(data, &workflow); err != nil {
+		t.Fatalf("parse build.yml: %v", err)
+	}
+
+	release, ok := workflow.Jobs["release"]
+	if !ok {
+		t.Fatalf("build.yml has no release job; jobs are %v", slices.Sorted(maps.Keys(workflow.Jobs)))
+	}
+
+	const wantIf = "github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')"
+	if release.If != wantIf {
+		t.Errorf("release job guard = %q, want %q", release.If, wantIf)
+	}
+	if release.Permissions.Contents != "write" {
+		t.Errorf("release job contents permission = %q, want \"write\"", release.Permissions.Contents)
+	}
+
+	for name, job := range workflow.Jobs {
+		if name != "release" && job.Permissions.Contents == "write" {
+			t.Errorf("job %q declares contents: write; only the release job may publish", name)
+		}
 	}
 }
 

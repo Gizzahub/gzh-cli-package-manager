@@ -129,7 +129,7 @@ url "https://github.com/gizzahub/gzh-cli-package-manager/releases/download/v1.0.
 # No dependencies needed
 
 # Go install works immediately
-go install github.com/gizzahub/gzh-cli-package-manager/cmd/pm@latest
+go install github.com/gizzahub/gzh-cli-package-manager/cmd/gz-pm@latest
 ```
 
 With CGO:

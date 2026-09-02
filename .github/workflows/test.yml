@@ -3,6 +3,10 @@ name: Test
 on:
   push:
     branches: [ master, 'dev/**' ]
+    # Release tags are verified too. Without this the Build workflow, which runs
+    # no Go tests at all, would be the only workflow triggered by a tag, so a tag
+    # placed on an unverified commit would publish without any gate failing.
+    tags: [ 'v*' ]
   pull_request:
     branches: [ master ]
 
