@@ -30,22 +30,30 @@ ci-local: clean quality build ## Run full CI pipeline locally
 
 watch: ## Watch for changes and run tests (requires entr)
 	@echo "Watching for changes..."
-	@if command -v entr >/dev/null 2>&1; then \
-		find . -name "*.go" | entr -c make test-unit; \
-	else \
-		echo "⚠️  entr not installed. Install with: brew install entr (macOS) or apt install entr (Linux)"; \
-	fi
+	@command -v entr >/dev/null 2>&1 || { \
+		echo "❌ entr not installed. brew install entr (macOS) / apt install entr (Linux)"; \
+		exit 1; \
+	}
+	@find . -name "*.go" | entr -c make test-unit
 
 pre-commit: quality ## Run pre-commit checks
 	@echo "✅ Pre-commit checks passed"
 
-release-dry: ## Dry run release (goreleaser)
+# Reports failure when goreleaser is absent, for the same reason as `security`.
+#
+# Note that this target cannot succeed as the repository stands: there is no
+# .goreleaser.yml, so goreleaser has nothing to read even when installed. The
+# release path that is actually wired up and exercised is
+# `make release-snapshot` plus .github/workflows/build.yml. Add a goreleaser
+# config before relying on this, or drop the target -- what should not continue
+# is a second, half-present release path that reports success by doing nothing.
+release-dry: ## Dry run release (needs goreleaser + a .goreleaser.yml)
 	@echo "Running release dry run..."
-	@if command -v goreleaser >/dev/null 2>&1; then \
-		goreleaser release --snapshot --clean; \
-	else \
-		echo "⚠️  goreleaser not installed. Run: make install-goreleaser"; \
-	fi
+	@command -v goreleaser >/dev/null 2>&1 || { \
+		echo "❌ goreleaser not installed. Run: make install-goreleaser"; \
+		exit 1; \
+	}
+	goreleaser release --snapshot --clean
 
 # ==============================================================================
 # Code Analysis

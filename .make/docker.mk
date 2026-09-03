@@ -84,22 +84,22 @@ docker-test-alpine: ## Test in Alpine Linux container (apk)
 
 docker-scan: ## Scan Docker image for vulnerabilities
 	@echo "Scanning Docker image..."
-	@if command -v trivy >/dev/null 2>&1; then \
-		trivy image $(DOCKER_FULL_IMAGE); \
-	else \
-		echo "Install trivy for scanning: https://github.com/aquasecurity/trivy"; \
-	fi
+	@command -v trivy >/dev/null 2>&1 || { \
+		echo "❌ trivy not installed: https://github.com/aquasecurity/trivy"; \
+		exit 1; \
+	}
+	trivy image $(DOCKER_FULL_IMAGE)
 
 docker-size: ## Analyze Docker image size
 	@echo "Docker image size:"
 	@docker images $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME) --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}"
 
 docker-lint: ## Lint Dockerfile
-	@if command -v hadolint >/dev/null 2>&1; then \
-		hadolint Dockerfile; \
-	else \
-		echo "Install hadolint: https://github.com/hadolint/hadolint"; \
-	fi
+	@command -v hadolint >/dev/null 2>&1 || { \
+		echo "❌ hadolint not installed: https://github.com/hadolint/hadolint"; \
+		exit 1; \
+	}
+	hadolint Dockerfile
 
 # ==============================================================================
 # Docker Cleanup
@@ -119,13 +119,9 @@ docker-clean-all: docker-stop docker-clean ## Comprehensive Docker cleanup
 # ==============================================================================
 
 docker-compose-up: ## Start services with docker-compose
-	@if [ -f "docker-compose.yml" ]; then \
-		docker-compose up -d; \
-	else \
-		echo "No docker-compose.yml found"; \
-	fi
+	@[ -f "docker-compose.yml" ] || { echo "❌ No docker-compose.yml found"; exit 1; }
+	docker-compose up -d
 
 docker-compose-down: ## Stop services with docker-compose
-	@if [ -f "docker-compose.yml" ]; then \
-		docker-compose down; \
-	fi
+	@[ -f "docker-compose.yml" ] || { echo "❌ No docker-compose.yml found"; exit 1; }
+	docker-compose down

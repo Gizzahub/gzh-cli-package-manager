@@ -67,17 +67,28 @@ lint-check: install-lint ## Run lint without fixing (for CI)
 
 fmt-md: ## Format markdown files (requires mdformat)
 	@echo "Formatting markdown..."
-	@if command -v mdformat >/dev/null 2>&1; then \
-		find . -name "*.md" -not -path "./vendor/*" -not -path "./.git/*" | xargs mdformat; \
-		echo "✅ Markdown formatted"; \
-	else \
-		echo "⚠️  mdformat not installed. Install: pip install mdformat"; \
-	fi
+	@command -v mdformat >/dev/null 2>&1 || { \
+		echo "❌ mdformat not installed. Install: pip install mdformat"; \
+		exit 1; \
+	}
+	@find . -name "*.md" -not -path "./vendor/*" -not -path "./.git/*" | xargs mdformat
+	@echo "✅ Markdown formatted"
 
+# Reports failure when gosec is absent. Warning and exiting 0 made "no scan ran"
+# indistinguishable from "the scan found nothing", which is the more dangerous of
+# the two to mistake for the other.
+#
+# This target is not redundant with the gosec enabled in .golangci.yml. That one
+# runs under exclusions.presets, whose common-false-positives preset drops
+# "Potential file inclusion via variable" (G304) outright: deleting the #nosec in
+# pkg/application/usecase/bootstrap/bootstrap.go still leaves `golangci-lint run`
+# at 0 issues, while gosec reports the finding. Standalone gosec is where those
+# rules are actually checked, so an exit code it cannot fail hides real findings
+# rather than duplicated ones.
 security: ## Run security scan (gosec)
 	@echo "Running security scan..."
-	@if command -v gosec >/dev/null 2>&1; then \
-		gosec -exclude-generated ./...; \
-	else \
-		echo "⚠️  gosec not installed. Install: go install github.com/securego/gosec/v2/cmd/gosec@latest"; \
-	fi
+	@command -v gosec >/dev/null 2>&1 || { \
+		echo "❌ gosec not installed. Install: go install github.com/securego/gosec/v2/cmd/gosec@latest"; \
+		exit 1; \
+	}
+	gosec -exclude-generated ./...

@@ -193,6 +193,13 @@ func (uc *UseCase) bootstrapManager(
 
 // loadConfig loads bootstrap configuration from a YAML file.
 func (uc *UseCase) loadConfig(path string) (*dto.BootstrapConfig, error) {
+	// #nosec G304 -- path is the user's own --config value, read by a CLI running
+	// with that user's privileges. Reading a file they named, on their behalf,
+	// crosses no trust boundary: any path reachable here is already reachable by
+	// the invoking shell. gosec suggests scoping reads under an os.Root, which
+	// would be right for a server handling untrusted input and wrong here -- it
+	// would break `gz-pm bootstrap --config ...` for every config outside the
+	// chosen root, which is the documented way to use the flag.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
