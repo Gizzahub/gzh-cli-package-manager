@@ -25,7 +25,6 @@ GOBUILD := $(GO) build -trimpath
 GOTEST := $(GO) test
 GOINSTALL := $(GO) install
 GOMOD := $(GO) mod
-GOFMT := $(GO) fmt
 GOVET := $(GO) vet
 
 # Test settings

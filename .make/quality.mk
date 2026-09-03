@@ -52,9 +52,22 @@ lint-diff: install-lint ## Lint changes since origin/master (LINT_DIFF_BASE=...)
 	@echo "Linting changes since $(LINT_DIFF_BASE)..."
 	@"$(GOLANGCI_LINT_BIN)" run $(GOLANGCI_LINT_RUN_FLAGS) --new-from-rev="$(LINT_DIFF_BASE)" ./...
 
-fmt-check: ## Check if code is formatted (for CI)
+# Checks with the same formatters `fmt` applies. It tested `gofmt -l` alone,
+# which knows nothing about gofumpt's extra rules or gci's import grouping, so
+# the target named "for CI" could pass on code the Lint job rejects -- the exact
+# local/hosted drift enabling the formatters was meant to close.
+#
+# The emptiness of the output is what decides, not the exit status:
+# `golangci-lint fmt --diff` prints the diff and still exits 0, so testing its
+# status would rebuild the same gate that cannot fail.
+fmt-check: install-lint ## Check if code is formatted (for CI)
 	@echo "Checking code format..."
-	@test -z "$$(gofmt -l .)" || { echo "Code is not formatted. Run: make fmt"; exit 1; }
+	@out="$$("$(GOLANGCI_LINT_BIN)" fmt --diff ./... 2>&1)"; \
+	if [ -n "$$out" ]; then \
+		printf '%s\n' "$$out"; \
+		echo "❌ Code is not formatted. Run: make fmt"; \
+		exit 1; \
+	fi
 	@echo "✅ Code is properly formatted"
 
 lint-check: install-lint ## Run lint without fixing (for CI)

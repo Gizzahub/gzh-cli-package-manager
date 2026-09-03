@@ -30,9 +30,9 @@ gz-pm update --all
 
 - **Multi-Manager Support** - Homebrew, ASDF, npm, pip, cargo, apt, pacman, winget, scoop, chocolatey
 - **Unified Interface** - One command to update all package managers
-- **Readable Output** - Per-manager status icons, skip reasons, and an aggregate summary
-- **Smart Conflict Detection** - Identifies duplicate binaries and version manager conflicts
-- **Environment Awareness** - Detects conda, virtualenv, and adjusts behavior accordingly
+- **Readable Output** - Per-manager status icons and an aggregate summary
+- **Environment Awareness** - Detects conda and virtualenv, and refuses to run pip
+  inside a conda environment unless you pass `--pip-allow-conda`
 - **Dry-Run Support** - Preview changes before executing
 - **Two Output Formats** - `text` (default, human-readable) and `json` (for scripts)
 - **Cross-Platform** - macOS and Linux (Ubuntu, Debian, Arch); the Windows managers ship but carry no CI coverage
@@ -140,9 +140,9 @@ manager runs, not where `gz-pm` compiles.
 |---------|-------|-------|---------|
 | **Homebrew** | ✅ | ✅ | ❌ |
 | **ASDF** | ✅ | ✅ | ❌ |
-| **npm** (Node.js) | ✅ | ✅ | ✅ |
-| **pip** (Python) | ✅ | ✅ | ✅ |
-| **cargo** (Rust) | ✅ | ✅ | ✅ |
+| **npm** (Node.js) | ✅ | ✅ | ⚠️ |
+| **pip** (Python) | ✅ | ✅ | ⚠️ |
+| **cargo** (Rust) | ✅ | ✅ | ⚠️ |
 | **apt** (Debian/Ubuntu) | ❌ | ✅ | ❌ |
 | **pacman** (Arch) | ❌ | ✅ | ❌ |
 | **winget** (Windows) | ❌ | ❌ | ✅ |
@@ -153,6 +153,13 @@ The three Windows managers ship and are reachable as `gz-pm winget`,
 `gz-pm scoop` and `gz-pm chocolatey`. They are **untested on Windows**: the
 matrix in `.github/workflows/test.yml` runs `ubuntu-latest` and `macos-latest`
 only, so nothing exercises them against a real winget, scoop or choco.
+
+The ⚠️ marks the reverse gap. npm, pip and cargo run on Windows, but `gz-pm`
+detects them by shelling out to `which` (`pkg/infrastructure/adapter/manager/`
+`npm`, `pip`, `cargo`), which native Windows does not provide -- only the three
+Windows adapters use `where`. On Windows those three will therefore report as
+not installed even when they are, unless a `which` is on PATH (Git Bash, WSL,
+or a shim). The manager works; the detection does not.
 
 **sdkman** and **yay** are not supported. Both exist as manager IDs in the domain
 layer, which is easy to mistake for support, but the registry builds no adapter
@@ -190,10 +197,15 @@ installed:
    Total Duration: 51.4s
 ```
 
-A manager that is not installed is skipped with its reason rather than failing
-the run, and `--output json` emits the same result as a single JSON document for
-scripting. The exact text layout is produced by `displayUpdateText` in
-`cmd/gz-pm/command/update.go`.
+A manager that is not installed is left out of the run entirely rather than
+reported -- `--all` selects from installed managers only, and a name given to
+`--managers` that is not installed is dropped with a log line, so it appears in
+neither the per-manager output nor `Total Managers`. The one manager that is
+listed as skipped with a stated reason is pip inside a conda environment
+(`--pip-allow-conda` overrides it). `--output json` emits the same result as a
+single JSON document for scripting. The exact text layout is produced by
+`displayUpdateText` in `cmd/gz-pm/command/update.go`; the selection rules are
+`selectManagers` in `pkg/application/usecase/update/update.go`.
 
 ## 📖 Documentation
 
@@ -298,7 +310,7 @@ compatibility guarantee this project is not yet in a position to keep.
 - `update` -- multi-manager orchestration, `--all` or `--managers`, `--dry-run`
 - `status` -- per-manager availability, package counts, pending updates
 - `bootstrap` -- set up managers from a config file or interactively
-- `cleanup` -- cleanup operations including `quarantine` and `list`
+- `cleanup` -- `cache`, `orphans`, `quarantine` and `versions`
 - `winget` / `scoop` / `chocolatey` -- per-manager list, search, install,
   uninstall, upgrade
 - `text` and `json` output for the commands above
