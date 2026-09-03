@@ -20,7 +20,7 @@ brew update && brew upgrade
 asdf plugin update --all && asdf update
 npm update -g
 pip install --upgrade pip
-sdk selfupdate && sdk update
+cargo install-update -a
 
 # Just run:
 gz-pm update --all
@@ -28,14 +28,14 @@ gz-pm update --all
 
 ## ✨ Features
 
-- **Multi-Manager Support** - Homebrew, ASDF, npm, pip, apt, pacman, sdkman, cargo, and more
+- **Multi-Manager Support** - Homebrew, ASDF, npm, pip, cargo, apt, pacman, winget, scoop, chocolatey
 - **Unified Interface** - One command to update all package managers
-- **Rich Progress Output** - Visual progress bars, color-coded status, detailed summaries
+- **Readable Output** - Per-manager status icons, skip reasons, and an aggregate summary
 - **Smart Conflict Detection** - Identifies duplicate binaries and version manager conflicts
 - **Environment Awareness** - Detects conda, virtualenv, and adjusts behavior accordingly
 - **Dry-Run Support** - Preview changes before executing
-- **Multiple Output Formats** - Human-readable (default), JSON (for scripts), simple (for CI/CD)
-- **Cross-Platform** - macOS, Linux (Ubuntu, Arch, Debian), Windows (planned)
+- **Two Output Formats** - `text` (default, human-readable) and `json` (for scripts)
+- **Cross-Platform** - macOS and Linux (Ubuntu, Debian, Arch); the Windows managers ship but carry no CI coverage
 - **Configuration Management** - Bootstrap package-manager setups from configuration
 
 ## 📦 Installation
@@ -130,62 +130,70 @@ release; they are not current `gz-pm` commands.
 
 ## 📋 Supported Package Managers
 
-| Manager | macOS | Linux | Windows | Status |
-|---------|-------|-------|---------|--------|
-| **Homebrew** | ✅ | ✅ | ❌ | Stable |
-| **ASDF** | ✅ | ✅ | ❌ | Stable |
-| **npm** (Node.js) | ✅ | ✅ | ✅ | Stable |
-| **pip** (Python) | ✅ | ✅ | ✅ | Stable |
-| **cargo** (Rust) | ✅ | ✅ | ✅ | Stable |
-| **sdkman** (JVM) | ✅ | ✅ | ❌ | Stable |
-| **apt** (Debian/Ubuntu) | ❌ | ✅ | ❌ | Stable |
-| **pacman** (Arch) | ❌ | ✅ | ❌ | Stable |
-| **yay** (AUR) | ❌ | ✅ | ❌ | Beta |
-| **choco** (Windows) | ❌ | ❌ | 🔜 | Planned |
-| **scoop** (Windows) | ❌ | ❌ | 🔜 | Planned |
+These ten adapters are the ones `pkg/infrastructure/adapter/registry` constructs.
+Registration is unconditional -- no adapter gates on `GOOS` -- so a manager
+becomes *available* when its executable is found on the host and reports a clear
+error when it is not. The columns below therefore describe where each underlying
+manager runs, not where `gz-pm` compiles.
+
+| Manager | macOS | Linux | Windows |
+|---------|-------|-------|---------|
+| **Homebrew** | ✅ | ✅ | ❌ |
+| **ASDF** | ✅ | ✅ | ❌ |
+| **npm** (Node.js) | ✅ | ✅ | ✅ |
+| **pip** (Python) | ✅ | ✅ | ✅ |
+| **cargo** (Rust) | ✅ | ✅ | ✅ |
+| **apt** (Debian/Ubuntu) | ❌ | ✅ | ❌ |
+| **pacman** (Arch) | ❌ | ✅ | ❌ |
+| **winget** (Windows) | ❌ | ❌ | ✅ |
+| **scoop** (Windows) | ❌ | ❌ | ✅ |
+| **chocolatey** (Windows) | ❌ | ❌ | ✅ |
+
+The three Windows managers ship and are reachable as `gz-pm winget`,
+`gz-pm scoop` and `gz-pm chocolatey`. They are **untested on Windows**: the
+matrix in `.github/workflows/test.yml` runs `ubuntu-latest` and `macos-latest`
+only, so nothing exercises them against a real winget, scoop or choco.
+
+**sdkman** and **yay** are not supported. Both exist as manager IDs in the domain
+layer, which is easy to mistake for support, but the registry builds no adapter
+for either and `registry_test.go` fails if one appears.
 
 ## 🎨 Example Output
 
+`gz-pm update --all --dry-run` on a macOS host with Homebrew, npm, pip and cargo
+installed:
+
 ```text
-📦 Package Manager Update - gz-pm v1.0.0
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧪 Package Manager Update (DRY-RUN)
 
-🔍 Performing pre-flight checks...
+✅ Homebrew
+   Duration: 0.0s
+   No packages updated
 
-📊 Resource Availability Check
-✅ Disk: Sufficient disk space: 45.2GB available, ~2.1GB needed
-✅ Network: Network connectivity good: 4/4 repositories accessible
-✅ Memory: Sufficient memory: 8192MB available
+✅ NPM
+   Duration: 0.0s
+   No packages updated
 
-═══════════ 🚀 [1/3] brew — Updating ═══════════
-🍺 Updating Homebrew...
-✅ brew update: Updated 23 formulae (15.2s)
-✅ brew upgrade: Upgraded 5 packages (42.8s)
-   • node: 20.11.0 → 20.11.1 (24.8MB)
-   • git: 2.43.0 → 2.43.1 (8.4MB)
-   • python@3.11: 3.11.7 → 3.11.8 (15.2MB)
+✅ Pip
+   Duration: 0.0s
+   No packages updated
 
-═══════════ 🚀 [2/3] asdf — Updating ═══════════
-🔄 Updating asdf version manager...
-✅ asdf plugin update --all: 8 plugins updated (18.4s)
-✅ nodejs: 20.11.0 → 20.11.1 installed (35.2s)
+✅ Cargo
+   Duration: 0.0s
+   No packages updated
 
-═══════════ 🚀 [3/3] npm — Updating ═══════════
-🧩 Updating npm global packages...
-✅ npm update -g: 12 global packages updated (38.2s)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🎉 Package manager updates completed successfully!
-
-📊 Summary:
-   • Managers updated: 3/3
-   • Packages upgraded: 27
-   • Download size: 164.3MB
-   • Disk freed: 245MB
-
-⏰ Completed in 3m 42s
+📊 Summary
+   Total Managers: 4
+   Successful: 4
+   Failed: 0
+   Total Packages Updated: 0
+   Total Duration: 51.4s
 ```
+
+A manager that is not installed is skipped with its reason rather than failing
+the run, and `--output json` emits the same result as a single JSON document for
+scripting. The exact text layout is produced by `displayUpdateText` in
+`cmd/gz-pm/command/update.go`.
 
 ## 📖 Documentation
 
@@ -280,34 +288,32 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
 
 ## 🛣️ Roadmap
 
-### v1.0 (Current) - MVP
-- ✅ Multi-manager update orchestration
-- ✅ Enhanced output with progress indication
-- ✅ Resource pre-flight checks
-- ✅ Duplicate binary detection
-- ✅ Dry-run support
-- ✅ JSON output for automation
+The first release will be tagged **v0.1.0**. The leading zero is deliberate: the
+public API is not frozen, several commands described in the specifications are
+not built yet, and Windows has no CI coverage. A 1.0 would promise a
+compatibility guarantee this project is not yet in a position to keep.
 
-### v1.1 (Month 3)
-- 🔜 Bootstrap command (setup from config)
-- 🔜 Sync command (config-driven updates)
-- 🔜 Export command (save current config)
-- 🔜 SQLite-based configuration
-- 🔜 Plugin system for custom managers
+**Shipping today** -- every item below is reachable from `gz-pm --help`:
 
-### v1.2 (Month 5)
-- 🔜 TUI (Terminal UI) with Bubble Tea
-- 🔜 Cloud config sync (Dropbox, Google Drive)
-- 🔜 Update scheduling (cron integration)
-- 🔜 Rollback capability
+- `update` -- multi-manager orchestration, `--all` or `--managers`, `--dry-run`
+- `status` -- per-manager availability, package counts, pending updates
+- `bootstrap` -- set up managers from a config file or interactively
+- `cleanup` -- cleanup operations including `quarantine` and `list`
+- `winget` / `scoop` / `chocolatey` -- per-manager list, search, install,
+  uninstall, upgrade
+- `text` and `json` output for the commands above
 
-### v2.0 (Month 9)
-- 🔜 Team/enterprise features (shared configs)
-- 🔜 Windows support (choco, scoop)
-- 🔜 REST API for integration
-- 🔜 Prometheus metrics
+**Not built yet** -- named here because the specifications describe them and
+that is easy to mistake for a shipped feature:
 
-See [PRD.md](PRD.md) for detailed roadmap.
+- `sync` and `export` (configuration round-trip)
+- Resource pre-flight checks
+- sdkman and yay adapters
+- Plugin system, TUI, update scheduling, rollback
+
+[PRD.md](PRD.md) is the roadmap of record. This section intentionally does not
+restate its milestones: the copy that used to live here drifted, and ended up
+marking unbuilt features as delivered.
 
 ## 🤝 Contributing
 
@@ -355,7 +361,9 @@ Apache License 2.0 - see [LICENSE](LICENSE) file.
 ## 📊 Project Status
 
 - **Status**: Active implementation and quality hardening
-- **Release Readiness**: The project is not yet declared v1.0-ready; automated checks, platform coverage, and release controls require verification before release
+- **Release Readiness**: The first release will be tagged v0.1.0. Windows carries no CI
+  coverage and the release controls are still being verified; [PRD.md](PRD.md) holds the
+  criteria a 1.0 would have to meet
 - **Test Coverage**: Target 90%+; generate a current report with `make test-coverage`
 
 ---
