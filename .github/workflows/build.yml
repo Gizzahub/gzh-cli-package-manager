@@ -192,6 +192,23 @@ jobs:
         # sum.golang.org records its hash permanently. The tag push is the
         # irreversible step; this covers only the release artifacts.
         draft: true
+        # prerelease is coupled to draft inside the action, which the pair does
+        # not show on its face. At the pinned 3.0.2, createRelease computes
+        #   draft = prerelease === true ? input_draft === true : true
+        # (src/github.ts:1025), so while prerelease is false the release is
+        # always created as a draft, and it is finalizeRelease
+        # (defined src/github.ts:722, publishing call src/github.ts:740) that
+        # makes it public afterwards. prerelease: false is not what would
+        # publish this release; the finalize call is. Setting prerelease: true
+        # alongside draft: false would instead create the release public
+        # immediately and upload assets to an already-published release. The
+        # contract test pins draft: true, which rules that combination out.
+        #
+        # This governs creation only. If a release already exists for the tag,
+        # updateRelease reuses that release's own draft state
+        # (src/github.ts:675) and ignores this input, so draft: true does not
+        # pull an already-published release back to draft -- it only keeps
+        # finalizeRelease from publishing again.
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -71,13 +71,21 @@ deps-graph: ## Show module dependency graph
 # Documentation
 # ==============================================================================
 
-changelog: ## Generate changelog (requires git-chglog)
-	@if command -v git-chglog >/dev/null 2>&1; then \
-		git-chglog -o CHANGELOG.md; \
-		echo "✅ Changelog generated"; \
-	else \
-		echo "⚠️  git-chglog not installed. See: https://github.com/git-chglog/git-chglog"; \
-	fi
+# Reports failure when the tool is absent. Warning and exiting 0 made "no
+# changelog was generated" indistinguishable from "a changelog was generated",
+# so a caller reading only the exit status could not tell the two apart.
+#
+# As shipped this target cannot succeed here, and that is deliberate rather
+# than overlooked: it needs both git-chglog on PATH and a .chglog/ config,
+# neither of which this repository carries. git-chglog fails loudly by itself
+# on the missing config. Add both before invoking it; nothing else calls it.
+changelog: ## Generate CHANGELOG.md on demand (needs git-chglog + .chglog/ config)
+	@command -v git-chglog >/dev/null 2>&1 || { \
+		echo "❌ git-chglog not installed. See: https://github.com/git-chglog/git-chglog"; \
+		exit 1; \
+	}
+	git-chglog -o CHANGELOG.md
+	@echo "✅ Changelog generated"
 
 docs-serve: ## Serve documentation locally (requires mdbook or similar)
 	@if command -v mdbook >/dev/null 2>&1; then \

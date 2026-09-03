@@ -976,7 +976,6 @@ When creating a PR, use this template:
 - [ ] Tests pass (`make test`)
 - [ ] Linter passes (`make lint`)
 - [ ] Documentation updated (if applicable)
-- [ ] CHANGELOG.md updated (if user-facing change)
 - [ ] Commit messages follow format
 - [ ] No breaking changes (or documented)
 
@@ -1002,7 +1001,6 @@ Closes #XXX
 
 - **Squash and merge** for feature branches
 - **Rebase and merge** for clean linear history (preferred)
-- **Update CHANGELOG.md** before merging (if user-facing)
 
 ---
 
@@ -1059,7 +1057,6 @@ When adding features, update:
 - `README.md` - If it affects getting started
 - `docs/specifications/use-cases/` - If new use case
 - `docs/specifications/test-scenarios.md` - Add test scenarios
-- `CHANGELOG.md` - For all user-facing changes
 
 ---
 
