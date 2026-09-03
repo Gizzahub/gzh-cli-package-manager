@@ -15,7 +15,13 @@ LDFLAGS := -ldflags "-X $(VERSION_PKG).Version=$(VERSION) -X $(VERSION_PKG).GitC
 
 # Go commands
 GO := go
-GOBUILD := $(GO) build
+# -trimpath keeps the building machine's absolute paths out of the binary, so a
+# build is reproducible from source alone and a published checksum can be
+# verified by someone who does not share our directory layout. It is set here
+# rather than per-target so every build in this repository agrees; the release
+# workflow and scripts/release/snapshot-archives.sh pass it explicitly for the
+# same reason.
+GOBUILD := $(GO) build -trimpath
 GOTEST := $(GO) test
 GOINSTALL := $(GO) install
 GOMOD := $(GO) mod

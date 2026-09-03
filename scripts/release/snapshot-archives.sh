@@ -57,7 +57,7 @@ while IFS= read -r target; do
 	if ! (
 		cd "$release_repo_root"
 		GOWORK=off GOFLAGS='-mod=readonly' CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
-			go build -o "$binary_path" ./cmd/gz-pm
+			go build -trimpath -o "$binary_path" ./cmd/gz-pm
 	); then
 		release_die "snapshot build failed for $target"
 	fi

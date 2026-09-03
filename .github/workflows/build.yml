@@ -102,6 +102,7 @@ jobs:
 
         mkdir -p build dist
         go build \
+          -trimpath \
           -ldflags "-s -w \
             -X github.com/gizzahub/gzh-cli-package-manager/internal/version.Version=${{ steps.version.outputs.VERSION }} \
             -X github.com/gizzahub/gzh-cli-package-manager/internal/version.GitCommit=$(git rev-parse --short HEAD) \
