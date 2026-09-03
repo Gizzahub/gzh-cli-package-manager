@@ -9,10 +9,9 @@ import (
 	"time"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterpkg "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/registry"
-
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
 
 const (

@@ -7,10 +7,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/dto"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/input"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
-	"github.com/spf13/cobra"
 )
 
 var (

@@ -156,6 +156,13 @@ issues:
   new: false
 
 formatters:
+  # Without this key golangci-lint v2 runs no formatter at all: the gci settings
+  # below were configured but never applied, and `golangci-lint formatters`
+  # listed both of these as disabled. Enabling them is what makes `make fmt` and
+  # the Lint job actually enforce the import grouping this file describes.
+  enable:
+    - gofumpt
+    - gci
   settings:
     gci:
       sections:

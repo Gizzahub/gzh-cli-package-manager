@@ -8,10 +8,11 @@ import (
 	"os"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/dto"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
-	"gopkg.in/yaml.v3"
 )
 
 const managerIDLogKey = "manager_id"

@@ -12,11 +12,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/cleanup"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 	repo "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/repository/cleanup"
-	"github.com/spf13/cobra"
 )
 
 func captureStdout(t *testing.T, fn func() error) (string, error) {

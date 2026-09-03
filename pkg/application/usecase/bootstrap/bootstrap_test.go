@@ -6,12 +6,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/dto"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/usecase/bootstrap"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/logger"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (

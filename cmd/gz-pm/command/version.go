@@ -3,8 +3,9 @@ package command
 import (
 	"fmt"
 
-	"github.com/gizzahub/gzh-cli-package-manager/internal/version"
 	"github.com/spf13/cobra"
+
+	"github.com/gizzahub/gzh-cli-package-manager/internal/version"
 )
 
 // versionCmd represents the version command.

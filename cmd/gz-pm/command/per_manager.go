@@ -7,9 +7,10 @@ import (
 	"io"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
-	"github.com/spf13/cobra"
 )
 
 // managerAdapters holds adapters for per-manager CLI commands.

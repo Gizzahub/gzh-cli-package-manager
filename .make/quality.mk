@@ -13,14 +13,16 @@ lint: install-lint ## Run golangci-lint
 	@echo "Running golangci-lint..."
 	@"$(GOLANGCI_LINT_BIN)" run $(GOLANGCI_LINT_RUN_FLAGS) ./...
 
-fmt: ## Format code with gofmt and gofumpt
+# Formats with the pinned golangci-lint rather than a gofumpt from PATH. The
+# previous form fell back to plain go fmt with a notice and exited 0, so a
+# machine without gofumpt reported success having applied neither gofumpt nor
+# gci -- and gci was never applied anywhere, because .golangci.yml declared its
+# settings without enabling it. Both now come from the same pinned binary the
+# Lint job uses, so local and hosted formatting cannot drift apart.
+fmt: install-lint ## Format code (gofumpt + gci, via pinned golangci-lint)
 	@echo "Formatting code..."
-	$(GOFMT) ./...
-	@if command -v gofumpt >/dev/null 2>&1; then \
-		gofumpt -w .; \
-	else \
-		echo "gofumpt not installed, using go fmt only"; \
-	fi
+	@"$(GOLANGCI_LINT_BIN)" fmt ./...
+	@echo "✅ Formatted"
 
 vet: ## Run go vet
 	@echo "Running go vet..."
@@ -36,12 +38,10 @@ check: vet lint ## Quick check (vet + lint, no tests)
 # Diff-Aware Checks (faster for incremental development)
 # ==============================================================================
 
-fmt-diff: ## Format only changed Go files
+fmt-diff: install-lint ## Format only changed Go files
 	@echo "Formatting changed files..."
-	@git diff --name-only --diff-filter=ACMR HEAD | grep '\.go$$' | xargs -r gofmt -w
-	@if command -v gofumpt >/dev/null 2>&1; then \
-		git diff --name-only --diff-filter=ACMR HEAD | grep '\.go$$' | xargs -r gofumpt -w; \
-	fi
+	@git diff --name-only --diff-filter=ACMR HEAD | grep '\.go$$' | \
+		xargs -r "$(GOLANGCI_LINT_BIN)" fmt
 	@echo "✅ Changed files formatted"
 
 # Base is the integration branch tip (not HEAD~1): multi-commit task
