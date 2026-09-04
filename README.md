@@ -313,8 +313,9 @@ compatibility guarantee this project is not yet in a position to keep.
 - `cleanup` -- `cache`, `orphans`, `quarantine` and `versions`
 - `winget` / `scoop` / `chocolatey` -- per-manager list, search, install,
   uninstall, upgrade
-- `text` and `json` output for the commands above, except `cleanup`, which
-  has no `--output` flag
+- `text` and `json` output for `update`, `status`, `bootstrap`, and the
+  `winget`/`scoop`/`chocolatey` `list`/`search` subcommands -- `cleanup` and the
+  `install`/`uninstall`/`upgrade` subcommands have no `--output` flag
 
 **Not built yet** -- named here because the specifications describe them and
 that is easy to mistake for a shipped feature:
