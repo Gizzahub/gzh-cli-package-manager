@@ -47,10 +47,10 @@ Examples:
 
   # Use specific update strategy
   gz-pm update --all --strategy stable`,
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		if updateUseCase == nil {
 			fmt.Println("❌ Error: Update use case not initialized")
-			return
+			return nil
 		}
 
 		ctx := context.Background()
@@ -103,8 +103,7 @@ Examples:
 		case outputFormatText:
 			displayUpdateText(resp)
 		default:
-			fmt.Printf("❌ Error: Unknown output format: %s\n", updateOutput)
-			fmt.Println("Supported formats: text, json")
+			return fmt.Errorf("unknown output format %q (supported: text, json)", updateOutput)
 		}
 
 		// Exit with appropriate code
@@ -115,6 +114,7 @@ Examples:
 				os.Exit(2) // Complete failure
 			}
 		}
+		return nil
 	},
 }
 
@@ -196,6 +196,6 @@ func init() {
 	updateCmd.Flags().BoolVar(&updateDryRun, "dry-run", false, "Preview changes without executing")
 	updateCmd.Flags().StringVarP(&updateManagers, "managers", "m", "", "Comma-separated list of managers to update")
 	updateCmd.Flags().StringVar(&updateStrategy, "strategy", "stable", "Update strategy (latest|stable|minor|fixed)")
-	updateCmd.Flags().StringVarP(&updateOutput, "output", "o", outputFormatText, "Output format (text|json|simple)")
+	updateCmd.Flags().StringVarP(&updateOutput, "output", "o", outputFormatText, "Output format (text|json)")
 	updateCmd.Flags().BoolVar(&updatePipAllowConda, "pip-allow-conda", false, "Allow pip updates in conda environments")
 }

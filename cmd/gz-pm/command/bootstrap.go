@@ -43,10 +43,10 @@ Examples:
 
   # Preview what would be installed
   gz-pm bootstrap --config mysetup.yaml --dry-run`,
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		if bootstrapUseCase == nil {
 			fmt.Println("❌ Error: Bootstrap use case not initialized")
-			return
+			return nil
 		}
 
 		ctx := context.Background()
@@ -72,8 +72,7 @@ Examples:
 		case outputFormatText:
 			displayBootstrapText(resp)
 		default:
-			fmt.Printf("❌ Error: Unknown output format: %s\n", bootstrapOutput)
-			fmt.Println("Supported formats: text, json")
+			return fmt.Errorf("unknown output format %q (supported: text, json)", bootstrapOutput)
 		}
 
 		// Exit with appropriate code
@@ -84,6 +83,7 @@ Examples:
 				os.Exit(2) // Complete failure
 			}
 		}
+		return nil
 	},
 }
 

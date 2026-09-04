@@ -312,10 +312,14 @@ compatibility guarantee this project is not yet in a position to keep.
 - `bootstrap` -- set up managers from a config file or interactively
 - `cleanup` -- `cache`, `orphans`, `quarantine` and `versions`
 - `winget` / `scoop` / `chocolatey` -- per-manager list, search, install,
-  uninstall, upgrade
-- `text` and `json` output for `update`, `status`, `bootstrap`, and the
-  `winget`/`scoop`/`chocolatey` `list`/`search` subcommands -- `cleanup` and the
-  `install`/`uninstall`/`upgrade` subcommands have no `--output` flag
+  uninstall, upgrade; `winget` also has `winget source list`, and `scoop` also
+  has `scoop bucket list`/`add`/`remove`
+- `--output text`/`--output json` on `update`, `status`, `bootstrap`,
+  `winget list`, `winget search`, `winget source list`, `scoop list`,
+  `scoop search`, `scoop bucket list`, `chocolatey list` and
+  `chocolatey search` -- this list is not an exhaustive partition of every
+  other subcommand, so run `gz-pm <command> --help` to check one not named
+  here
 
 **Not built yet** -- named here because the specifications describe them and
 that is easy to mistake for a shipped feature:
