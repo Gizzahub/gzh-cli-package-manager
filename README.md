@@ -313,7 +313,8 @@ compatibility guarantee this project is not yet in a position to keep.
 - `cleanup` -- `cache`, `orphans`, `quarantine` and `versions`
 - `winget` / `scoop` / `chocolatey` -- per-manager list, search, install,
   uninstall, upgrade
-- `text` and `json` output for the commands above
+- `text` and `json` output for the commands above, except `cleanup`, which
+  has no `--output` flag
 
 **Not built yet** -- named here because the specifications describe them and
 that is easy to mistake for a shipped feature:
@@ -380,7 +381,7 @@ Apache License 2.0 - see [LICENSE](LICENSE) file.
 
 ---
 
-**Made with ❤️ by the GizzaHub team**
+**Made with ❤️ by archmagece**
 
 [GitHub](https://github.com/gizzahub/gzh-cli-package-manager) •
 [Documentation](docs/) •

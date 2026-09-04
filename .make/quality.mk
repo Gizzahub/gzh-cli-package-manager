@@ -57,9 +57,17 @@ lint-diff: install-lint ## Lint changes since origin/master (LINT_DIFF_BASE=...)
 # the target named "for CI" could pass on code the Lint job rejects -- the exact
 # local/hosted drift enabling the formatters was meant to close.
 #
-# The emptiness of the output is what decides, not the exit status:
-# `golangci-lint fmt --diff` prints the diff and still exits 0, so testing its
-# status would rebuild the same gate that cannot fail.
+# Measured against the pinned v2.13.1: `golangci-lint fmt --diff` exits 1 when
+# it emits a diff and 0 when it emits nothing, so the exit status and the
+# emptiness of the output agree. This tests the output because it has to
+# capture it either way -- printing the diff next to "run make fmt" is what
+# makes the failure actionable rather than just red.
+#
+# An earlier version of this comment asserted the command exits 0 even with a
+# diff, and that testing its status would rebuild a gate that cannot fail. That
+# was never measured and it is wrong. It is recorded here because the claim was
+# specific enough to be believed and would have argued against the simpler
+# check.
 fmt-check: install-lint ## Check if code is formatted (for CI)
 	@echo "Checking code format..."
 	@out="$$("$(GOLANGCI_LINT_BIN)" fmt --diff ./... 2>&1)"; \
