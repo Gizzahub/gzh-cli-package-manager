@@ -1,0 +1,8 @@
+# CE task runtime — gzh-cli-package-manager의 저장소 신원 선언.
+schema-version: 2
+repository-id: gzh-cli-package-manager
+worktree-roots:
+  mbp: /Users/archmagece/worktrees/gzh-cli/gzh-cli-package-manager
+  mst: /Users/archmagece/worktrees/gzh-cli/gzh-cli-package-manager
+integration-provider: gz-git
+integration-network-policy: allow
