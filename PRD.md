@@ -218,23 +218,9 @@ gz-pm update --managers mise --strategy micro --dry-run
 - Every other adapter returns a message and runs no manager command
 - Command details are in `docs/mise-update.md`
 
-**Output Example**:
-```
-🔍 Performing pre-flight checks...
-📦 Planned Updates (dry run):
-
-brew:
-  • node: 20.11.0 → 20.11.1 (24.8MB)
-  • git: 2.43.0 → 2.43.1 (8.4MB)
-
-npm:
-  • typescript: 5.3.2 → 5.3.3 (2.1MB)
-
-Total: 3 packages, 35.1MB download
-Estimated time: 2m 30s
-
-Run without --dry-run to apply changes
-```
+**Output**: text mode prints `🧪 Package Manager Update (DRY-RUN)`, the manager
+name, and that manager's message. mise prints the mise preview. Other adapters
+print a fixed sentence. The CLI does not print download sizes here.
 
 **Related Requirements**: REQ-UC001-003
 
