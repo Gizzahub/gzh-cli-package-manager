@@ -1,5 +1,19 @@
 # UC-001: Update Package Managers
 
+## Current contract
+
+The sample transcripts below are the original draft. The CLI does not print
+those banners, download sizes, or `~/.gz-pm` logs. Text output starts with
+`📦 Package Manager Update` or, with `--dry-run`, `🧪 Package Manager Update (DRY-RUN)`,
+then one block per manager and a summary.
+
+mise is a registered adapter. Its strategies, `--bump`, and config scope are
+[docs/mise-update.md](../../mise-update.md). `--dry-run` installs nothing. For
+mise it runs mise's preview (`mise upgrade --no-prune --dry-run`; `minor`,
+`micro`, and `latest` also run `mise ls` and `mise ls-remote`). brew, asdf, npm,
+pip, cargo, apt, pacman, winget, scoop, and chocolatey return a message and run
+no manager command.
+
 ## Scenario: Update all package managers and their packages
 
 ### Input
@@ -16,13 +30,13 @@ gz-pm update
 gz-pm update --all                      # Explicit all (same as default)
 gz-pm update --manager brew             # Single manager
 gz-pm update --managers brew,asdf,npm   # Multiple specific managers
-gz-pm update --all --dry-run             # Preview changes without executing
+gz-pm update --managers mise --dry-run  # mise preview; see docs/mise-update.md
 gz-pm update --all --output json        # Machine-readable JSON output
 ```
 
 **Prerequisites**:
 
-- [ ] Package managers installed (asdf, brew, npm, etc.)
+- [ ] A registered manager is installed (brew, asdf, mise, npm, pip, cargo, apt, pacman, winget, scoop, or chocolatey)
 - [ ] Network connectivity
 - [ ] Admin permissions (for system-wide package managers like apt, pacman)
 - [ ] Sufficient disk space for downloads and cache
@@ -99,14 +113,8 @@ Exit Code: 1
 ❌ No supported package managers found!
 
 💡 Supported package managers:
-   - Homebrew (macOS/Linux): Install from https://brew.sh
-   - asdf (Version manager): Install from https://asdf-vm.com
-   - SDKMAN (Java ecosystem): Install from https://sdkman.io
-   - Node.js npm: Installed with Node.js
-   - Python pip: Installed with Python
-   - Rust cargo: Installed with Rust
-   - apt (Debian/Ubuntu): System package manager
-   - pacman (Arch/Manjaro): System package manager
+   - The registry: brew, asdf, mise, npm, pip, cargo, apt, pacman, winget, scoop, chocolatey
+   - SDKMAN is not a registered adapter
 
 🚫 Nothing to update.
 
@@ -167,6 +175,9 @@ Exit Code: 0
 - System PATH potentially modified for new tool versions
 
 ### Validation
+
+The checks below belong to the original draft transcripts. They are not the
+current CLI text or the current test suite.
 
 **Automated Tests**:
 

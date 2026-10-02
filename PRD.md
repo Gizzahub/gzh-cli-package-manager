@@ -3,8 +3,8 @@
 > **Product Name**: gzh-cli-package-manager
 > **CLI Binary**: `gz-pm`
 > **Version**: 1.0.0
-> **Last Updated**: 2025-01-27
-> **Status**: Draft
+> **Last Updated**: 2026-10-02
+> **Status**: Draft. Current adapters and mise dry-run: PRODUCT.md, README, [docs/mise-update.md](docs/mise-update.md). mise is registered since `0ec42b6`.
 
 ---
 
@@ -16,7 +16,7 @@
 
 Modern software development requires managing packages across:
 - System package managers (brew, apt, pacman)
-- Version managers (asdf, nvm, pyenv, rbenv)
+- Version managers (asdf, mise). nvm, pyenv, and rbenv are not registered adapters
 - Language package managers (npm, pip, cargo, gem)
 - JVM ecosystem (sdkman)
 
@@ -173,16 +173,12 @@ Modern software development requires managing packages across:
 **User Story**: As a developer, I want gz-pm to automatically discover which package managers I have installed, so I don't need to configure anything manually.
 
 **Acceptance Criteria**:
-- Detect brew, asdf, npm, pip, apt, pacman, yay, sdkman, nvm, rbenv, pyenv automatically
-- Support macOS, Linux (Ubuntu/Arch/Fedora), Windows/WSL2
-- Cache detection results for 24 hours
-- `--refresh` flag to force re-detection
-- Detection completes in < 5 seconds
+- Registered adapters: brew, asdf, mise, npm, pip, cargo, apt, pacman, winget, scoop, choco
+- yay, sdkman, nvm, rbenv, and pyenv are not registered
+- Each adapter probes its own executable. mise uses `mise --version`
 
 **Technical Approach**:
-- Check standard installation paths
-- Execute `which <manager>` or equivalent
-- Parse version strings from `<manager> --version`
+- `pkg/infrastructure/adapter/registry` is the supported set
 
 **Related Requirements**: REQ-STATUS-001
 
@@ -195,20 +191,15 @@ Modern software development requires managing packages across:
 **User Story**: As a cautious developer, I want to control how aggressively packages are updated, so I can avoid breaking changes in production environments.
 
 **Acceptance Criteria**:
-- Default strategy: `stable` (latest stable releases only)
-- `--strategy latest`: Include beta/rc versions
-- `--strategy minor`: Patch and minor updates only, no major versions
-- `--strategy fixed`: Show available updates but don't install
-- Per-manager strategy overrides via config file
+- Default strategy: `stable`. For mise this delegates to `mise upgrade`
+- `latest`, `minor`, and `micro` plan mise updates. Other managers reject `minor` and `micro`
+- `--strategy fixed` skips the upgrade
+- Per-manager overrides use the gz-pm config file in `docs/mise-update.md`
 
 **Example**:
 ```bash
-# Update everything to latest stable
-gz-pm update --all --strategy stable
-
-# Update Homebrew aggressively, pip conservatively
-# Config: brew=latest, pip=minor
-gz-pm update --all
+gz-pm update --managers mise --strategy stable --dry-run
+gz-pm update --managers mise --strategy micro --dry-run
 ```
 
 **Related Requirements**: REQ-UC001-002
@@ -222,11 +213,10 @@ gz-pm update --all
 **User Story**: As a cautious developer, I want to see what would be updated before actually updating, so I can avoid surprises.
 
 **Acceptance Criteria**:
-- `--dry-run` flag shows planned changes without executing
-- Display: packages to update, version changes, download sizes
-- Execution time estimate
-- Dry-run completes in < 30 seconds
-- No actual package installations
+- `--dry-run` installs nothing
+- mise runs `mise upgrade --no-prune --dry-run`. `minor`, `micro`, and `latest` also run `mise ls` and `mise ls-remote`
+- Every other adapter returns a message and runs no manager command
+- Command details are in `docs/mise-update.md`
 
 **Output Example**:
 ```
@@ -722,7 +712,7 @@ gz-pm update --all  # Execute
 - Exceptional UX (beautiful output, great docs)
 - Show value immediately (first run should impress)
 - Community building (blog posts, talks, demos)
-- Integration with popular tools (mise, devenv)
+- mise update orchestration is implemented (`docs/mise-update.md`). devenv integration is not a gz-pm feature
 
 ---
 

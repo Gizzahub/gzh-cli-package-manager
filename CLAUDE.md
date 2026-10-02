@@ -11,10 +11,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Architecture**: Clean Architecture + Hexagonal (Ports & Adapters)
 **Go Version**: 1.24+ consumer baseline; Go 1.26.7 recommended for development
 
-Think of it as a "package manager for package managers" - unified interface for:
-- **System**: Homebrew, apt, pacman, winget (Windows)
-- **Version**: asdf
+Think of it as a "package manager for package managers" - unified interface for the
+eleven adapters in `pkg/infrastructure/adapter/registry`:
+- **System**: Homebrew, apt, pacman, winget, scoop, chocolatey
+- **Version**: asdf, mise
 - **Language**: npm, pip, cargo
+
+mise updates tools that mise already manages. The contract is
+[docs/mise-update.md](docs/mise-update.md). `gz-pm` does not install mise itself.
 
 ---
 
@@ -148,14 +152,17 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## Important Files
 
+- `PRODUCT.md` - Current goals, manager set, and dry-run contract
+- `docs/mise-update.md` - mise update strategies and dry-run behavior
+- `README.md` - Supported-manager table
 - `ARCHITECTURE.md` - Architecture overview + index
 - `docs/10-architecture/` - Full architecture documentation (split by topic)
 - `CONTRIBUTING.md` - Development guidelines
-- `PRD.md` - Product vision and roadmap
+- `PRD.md` - Original product draft; older than PRODUCT.md where they disagree
 - `REQUIREMENTS.md` - Functional/non-functional requirements
 - `docs/10-architecture/adr/` - Architecture Decision Records
 - `Makefile` - Build automation
 
 ---
 
-**Last Updated**: 2026-08-31
+**Last Updated**: 2026-10-02

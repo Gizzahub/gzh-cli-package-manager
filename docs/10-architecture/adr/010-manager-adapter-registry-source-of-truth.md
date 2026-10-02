@@ -40,6 +40,20 @@ adapter implementation exist.
 | `scoop` | same | same | `scoop.NewAdapter` |
 | `choco` | same | same | `chocolatey.NewAdapter` |
 
+## Later registry members
+
+The table above is the 2026-09-01 design-time snapshot. It is not the live list.
+Commit `0ec42b6` (2026-10-02) added `mise` (`mise.NewAdapter`) to
+`pkg/infrastructure/adapter/registry`. That factory remains the source of truth.
+"Registry consolidation must not add managers" in Dependency and Behavior
+Boundaries binds that refactor only. A later support decision adds an adapter
+in the same factory.
+
+mise `--dry-run` runs mise's own preview and is specified in
+[docs/mise-update.md](../../mise-update.md). Every other adapter's dry-run
+returns before any manager command. "Must not change dry-run semantics" means
+the consolidation left each adapter's preview behavior as it was.
+
 The CLI registry is passed to the update use case and command-layer per-manager
 operations. The detecting repository's registry is used for detection and status
 queries. Both constructors receive the same executor and logger supplied by their

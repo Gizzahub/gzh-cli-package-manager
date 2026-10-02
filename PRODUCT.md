@@ -3,7 +3,7 @@
 **Project**: gzh-cli-package-manager (`gz-pm` binary)
 **Doc Type**: Goals + Constraints + Quality Gates
 **Status**: Active
-**Last Updated**: 2026-07-16
+**Last Updated**: 2026-10-02
 
 ______________________________________________________________________
 
@@ -15,7 +15,11 @@ one CLI (and importable command tree) it:
 - detects which package managers are installed and reports their health,
 - drives bulk updates through per-manager adapters instead of reimplementing them
   (SOUL 신념 1: 감싸되 대체하지 않는다),
-- and keeps every mutation behind `--dry-run` and explicit opt-in guards.
+- and keeps destructive updates behind `--dry-run` and explicit opt-in guards.
+  `--dry-run` installs nothing. For mise it runs mise's own preview
+  (`mise upgrade --no-prune --dry-run`; `minor`, `micro`, and `latest` also run
+  `mise ls` and `mise ls-remote`). Every other adapter returns a message and
+  runs no manager command. The mise contract is `docs/mise-update.md`.
 
 This is a feature-library project — a single PRODUCT.md is sufficient. It
 replaces a PRD.
@@ -44,8 +48,9 @@ G2. **Update parity (감지 = 실동작)**
 
 G3. **Safe by default**
 
-- Target: 모든 파괴적 경로는 exec 이전에 `--dry-run` 분기; sudo 사용 0건;
-  shell 보간(`sh -c`) 0건 — 현재 3항목 모두 충족
+- Target: `--dry-run`은 설치·삭제 명령을 실행하지 않는다. mise는 위 미리보기
+  명령만 실행하고, 나머지 어댑터는 매니저 명령을 실행하지 않는다. sudo 사용
+  0건. shell 보간(`sh -c`) 0건 — 현재 충족
 
 G4. **Clean Architecture 경계**
 
@@ -101,7 +106,8 @@ ______________________________________________________________________
 
 **Safety**
 
-- `--dry-run`은 어떤 exec보다 먼저 분기한다
+- `--dry-run`은 설치·삭제 명령보다 먼저 갈라진다. mise 미리보기 명령은 그
+  갈림 안에서만 실행된다
 - conda 환경에서 pip 업데이트는 자동 차단 — `--pip-allow-conda` 명시 opt-in 필요
 - 확인 프롬프트·롤백은 현재 없음 — 파괴적 범위를 넓히기 전에 도입해야 한다
 
@@ -123,8 +129,9 @@ ______________________________________________________________________
 
 **Docs**
 
-- README·CLAUDE.md의 명령·상태 서술이 실제 코드와 일치한다 (현재 미충족:
-  "implementation pending" 서술이 stale)
+- README·CLAUDE.md·PRD.md·UC-001·ADR-010의 등록 매니저 목록과 dry-run 서술이
+  레지스트리 및 `docs/mise-update.md`와 일치한다. "implementation pending"은
+  README와 CLAUDE.md에 없다
 
 ______________________________________________________________________
 
