@@ -16,6 +16,7 @@ func TestNewRegistersOnlySupportedManagers(t *testing.T) {
 		manager.ManagerPip:        {},
 		manager.ManagerCargo:      {},
 		manager.ManagerASDF:       {},
+		manager.ManagerMise:       {},
 		manager.ManagerWinget:     {},
 		manager.ManagerScoop:      {},
 		manager.ManagerChocolatey: {},

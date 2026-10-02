@@ -10,6 +10,7 @@ import (
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cargo"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/chocolatey"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/homebrew"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/mise"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/npm"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/pacman"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/pip"
@@ -24,6 +25,7 @@ func New(executor output.CommandExecutor, logger output.Logger) map[manager.Mana
 		manager.ManagerApt:        apt.NewAdapter(executor, logger),
 		manager.ManagerHomebrew:   homebrew.NewAdapter(executor, logger),
 		manager.ManagerASDF:       asdf.NewAdapter(executor, logger),
+		manager.ManagerMise:       mise.NewAdapter(executor, logger),
 		manager.ManagerNPM:        npm.NewAdapter(executor, logger),
 		manager.ManagerCargo:      cargo.NewAdapter(executor, logger),
 		manager.ManagerPip:        pip.NewAdapter(executor, logger),

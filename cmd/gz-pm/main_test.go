@@ -21,6 +21,7 @@ func TestNewManagerAdaptersRegistersSupportedManagers(t *testing.T) {
 		manager.ManagerApt,
 		manager.ManagerHomebrew,
 		manager.ManagerASDF,
+		manager.ManagerMise,
 		manager.ManagerNPM,
 		manager.ManagerCargo,
 		manager.ManagerPip,

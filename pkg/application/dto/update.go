@@ -17,6 +17,21 @@ type UpdateRequest struct {
 	// Strategy specifies the update strategy to use.
 	Strategy UpdateStrategy
 
+	// Bump explicitly permits rewriting mise version requests.
+	Bump bool
+
+	// MiseDir selects the directory whose mise configuration is loaded.
+	MiseDir string
+
+	// MiseLocal restricts mise to project-local configuration.
+	MiseLocal bool
+
+	// MiseTools restricts mise updates to these declared tool names.
+	MiseTools []string
+
+	// Policies overrides update options for individual managers.
+	Policies map[manager.ManagerID]UpdatePolicy
+
 	// CheckDuplicates enables duplicate binary detection.
 	CheckDuplicates bool
 
@@ -30,9 +45,10 @@ type UpdateStrategy string
 
 // Update strategies.
 const (
-	StrategyStable UpdateStrategy = "stable" // Latest stable release only (default)
-	StrategyLatest UpdateStrategy = "latest" // Absolute latest (including beta/rc)
+	StrategyStable UpdateStrategy = "stable" // Native release resolution within requests (default)
+	StrategyLatest UpdateStrategy = "latest" // Latest; mise prerelease targets require Bump
 	StrategyMinor  UpdateStrategy = "minor"  // Latest minor/patch, no major upgrades
+	StrategyMicro  UpdateStrategy = "micro"  // Patch updates only, no major/minor upgrades
 	StrategyFixed  UpdateStrategy = "fixed"  // Show available updates but don't install
 )
 
@@ -50,6 +66,8 @@ type UpdateResponse struct {
 
 // ManagerUpdateResult represents the update result for a single manager.
 type ManagerUpdateResult struct {
+	// Message preserves native update output, including mise dry-run plans.
+	Message string `json:",omitempty"`
 	// Manager ID and name.
 	ID   manager.ManagerID
 	Name string

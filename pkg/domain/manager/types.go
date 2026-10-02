@@ -9,6 +9,7 @@ type ManagerID string
 const (
 	ManagerHomebrew   ManagerID = "brew"
 	ManagerASDF       ManagerID = "asdf"
+	ManagerMise       ManagerID = "mise"
 	ManagerNPM        ManagerID = "npm"
 	ManagerPip        ManagerID = "pip"
 	ManagerCargo      ManagerID = "cargo"

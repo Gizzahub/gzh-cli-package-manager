@@ -45,6 +45,9 @@ func NewUseCase(
 // Update performs update operations on package managers.
 func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.UpdateResponse, error) {
 	startTime := time.Now()
+	if err := validateRequest(req); err != nil {
+		return nil, err
+	}
 
 	uc.logger.Info(
 		ctx, "Starting package manager update",
@@ -57,6 +60,9 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 	if err != nil {
 		return nil, err
 	}
+	if err := uc.validatePolicies(managers, req); err != nil {
+		return nil, err
+	}
 
 	if len(managers) == 0 {
 		uc.logger.Info(ctx, "No managers to update")
@@ -66,9 +72,6 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 			DryRun:  req.DryRun,
 		}, nil
 	}
-
-	// Convert DTO strategy to adapter strategy
-	adapterStrategy := uc.convertStrategy(req.Strategy)
 
 	// Detect environment for pip safety checks
 	var env *detector.Environment
@@ -89,7 +92,7 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 
 	for _, mgr := range managers {
 		// Check if pip should be skipped in conda environment
-		if mgr.ID == manager.ManagerPip && env != nil && !env.IsPipSafe && !req.PipAllowConda {
+		if shouldSkipPip(mgr.ID, env, req.PipAllowConda) {
 			uc.logger.Warn(
 				ctx, "Skipping pip update in conda environment",
 				output.Field{Key: "env_type", Value: string(env.Type)},
@@ -112,7 +115,7 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 
 		uc.logger.Info(ctx, "Updating manager", output.Field{Key: managerFieldKey, Value: mgr.Name})
 
-		result := uc.updateManager(ctx, mgr, adapterStrategy, req.DryRun)
+		result := uc.updateManager(ctx, mgr, uc.updateOptions(mgr.ID, req))
 		results = append(results, result)
 
 		// Update summary
@@ -145,6 +148,10 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 		Summary: summary,
 		DryRun:  req.DryRun,
 	}, nil
+}
+
+func shouldSkipPip(id manager.ManagerID, env *detector.Environment, allowConda bool) bool {
+	return id == manager.ManagerPip && env != nil && !env.IsPipSafe && !allowConda
 }
 
 func (uc *UseCase) selectManagers(ctx context.Context, req *dto.UpdateRequest) ([]*manager.Manager, error) {
@@ -180,8 +187,7 @@ func (uc *UseCase) selectManagers(ctx context.Context, req *dto.UpdateRequest) (
 func (uc *UseCase) updateManager(
 	ctx context.Context,
 	mgr *manager.Manager,
-	strategy adapterm.UpdateStrategy,
-	dryRun bool,
+	opts adapterm.UpdateOptions,
 ) *dto.ManagerUpdateResult {
 	startTime := time.Now()
 
@@ -204,14 +210,7 @@ func (uc *UseCase) updateManager(
 		return result
 	}
 
-	snapshot := uc.preUpdateSnapshot(ctx, adapter, mgr, dryRun)
-
-	// Execute update
-	opts := adapterm.UpdateOptions{
-		DryRun:   dryRun,
-		Strategy: strategy,
-		Packages: []string{}, // Empty means update all packages
-	}
+	snapshot := uc.preUpdateSnapshot(ctx, adapter, mgr, opts.DryRun)
 
 	updateResult, err := adapter.Update(ctx, opts)
 	if err != nil {
@@ -223,6 +222,12 @@ func (uc *UseCase) updateManager(
 	}
 
 	result.Success = updateResult.Success
+	if mgr.ID == manager.ManagerMise {
+		result.Message = updateResult.Message
+	}
+	if !updateResult.Success {
+		result.Error = updateResult.Message
+	}
 	result.Duration = time.Since(startTime).Seconds()
 	applyUpdateMetadata(result, mgr.ID, snapshot, updateResult)
 	result.SkippedPackages = updateResult.FailedPackages
@@ -247,6 +252,8 @@ func (uc *UseCase) convertStrategy(dtoStrategy dto.UpdateStrategy) adapterm.Upda
 		return adapterm.StrategyStable
 	case dto.StrategyMinor:
 		return adapterm.StrategyMinor
+	case dto.StrategyMicro:
+		return adapterm.StrategyMicro
 	case dto.StrategyFixed:
 		return adapterm.StrategyFixed
 	default:

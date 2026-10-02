@@ -808,6 +808,11 @@ func TestUseCase_Update_Strategies(t *testing.T) {
 			expectedAdapter: adapterm.StrategyMinor,
 		},
 		{
+			name:            "strategy micro",
+			inputStrategy:   dto.StrategyMicro,
+			expectedAdapter: adapterm.StrategyMicro,
+		},
+		{
 			name:            "strategy fixed",
 			inputStrategy:   dto.StrategyFixed,
 			expectedAdapter: adapterm.StrategyFixed,
@@ -822,7 +827,7 @@ func TestUseCase_Update_Strategies(t *testing.T) {
 				findInstalledFunc: func(_ context.Context) ([]*manager.Manager, error) {
 					return []*manager.Manager{
 						{
-							ID:          manager.ManagerHomebrew,
+							ID:          manager.ManagerMise,
 							Name:        testHomebrewManagerName,
 							Installed:   true,
 							LastChecked: now,
@@ -840,7 +845,7 @@ func TestUseCase_Update_Strategies(t *testing.T) {
 			}
 
 			adapters := map[manager.ManagerID]adapterm.Adapter{
-				manager.ManagerHomebrew: adapter,
+				manager.ManagerMise: adapter,
 			}
 
 			uc := NewUseCase(repo, logger, adapters, nil)
@@ -1009,15 +1014,9 @@ func TestUseCase_Update_UnknownStrategy(t *testing.T) {
 	}
 	logger := &mockLogger{}
 	adapter := &mockAdapter{
-		updateFunc: func(_ context.Context, opts adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
-			// Verify that unknown strategy falls back to stable
-			if opts.Strategy != adapterm.StrategyStable {
-				return &adapterm.UpdateResult{
-					Success: false,
-					Message: "Expected stable strategy for unknown input",
-				}, nil
-			}
-			return &adapterm.UpdateResult{Success: true}, nil
+		updateFunc: func(_ context.Context, _ adapterm.UpdateOptions) (*adapterm.UpdateResult, error) {
+			t.Fatal("unknown strategy must not execute updates")
+			return nil, nil
 		},
 	}
 	adapters := map[manager.ManagerID]adapterm.Adapter{
@@ -1032,11 +1031,7 @@ func TestUseCase_Update_UnknownStrategy(t *testing.T) {
 	}
 
 	resp, err := uc.Update(context.Background(), req)
-	if err != nil {
-		t.Fatalf("Update() unexpected error: %v", err)
-	}
-
-	if !resp.Results[0].Success {
-		t.Error("Expected success with unknown strategy falling back to stable")
+	if err == nil || resp != nil {
+		t.Error("Expected unknown strategy to fail before updates")
 	}
 }

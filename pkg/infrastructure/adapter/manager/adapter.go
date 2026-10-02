@@ -86,6 +86,12 @@ type BucketManager interface {
 
 // UpdateOptions contains options for updating packages.
 type UpdateOptions struct {
+	// Bump permits mise to rewrite version requests explicitly.
+	Bump bool
+
+	// MiseDir and MiseLocal select the mise configuration scope.
+	MiseDir   string
+	MiseLocal bool
 	// DryRun performs a dry run without actually updating.
 	DryRun bool
 
@@ -109,6 +115,9 @@ const (
 
 	// StrategyMinor updates to the latest minor version (no major updates).
 	StrategyMinor UpdateStrategy = "minor"
+
+	// StrategyMicro permits patch updates only.
+	StrategyMicro UpdateStrategy = "micro"
 
 	// StrategyFixed does not update, only shows available updates.
 	StrategyFixed UpdateStrategy = "fixed"

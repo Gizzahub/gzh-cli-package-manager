@@ -1,17 +1,14 @@
 package command
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/dto"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/input"
-	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 )
 
 var (
@@ -21,6 +18,11 @@ var (
 	updateStrategy      string
 	updateOutput        string
 	updatePipAllowConda bool
+	updateBump          bool
+	updateMiseDir       string
+	updateMiseLocal     bool
+	updateMiseTools     []string
+	updateConfigPath    string
 	updateUseCase       input.UpdateUseCase
 )
 
@@ -47,53 +49,21 @@ Examples:
 
   # Use specific update strategy
   gz-pm update --all --strategy stable`,
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		req, err := buildUpdateRequest(cmd)
+		if err != nil {
+			return err
+		}
 		if updateUseCase == nil {
-			fmt.Println("❌ Error: Update use case not initialized")
-			return nil
+			return fmt.Errorf("update use case not initialized")
 		}
 
-		ctx := context.Background()
-
-		// Parse manager IDs if specified
-		var managerIDs []manager.ManagerID
-		if updateManagers != "" {
-			parts := strings.Split(updateManagers, ",")
-			managerIDs = make([]manager.ManagerID, 0, len(parts))
-			for _, part := range parts {
-				managerIDs = append(managerIDs, manager.ManagerID(strings.TrimSpace(part)))
-			}
-		}
-
-		// Convert strategy string to DTO type
-		strategy := dto.StrategyStable // default
-		switch updateStrategy {
-		case "latest":
-			strategy = dto.StrategyLatest
-		case "stable":
-			strategy = dto.StrategyStable
-		case "minor":
-			strategy = dto.StrategyMinor
-		case "fixed":
-			strategy = dto.StrategyFixed
-		default:
-			fmt.Printf("⚠️  Warning: Unknown strategy '%s', using 'stable'\n", updateStrategy)
-		}
-
-		// Build request
-		req := &dto.UpdateRequest{
-			All:           updateAll,
-			ManagerIDs:    managerIDs,
-			DryRun:        updateDryRun,
-			Strategy:      strategy,
-			PipAllowConda: updatePipAllowConda,
-		}
+		ctx := cmd.Context()
 
 		// Execute update
 		resp, err := updateUseCase.Update(ctx, req)
 		if err != nil {
-			fmt.Printf("❌ Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("update managers: %w", err)
 		}
 
 		// Display results
@@ -140,18 +110,7 @@ func displayUpdateText(resp *dto.UpdateResponse) {
 		case result.Skipped:
 			fmt.Printf("   Skipped: %s\n", result.SkipReason)
 		case result.Success:
-			fmt.Printf("   Duration: %.1fs\n", result.Duration)
-			if len(result.UpdatedPackages) > 0 {
-				fmt.Printf("   Updated: %d packages\n", len(result.UpdatedPackages))
-				for i := range result.UpdatedPackages {
-					fmt.Printf("      • %s\n", result.UpdatedPackages[i].Name)
-				}
-			} else {
-				fmt.Println("   No packages updated")
-			}
-			if result.SpaceFreed > 0 {
-				fmt.Printf("   Space freed: %.1f MB\n", float64(result.SpaceFreed)/(1024*1024))
-			}
+			displaySuccessfulUpdate(result)
 		default:
 			fmt.Printf("   Error: %s\n", result.Error)
 		}
@@ -159,6 +118,24 @@ func displayUpdateText(resp *dto.UpdateResponse) {
 	}
 
 	displayUpdateSummary(resp.Summary)
+}
+
+func displaySuccessfulUpdate(result *dto.ManagerUpdateResult) {
+	fmt.Printf("   Duration: %.1fs\n", result.Duration)
+	if result.Message != "" {
+		fmt.Printf("   %s\n", result.Message)
+	}
+	if len(result.UpdatedPackages) > 0 {
+		fmt.Printf("   Updated: %d packages\n", len(result.UpdatedPackages))
+		for i := range result.UpdatedPackages {
+			fmt.Printf("      • %s\n", result.UpdatedPackages[i].Name)
+		}
+	} else if result.Message == "" {
+		fmt.Println("   No packages updated")
+	}
+	if result.SpaceFreed > 0 {
+		fmt.Printf("   Space freed: %.1f MB\n", float64(result.SpaceFreed)/(1024*1024))
+	}
 }
 
 // displayUpdateSummary prints the aggregate update results.
@@ -195,7 +172,12 @@ func init() {
 	updateCmd.Flags().BoolVarP(&updateAll, "all", "a", false, "Update all package managers")
 	updateCmd.Flags().BoolVar(&updateDryRun, "dry-run", false, "Preview changes without executing")
 	updateCmd.Flags().StringVarP(&updateManagers, "managers", "m", "", "Comma-separated list of managers to update")
-	updateCmd.Flags().StringVar(&updateStrategy, "strategy", "stable", "Update strategy (latest|stable|minor|fixed)")
+	updateCmd.Flags().StringVar(&updateStrategy, "strategy", "stable", "Update strategy (latest|stable|minor|micro|fixed); minor/micro require mise")
+	updateCmd.Flags().BoolVar(&updateBump, "bump", false, "Allow mise to rewrite version requests (requires --managers mise)")
+	updateCmd.Flags().StringVar(&updateMiseDir, "mise-dir", "", "Load mise configuration from this directory (default: current directory)")
+	updateCmd.Flags().BoolVar(&updateMiseLocal, "mise-local", false, "Restrict mise updates to project-local configuration")
+	updateCmd.Flags().StringSliceVar(&updateMiseTools, "mise-tools", nil, "Comma-separated declared mise tools to update (default: all active tools)")
+	updateCmd.Flags().StringVar(&updateConfigPath, "config", "", "Update preferences YAML (default: $XDG_CONFIG_HOME/gz-pm/config.yaml)")
 	updateCmd.Flags().StringVarP(&updateOutput, "output", "o", outputFormatText, "Output format (text|json)")
 	updateCmd.Flags().BoolVar(&updatePipAllowConda, "pip-allow-conda", false, "Allow pip updates in conda environments")
 }

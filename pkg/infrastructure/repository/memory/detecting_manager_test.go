@@ -197,11 +197,11 @@ func pipCommandSequence() []string {
 func currentPlatformManagerCount() int {
 	switch runtime.GOOS {
 	case "darwin":
-		return 5
+		return 6
 	case "windows":
-		return 8
+		return 9
 	default:
-		return 7
+		return 8
 	}
 }
 
@@ -661,6 +661,7 @@ func TestDetectingManagerRepository_AdapterRegistration(t *testing.T) {
 		manager.ManagerPip,
 		manager.ManagerCargo,
 		manager.ManagerASDF,
+		manager.ManagerMise,
 		manager.ManagerWinget,
 		manager.ManagerScoop,
 		manager.ManagerChocolatey,

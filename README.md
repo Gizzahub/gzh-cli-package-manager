@@ -130,7 +130,7 @@ release; they are not current `gz-pm` commands.
 
 ## 📋 Supported Package Managers
 
-These ten adapters are the ones `pkg/infrastructure/adapter/registry` constructs.
+These eleven adapters are the ones `pkg/infrastructure/adapter/registry` constructs.
 Registration is unconditional -- no adapter gates on `GOOS` -- so a manager
 becomes *available* when its executable is found on the host and reports a clear
 error when it is not. The columns below therefore describe where each underlying
@@ -140,6 +140,7 @@ manager runs, not where `gz-pm` compiles.
 |---------|-------|-------|---------|
 | **Homebrew** | ✅ | ✅ | ❌ |
 | **ASDF** | ✅ | ✅ | ❌ |
+| **mise** | ✅ | ✅ | ⚠️ |
 | **npm** (Node.js) | ✅ | ✅ | ⚠️ |
 | **pip** (Python) | ✅ | ✅ | ⚠️ |
 | **cargo** (Rust) | ✅ | ✅ | ⚠️ |
@@ -148,6 +149,11 @@ manager runs, not where `gz-pm` compiles.
 | **winget** (Windows) | ❌ | ❌ | ✅ |
 | **scoop** (Windows) | ❌ | ❌ | ✅ |
 | **chocolatey** (Windows) | ❌ | ❌ | ✅ |
+
+mise supports `latest/stable/minor/micro/fixed` policies, explicit `--bump`,
+configuration scope selection, and persisted per-manager update preferences.
+See [mise 도구 갱신 정책](docs/mise-update.md) for examples and compatibility limits.
+The mise adapter upgrades managed tools, not the mise executable itself.
 
 The three Windows managers ship and are reachable as `gz-pm winget`,
 `gz-pm scoop` and `gz-pm chocolatey`. They are **untested on Windows**: the
@@ -307,7 +313,8 @@ compatibility guarantee this project is not yet in a position to keep.
 
 **Shipping today** -- every item below is reachable from `gz-pm --help`:
 
-- `update` -- multi-manager orchestration, `--all` or `--managers`, `--dry-run`
+- `update` -- multi-manager orchestration, `--all` or `--managers`, `--dry-run`,
+  `--config`, and mise policy/scope options (`--bump`, `--mise-dir`, `--mise-local`)
 - `status` -- per-manager availability, package counts, pending updates
 - `bootstrap` -- set up managers from a config file or interactively
 - `cleanup` -- `cache`, `orphans`, `quarantine` and `versions`

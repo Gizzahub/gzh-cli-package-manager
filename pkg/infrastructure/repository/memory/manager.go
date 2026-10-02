@@ -95,6 +95,15 @@ func (r *ManagerRepository) initializeDefaultManagers() {
 	// Define all supported managers
 	managers := []*manager.Manager{
 		{
+			ID:          manager.ManagerMise,
+			Name:        "mise",
+			Type:        manager.TypeVersion,
+			Platform:    platform,
+			Status:      manager.StatusUnavailable,
+			Packages:    []manager.Package{},
+			LastChecked: now,
+		},
+		{
 			ID:          manager.ManagerHomebrew,
 			Name:        "Homebrew",
 			Type:        manager.TypeSystem,

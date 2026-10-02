@@ -24,7 +24,7 @@ replaces a PRD.
 | --------------------------------------------- | ------------------------------------------- |
 | 설치된 매니저 감지·상태 보고                  | 패키지 매니저 자체 구현                     |
 | 여러 매니저의 일괄 업데이트 오케스트레이션    | 매니저 자체를 설치해 주는 부트스트래퍼      |
-| dry-run·전략(latest/stable/minor/fixed) 선택  | 개별 패키지 install/remove/search           |
+| dry-run·전략(latest/stable/minor/micro/fixed) 선택 | 개별 패키지 install/remove/search        |
 | text·json 출력, 매니저별 종료 코드            | GUI·TUI·REST API·클라우드 동기화            |
 
 ______________________________________________________________________
@@ -33,13 +33,13 @@ ______________________________________________________________________
 
 G1. **Detection breadth**
 
-- Target: 10개 매니저 감지 (brew·asdf·npm·pip·cargo·apt·pacman·winget·scoop·choco)
-  — 현재 10/10 등록 완료
+- Target: 11개 매니저 감지 (brew·asdf·mise·npm·pip·cargo·apt·pacman·winget·scoop·choco)
+  — 현재 11/11 등록 완료
 
 G2. **Update parity (감지 = 실동작)**
 
-- Target: 감지되는 매니저는 모두 `update`가 실제 동작해야 한다 (10/10)
-- 현재 **10/10** — brew·scoop·winget·choco·npm·pip·cargo·asdf·apt·pacman 모두
+- Target: 감지되는 매니저는 모두 `update`가 실제 동작해야 한다 (11/11)
+- 현재 **11/11** — brew·scoop·winget·choco·npm·pip·cargo·asdf·mise·apt·pacman 모두
   `Update` 실구현 (dry-run 분기 포함; apt/pacman은 root 권한 없으면 명시적 실패).
 
 G3. **Safe by default**
@@ -119,7 +119,7 @@ ______________________________________________________________________
 
 **Correctness**
 
-- 감지되는 매니저의 `update`가 스텁을 반환하지 않는다 (G2 — 현재 충족 10/10)
+- 감지되는 매니저의 `update`가 스텁을 반환하지 않는다 (G2 — 현재 충족 11/11)
 
 **Docs**
 
