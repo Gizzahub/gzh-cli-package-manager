@@ -6,9 +6,11 @@ package homebrew
 import (
 	"context"
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/application/port/output"
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/diagnostics"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
 	adapterm "github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager"
 	"github.com/gizzahub/gzh-cli-package-manager/pkg/infrastructure/adapter/manager/cmdutil"
@@ -240,4 +242,116 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 		output.Field{Key: "updated_packages", Value: len(result.UpdatedPackages)})
 
 	return result, nil
+}
+
+// brewProviderID is the provider id the inventory records, taken from the
+// domain ManagerID for Homebrew so the two never drift apart.
+const brewProviderID = string(manager.ManagerHomebrew)
+
+// The Homebrew adapter provides the optional CommandInventory capability.
+var _ adapterm.CommandInventory = (*Adapter)(nil)
+
+// brewInventoryDocument is the brew info --json=v2 --installed document the
+// command inventory parses. Formulae carry their installed binaries in the
+// binaries list. Casks carry their artifacts, of which only binary artifacts
+// name an installed binary file.
+type brewInventoryDocument struct {
+	Formulae []brewFormulaInventory `json:"formulae"`
+	Casks    []brewCaskInventory    `json:"casks"`
+}
+
+// brewFormulaInventory is one formula entry the inventory reads.
+type brewFormulaInventory struct {
+	Name     string   `json:"name"`
+	Version  string   `json:"version"`
+	Binaries []string `json:"binaries"`
+}
+
+// brewCaskInventory is one cask entry the inventory reads. The token and the
+// display names are package identity, never commands.
+type brewCaskInventory struct {
+	Token     string             `json:"token"`
+	Name      []string           `json:"name"`
+	Version   string             `json:"version"`
+	Artifacts []brewCaskArtifact `json:"artifacts"`
+}
+
+// brewCaskArtifact is one artifact entry of a cask. Only binary artifacts
+// name an installed file; app and other artifacts provide no command.
+type brewCaskArtifact struct {
+	Binary []brewBinaryArtifact `json:"binary"`
+}
+
+// brewBinaryArtifact is one binary stanza of a cask artifact.
+type brewBinaryArtifact struct {
+	Source string `json:"source"`
+	Target string `json:"target"`
+}
+
+// Commands reports one install record per installed binary the Homebrew
+// packages provide, implementing the optional CommandInventory capability.
+// The query is the read-only brew info --json=v2 --installed document; the
+// inventory never calls LookPath, never scans the Homebrew prefix, and never
+// installs, updates, or removes anything.
+//
+// A formula contributes a command only for a binary its entry lists, and a
+// cask only for a binary artifact. The command is the binary's basename, so
+// a formula name, a cask token, or a cask display name never becomes the
+// command, and the install record keeps the binary path as its real path.
+// The brew install records leave Active and Executed false: the provider
+// selects its one installed version per package, and PATH resolution is a
+// separate capability.
+func (a *Adapter) Commands(ctx context.Context) ([]diagnostics.InstallRecord, error) {
+	result, err := a.executor.Execute(ctx, "brew", "info", "--json=v2", "--installed")
+	if resultErr := cmdutil.CheckResult(result, err, "list brew commands"); resultErr != nil {
+		return nil, resultErr
+	}
+
+	var document brewInventoryDocument
+	if err := cmdutil.UnmarshalJSON(result, &document, "parse brew commands"); err != nil {
+		return nil, err
+	}
+
+	records := make([]diagnostics.InstallRecord, 0, len(document.Formulae)+len(document.Casks))
+	for i := range document.Formulae {
+		records = appendBinaryCommands(records, document.Formulae[i].Version, document.Formulae[i].Binaries)
+	}
+	for i := range document.Casks {
+		records = appendBinaryCommands(records, document.Casks[i].Version, caskBinaryPaths(document.Casks[i].Artifacts))
+	}
+	return records, nil
+}
+
+// caskBinaryPaths collects the installed binary paths a cask's artifacts
+// declare. Artifacts without a binary stanza contribute nothing.
+func caskBinaryPaths(artifacts []brewCaskArtifact) []string {
+	paths := make([]string, 0, len(artifacts))
+	for i := range artifacts {
+		for j := range artifacts[i].Binary {
+			if source := artifacts[i].Binary[j].Source; source != "" {
+				paths = append(paths, source)
+			}
+		}
+	}
+	return paths
+}
+
+// appendBinaryCommands appends one install record per binary path, keeping
+// the records the caller already collected. Records from empty or malformed
+// binary paths are skipped so they cannot invent a command.
+func appendBinaryCommands(records []diagnostics.InstallRecord, version string, binaryPaths []string) []diagnostics.InstallRecord {
+	for _, binaryPath := range binaryPaths {
+		command := path.Base(binaryPath)
+		if command == "" || command == "." {
+			continue
+		}
+		records = append(records, diagnostics.InstallRecord{
+			Command:    command,
+			ProviderID: brewProviderID,
+			Kind:       diagnostics.KindSystemOrLanguage,
+			Version:    version,
+			RealPath:   binaryPath,
+		})
+	}
+	return records
 }
