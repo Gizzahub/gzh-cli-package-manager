@@ -50,8 +50,13 @@ var unmanagedTable = []unmanagedRow{
 // Every found row's path goes through the path-identity resolver, so a
 // launcher symlink and its target are one install, and the caller's search
 // paths decide which record is executed. A missing root or a missing file
-// contributes no record and no error. The file is never executed.
+// contributes no record and no error. A home root that is not absolute is
+// treated as missing, so a relative or empty root never probes the working
+// directory. The file is never executed.
 func ProbeUnmanagedInstalls(homeRoot string, searchPaths []string) []domaindiagnostics.InstallRecord {
+	if !filepath.IsAbs(homeRoot) {
+		return nil
+	}
 	found := presentTableRows(homeRoot, unmanagedTable)
 	if len(found) == 0 {
 		return nil
@@ -83,10 +88,12 @@ func presentTableRows(homeRoot string, rows []unmanagedRow) []domaindiagnostics.
 	return records
 }
 
-// filePresent reports whether the exact path exists. Only the row's own path
-// is stat'ed; the probe never searches the directories around it.
+// filePresent reports whether the exact path names an existing file, following
+// a launcher symlink to its target. A dangling link is a missing file, as it is
+// for the resolver's search-path walk. Only the row's own path is stat'ed; the
+// probe never searches the directories around it.
 func filePresent(path string) bool {
-	_, err := os.Lstat(path)
+	_, err := os.Stat(path)
 	return err == nil
 }
 
@@ -100,12 +107,14 @@ func applyUnmanagedVersions(records []domaindiagnostics.InstallRecord) {
 	}
 }
 
-// versionFromRealPath returns the segment following versions in a resolved
-// install path of the form ".../versions/<version>/...". A path without such
-// a segment has no extracted version.
+// versionFromRealPath returns the version directory of a resolved install
+// path of the form ".../versions/<version>/<file>". The rightmost versions
+// directory wins, so a home root that itself sits under a directory named
+// versions does not leak into the version. A path whose versions element is
+// not followed by a directory and a file has no extracted version.
 func versionFromRealPath(realPath string) string {
 	segments := strings.Split(realPath, string(filepath.Separator))
-	for i := 0; i+1 < len(segments); i++ {
+	for i := len(segments) - 3; i >= 0; i-- {
 		if segments[i] == versionsSegment {
 			return segments[i+1]
 		}

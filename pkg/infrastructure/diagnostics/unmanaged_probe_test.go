@@ -14,11 +14,55 @@ const (
 	claudeRelativePath   = ".local/bin/claude"
 	claudeVersion        = "2.1.287"
 
+	// kindUnmanagedLiteral pins the card's kind string independently of the
+	// production constant, so relabeling the installer is caught.
+	kindUnmanagedLiteral domaindiagnostics.ProviderKind = "unmanaged"
+
 	labelPresentRoot     = "present-root"
 	labelMissingRoot     = "missing-root"
 	labelNoHomeWalk      = "no-home-walk"
 	labelResolvedSymlink = "resolved-symlink"
 )
+
+// TestUnmanagedProbeRejectsDanglingAndRelativeRoots covers the edges around
+// the card labels: a launcher whose target is gone is a missing file, and a
+// home root that is not absolute is a missing root.
+func TestUnmanagedProbeRejectsDanglingAndRelativeRoots(t *testing.T) {
+	fixture := newProbeFixture(t)
+	if err := os.MkdirAll(filepath.Dir(fixture.claudeInstall), 0o750); err != nil {
+		t.Fatalf("create %s: %v", filepath.Dir(fixture.claudeInstall), err)
+	}
+	if err := os.Symlink(fixture.claudeTarget, fixture.claudeInstall); err != nil {
+		t.Fatalf("link %s to %s: %v", fixture.claudeInstall, fixture.claudeTarget, err)
+	}
+	if records := ProbeUnmanagedInstalls(fixture.root, nil); len(records) != 0 {
+		t.Fatalf("expected no record for a dangling launcher, got %d: %+v", len(records), records)
+	}
+
+	writeProbeFile(t, fixture.claudeTarget)
+	t.Chdir(fixture.root)
+	for _, root := range []string{"", "."} {
+		if records := ProbeUnmanagedInstalls(root, nil); len(records) != 0 {
+			t.Fatalf("expected no record for non-absolute root %q, got %d: %+v", root, len(records), records)
+		}
+	}
+}
+
+// TestVersionFromRealPath pins the version rule: the rightmost versions
+// directory followed by a file names the version.
+func TestVersionFromRealPath(t *testing.T) {
+	cases := map[string]string{
+		"/home/u/.local/share/claude/versions/2.1.287/claude":          claudeVersion,
+		"/x/versions/home/.local/share/claude/versions/2.1.287/claude": claudeVersion,
+		"/home/u/.local/share/claude/versions/claude":                  "",
+		"/home/u/.local/bin/claude":                                    "",
+	}
+	for path, want := range cases {
+		if got := versionFromRealPath(path); got != want {
+			t.Errorf("versionFromRealPath(%q) = %q, want %q", path, got, want)
+		}
+	}
+}
 
 // probeFixture is one temporary home root with the absolute paths the probe
 // scenarios assert against. The root is resolved through symlinks first so
@@ -138,8 +182,8 @@ func assertUnmanagedRecord(t *testing.T, record *domaindiagnostics.InstallRecord
 	if record.ProviderID != providerClaudeNative {
 		t.Errorf("expected provider %q, got %q", providerClaudeNative, record.ProviderID)
 	}
-	if record.Kind != KindUnmanaged {
-		t.Errorf("expected kind %q, got %q", KindUnmanaged, record.Kind)
+	if record.Kind != kindUnmanagedLiteral {
+		t.Errorf("expected kind %q, got %q", kindUnmanagedLiteral, record.Kind)
 	}
 	if !record.Active {
 		t.Error("expected the present file to be active")
