@@ -84,7 +84,9 @@ type inventoryAdapter struct {
 
 // Commands returns the fixed records without touching the machine.
 func (i *inventoryAdapter) Commands(_ context.Context) ([]diagnostics.InstallRecord, error) {
-	return i.records, nil
+	// Return a copy so an in-place change by the collector cannot also
+	// change the expected records the test compares against.
+	return append([]diagnostics.InstallRecord(nil), i.records...), nil
 }
 
 // TestCommandInventoryEmptyDefault pins the default-empty contract of the

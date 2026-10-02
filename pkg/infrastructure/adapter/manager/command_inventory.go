@@ -11,9 +11,9 @@ import (
 // which commands they provide. A manager that does not implement it
 // contributes no commands.
 type CommandInventory interface {
-	// Commands returns one install record per already-resolved install this
-	// manager provides. Implementations report facts only and never run a
-	// package-manager command.
+	// Commands returns one install record per install of a command this
+	// manager provides. Implementations may query their package manager
+	// read-only; they must not install, update, or remove anything.
 	Commands(ctx context.Context) ([]diagnostics.InstallRecord, error)
 }
 
