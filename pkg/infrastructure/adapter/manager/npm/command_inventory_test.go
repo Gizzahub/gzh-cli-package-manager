@@ -3,8 +3,8 @@ package npm
 import (
 	"context"
 	"errors"
-	"maps"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	// inventoryFixtureRoot stubs the npm root -g answer.
+	// inventoryFixtureRoot is the global node_modules prefix the fixture
+	// trees report; it only exists inside the stubbed executor answers.
 	inventoryFixtureRoot = "/usr/local/lib/node_modules"
 
 	// codexScopedName is the scoped package whose command differs from its name.
@@ -29,89 +30,217 @@ const (
 	vueCommand        = "vue"
 	cliServiceCommand = "cli-service"
 	unscopedCliName   = "cli"
+
+	// geminiScopedName is a real npm 11 --long sample: a scoped package
+	// whose bin file lives outside a bin directory.
+	geminiScopedName = "@google/gemini-cli"
+	geminiCommand    = "gemini"
+	geminiVersion    = "0.62.0"
+
+	// corepackName is a real npm 11 --long sample: an unscoped package that
+	// ships several commands, one of which shares the package name.
+	corepackName    = "corepack"
+	corepackVersion = "0.36.0"
+
+	// typeScriptSampleVersion is the version of the real typescript sample.
+	typeScriptSampleVersion = "7.0.2"
+
+	// legacyScopedName accepts a string-form bin defensively; the command is
+	// the package name without its scope.
+	legacyScopedName = "@openai/codex-legacy"
+	legacyCommand    = "codex-legacy"
+	legacyVersion    = "0.1.0"
+
+	// slashBinPackage reports a bin map key that contains a slash; npm links
+	// it under the key's basename.
+	slashBinPackage = "weird"
+	slashBinKey     = "@scope/tools-cli"
+	slashCommand    = "tools-cli"
+	slashVersion    = "1.2.3"
 )
 
-// Manifest fixtures. The bodies are executor answers, not files.
+// inventoryListArgs is the one executor call Commands may make: a single
+// npm ls of the global tree in long JSON form.
+var inventoryListArgs = []string{lsSubcommand, globalFlag, depthFlag, jsonFlag, longFlag}
+
+// Executor fixtures. Each body is the stubbed npm ls -g --depth=0 --json
+// --long answer, in the shape npm 11 actually prints.
 const (
-	codexManifestBody      = `{"name":"@openai/codex","version":"0.42.0","bin":"bin/codex.js"}`
-	vueCliManifestBody     = `{"name":"@vue/cli","version":"5.0.0","bin":{"vue":"bin/vue.js","cli-service":"bin/cli-service.js"}}`
-	typeScriptManifestBody = `{"name":"typescript","version":"5.0.0"}`
-	nullBinManifestBody    = `{"name":"fsevents","version":"1.2.9","bin":null}`
+	codexTreeBody = `{
+  "name": "gz-global",
+  "path": "/usr/local/lib/node_modules",
+  "dependencies": {
+    "@openai/codex": {
+      "name": "@openai/codex",
+      "version": "0.42.0",
+      "path": "/usr/local/lib/node_modules/@openai/codex",
+      "bin": {"codex": "bin/codex.js"}
+    }
+  }
+}`
+
+	noBinTreeBody = `{
+  "name": "gz-global",
+  "path": "/usr/local/lib/node_modules",
+  "dependencies": {
+    "fsevents": {
+      "name": "fsevents",
+      "version": "2.3.3",
+      "path": "/usr/local/lib/node_modules/fsevents"
+    },
+    "left-pad": {
+      "name": "left-pad",
+      "version": "1.3.0",
+      "path": "/usr/local/lib/node_modules/left-pad",
+      "bin": null
+    }
+  }
+}`
+
+	vueCliTreeBody = `{
+  "name": "gz-global",
+  "path": "/usr/local/lib/node_modules",
+  "dependencies": {
+    "@vue/cli": {
+      "name": "@vue/cli",
+      "version": "5.0.0",
+      "path": "/usr/local/lib/node_modules/@vue/cli",
+      "bin": {"vue": "bin/vue.js", "cli-service": "bin/cli-service.js"}
+    }
+  }
+}`
+
+	samplesTreeBody = `{
+  "name": "gz-global",
+  "path": "/usr/local/lib/node_modules",
+  "dependencies": {
+    "@google/gemini-cli": {
+      "name": "@google/gemini-cli",
+      "version": "0.62.0",
+      "path": "/usr/local/lib/node_modules/@google/gemini-cli",
+      "bin": {"gemini": "bundle/gemini.js"}
+    },
+    "corepack": {
+      "name": "corepack",
+      "version": "0.36.0",
+      "path": "/usr/local/lib/node_modules/corepack",
+      "bin": {
+        "corepack": "dist/corepack.js",
+        "pnpm": "dist/pnpm.js",
+        "pnpx": "dist/pnpx.js",
+        "yarn": "dist/yarn.js",
+        "yarnpkg": "dist/yarnpkg.js"
+      }
+    },
+    "typescript": {
+      "name": "typescript",
+      "version": "7.0.2",
+      "path": "/usr/local/lib/node_modules/typescript",
+      "bin": {"tsc": "bin/tsc"}
+    }
+  }
+}`
+
+	legacyTreeBody = `{
+  "name": "gz-global",
+  "path": "/usr/local/lib/node_modules",
+  "dependencies": {
+    "@openai/codex-legacy": {
+      "name": "@openai/codex-legacy",
+      "version": "0.1.0",
+      "path": "/usr/local/lib/node_modules/@openai/codex-legacy",
+      "bin": "bin/codex.js"
+    }
+  }
+}`
+
+	slashBinTreeBody = `{
+  "name": "gz-global",
+  "path": "/usr/local/lib/node_modules",
+  "dependencies": {
+    "weird": {
+      "name": "weird",
+      "version": "1.2.3",
+      "path": "/usr/local/lib/node_modules/weird",
+      "bin": {"@scope/tools-cli": "bin/cli.js"}
+    }
+  }
+}`
+
+	emptyTreeBody = `{"name":"gz-global","path":"/usr/local/lib/node_modules","dependencies":{}}`
+
+	brokenBinTreeBody = `{
+  "name": "gz-global",
+  "path": "/usr/local/lib/node_modules",
+  "dependencies": {
+    "broken": {
+      "name": "broken",
+      "version": "9.9.9",
+      "path": "/usr/local/lib/node_modules/broken",
+      "bin": ["not", "a", "map"]
+    },
+    "typescript": {
+      "name": "typescript",
+      "version": "7.0.2",
+      "path": "/usr/local/lib/node_modules/typescript",
+      "bin": {"tsc": "bin/tsc"}
+    }
+  }
+}`
 )
 
-var errInventoryManifest = errors.New("manifest read failed")
-
-// inventoryManifest is one stubbed package.json read.
-type inventoryManifest struct {
-	body string
-	err  error
-}
-
-// inventoryFixture stubs every executor call Commands can make: the global
-// package list, the global root, and one manifest read per package.
+// inventoryFixture is the stubbed answer to the one executor call Commands
+// may make.
 type inventoryFixture struct {
-	listJSON  string
-	listErr   error
-	root      string
-	rootErr   error
-	manifests map[string]inventoryManifest
-	calls     int
+	treeJSON string
+	treeErr  error
 }
 
-// newInventoryExecutor stubs the executor from the fixture and returns a
-// checker for the total call count.
-func newInventoryExecutor(t *testing.T, fixture *inventoryFixture) (executor output.CommandExecutor, assertCalls func()) {
+// newInventoryExecutor stubs the executor with the fixture's answer and
+// fails the test on any command other than the single npm ls query. A
+// cleanup asserts that Commands made exactly one executor call.
+func newInventoryExecutor(t *testing.T, fixture *inventoryFixture) output.CommandExecutor {
 	t.Helper()
 
 	calls := 0
-	executor = testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
+	t.Cleanup(func() {
+		if calls != 1 {
+			t.Errorf("Commands() made %d executor calls, want exactly 1", calls)
+		}
+	})
+	return testutil.NewMockExecutor(func(_ context.Context, command string, args ...string) (*output.ExecutionResult, error) {
 		calls++
-		result, err, known := respondInventoryCall(fixture, command, args)
-		if !known {
+		if command != npmExecutable || !slices.Equal(args, inventoryListArgs) {
 			t.Fatalf("Commands() sent unexpected executor call %q %q", command, args)
 		}
-		return result, err
+		if fixture.treeErr != nil {
+			return nil, fixture.treeErr
+		}
+		return testutil.SuccessResult(fixture.treeJSON), nil
 	})
-	assertCalls = func() {
-		if calls != fixture.calls {
-			t.Errorf("Commands() executor calls = %d, want %d", calls, fixture.calls)
-		}
-	}
-	return executor, assertCalls
 }
 
-// respondInventoryCall answers one executor call from the fixture; known is
-// false when the fixture does not expect the call at all.
-func respondInventoryCall(fixture *inventoryFixture, command string, args []string) (result *output.ExecutionResult, err error, known bool) {
-	switch {
-	case command == npmExecutable && slices.Equal(args, []string{listSubcommand, globalFlag, depthFlag, jsonFlag}):
-		if fixture.listErr != nil {
-			return nil, fixture.listErr, true
-		}
-		return testutil.SuccessResult(fixture.listJSON), nil, true
-	case command == npmExecutable && slices.Equal(args, []string{rootSubcommand, globalFlag}):
-		if fixture.rootErr != nil {
-			return nil, fixture.rootErr, true
-		}
-		return testutil.SuccessResult(fixture.root + "\n"), nil, true
-	case command == manifestCommand && len(args) == 1:
-		manifest, found := fixture.manifests[args[0]]
-		if !found {
-			return nil, nil, false
-		}
-		if manifest.err != nil {
-			return nil, manifest.err, true
-		}
-		return testutil.SuccessResult(manifest.body), nil, true
-	default:
-		return nil, nil, false
+// runInventoryCommands drives Commands once over the fixture and requires
+// success; the executor stub fails the test on any unexpected call.
+func runInventoryCommands(t *testing.T, fixture *inventoryFixture) []diagnostics.InstallRecord {
+	t.Helper()
+
+	adapter := NewAdapter(newInventoryExecutor(t, fixture), testutil.NewMockLogger())
+
+	records, err := adapter.Commands(context.Background())
+	if err != nil {
+		t.Fatalf("Commands() unexpected error = %v", err)
 	}
+	return records
 }
 
-// manifestPath builds the executor argument a package manifest read carries,
-// independently of the adapter's own path assembly.
-func manifestPath(packageName string) string {
-	return filepath.Join(inventoryFixtureRoot, packageName, manifestFile)
+// runInventoryError drives Commands once over a fixture whose executor call
+// fails.
+func runInventoryError(t *testing.T, fixture *inventoryFixture) ([]diagnostics.InstallRecord, error) {
+	t.Helper()
+
+	adapter := NewAdapter(newInventoryExecutor(t, fixture), testutil.NewMockLogger())
+	return adapter.Commands(context.Background())
 }
 
 // npmRecord builds the expected install record for one bin of a global npm
@@ -128,21 +257,29 @@ func npmRecord(command, version, realPath string) diagnostics.InstallRecord {
 	}
 }
 
-// assertInventoryRecords compares the records with the wanted ones indexed
-// by command, so record order never decides the verdict.
-func assertInventoryRecords(t *testing.T, got []diagnostics.InstallRecord, want map[string]diagnostics.InstallRecord) {
+// assertInventoryRecords requires the exact record slice, order included:
+// the inventory promises package-name-then-command order.
+func assertInventoryRecords(t *testing.T, got, want []diagnostics.InstallRecord) {
 	t.Helper()
 
-	gotByCommand := make(map[string]diagnostics.InstallRecord, len(got))
-	for _, record := range got {
-		if _, duplicate := gotByCommand[record.Command]; duplicate {
-			t.Errorf("Commands() returned duplicate command %q", record.Command)
-			continue
-		}
-		gotByCommand[record.Command] = record
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Commands() records = %#v, want %#v", got, want)
 	}
-	if !maps.Equal(gotByCommand, want) {
-		t.Errorf("Commands() records = %#v, want %#v", gotByCommand, want)
+}
+
+// assertInventoryError requires an error wrapping wantErr (any error when
+// wantErr is nil) and no records.
+func assertInventoryError(t *testing.T, got []diagnostics.InstallRecord, err, wantErr error) {
+	t.Helper()
+
+	if err == nil {
+		t.Fatal("Commands() error = nil, want an error")
+	}
+	if wantErr != nil && !errors.Is(err, wantErr) {
+		t.Fatalf("Commands() error = %v, want errors.Is(_, %v)", err, wantErr)
+	}
+	if got != nil {
+		t.Errorf("Commands() records = %#v on error, want nil", got)
 	}
 }
 
@@ -158,184 +295,107 @@ func assertNoCommand(t *testing.T, records []diagnostics.InstallRecord, command 
 	}
 }
 
-// runInventoryCommands drives Commands once and checks the executor call
-// count before the caller's assertions run.
-func runInventoryCommands(t *testing.T, fixture *inventoryFixture) []diagnostics.InstallRecord {
-	t.Helper()
-
-	executor, assertCalls := newInventoryExecutor(t, fixture)
-	defer assertCalls()
-	adapter := NewAdapter(executor, testutil.NewMockLogger())
-
-	records, err := adapter.Commands(context.Background())
-	if err != nil {
-		t.Fatalf("Commands() unexpected error = %v", err)
-	}
-	return records
-}
-
 func TestNpmCommandInventory(t *testing.T) {
 	t.Run("package-bin", func(t *testing.T) {
-		fixture := &inventoryFixture{
-			calls:    3,
-			listJSON: `{"dependencies":{"@openai/codex":{"version":"0.42.0"}}}`,
-			root:     inventoryFixtureRoot,
-			manifests: map[string]inventoryManifest{
-				manifestPath(codexScopedName): {body: codexManifestBody},
-			},
-		}
+		records := runInventoryCommands(t, &inventoryFixture{treeJSON: codexTreeBody})
 
-		records := runInventoryCommands(t, fixture)
-		assertInventoryRecords(t, records, map[string]diagnostics.InstallRecord{
-			codexCommand: npmRecord(codexCommand, codexVersion,
+		assertInventoryRecords(t, records, []diagnostics.InstallRecord{
+			npmRecord(codexCommand, codexVersion,
 				filepath.Join(inventoryFixtureRoot, codexScopedName, "bin", "codex.js")),
 		})
 		assertNoCommand(t, records, codexScopedName)
 	})
 
 	t.Run("no-bin", func(t *testing.T) {
-		fixture := &inventoryFixture{
-			calls:    3,
-			listJSON: `{"dependencies":{"typescript":{"version":"5.0.0"}}}`,
-			root:     inventoryFixtureRoot,
-			manifests: map[string]inventoryManifest{
-				manifestPath(testNPMTypeScript): {body: typeScriptManifestBody},
-			},
-		}
+		records := runInventoryCommands(t, &inventoryFixture{treeJSON: noBinTreeBody})
 
-		records := runInventoryCommands(t, fixture)
-		assertInventoryRecords(t, records, map[string]diagnostics.InstallRecord{})
+		assertInventoryRecords(t, records, []diagnostics.InstallRecord{})
+		assertNoCommand(t, records, "fsevents")
+		assertNoCommand(t, records, "left-pad")
 	})
 
 	t.Run("scoped-name-is-not-command", func(t *testing.T) {
-		fixture := &inventoryFixture{
-			calls:    3,
-			listJSON: `{"dependencies":{"@vue/cli":{"version":"5.0.0"}}}`,
-			root:     inventoryFixtureRoot,
-			manifests: map[string]inventoryManifest{
-				manifestPath(vueCliScopedName): {body: vueCliManifestBody},
-			},
-		}
+		records := runInventoryCommands(t, &inventoryFixture{treeJSON: vueCliTreeBody})
 
-		records := runInventoryCommands(t, fixture)
-		assertInventoryRecords(t, records, map[string]diagnostics.InstallRecord{
-			vueCommand: npmRecord(vueCommand, vueCliVersion,
-				filepath.Join(inventoryFixtureRoot, vueCliScopedName, "bin", "vue.js")),
-			cliServiceCommand: npmRecord(cliServiceCommand, vueCliVersion,
+		assertInventoryRecords(t, records, []diagnostics.InstallRecord{
+			npmRecord(cliServiceCommand, vueCliVersion,
 				filepath.Join(inventoryFixtureRoot, vueCliScopedName, "bin", "cli-service.js")),
+			npmRecord(vueCommand, vueCliVersion,
+				filepath.Join(inventoryFixtureRoot, vueCliScopedName, "bin", "vue.js")),
 		})
 		assertNoCommand(t, records, vueCliScopedName)
 		assertNoCommand(t, records, unscopedCliName)
 	})
 
-	t.Run("empty-global-tree", func(t *testing.T) {
-		fixture := &inventoryFixture{
-			calls:    1,
-			listJSON: `{"dependencies":{}}`,
-		}
+	t.Run("long-json-samples", func(t *testing.T) {
+		records := runInventoryCommands(t, &inventoryFixture{treeJSON: samplesTreeBody})
 
-		records := runInventoryCommands(t, fixture)
-		assertInventoryRecords(t, records, map[string]diagnostics.InstallRecord{})
+		assertInventoryRecords(t, records, []diagnostics.InstallRecord{
+			npmRecord(geminiCommand, geminiVersion,
+				filepath.Join(inventoryFixtureRoot, geminiScopedName, "bundle", "gemini.js")),
+			npmRecord(corepackName, corepackVersion,
+				filepath.Join(inventoryFixtureRoot, corepackName, "dist", "corepack.js")),
+			npmRecord("pnpm", corepackVersion,
+				filepath.Join(inventoryFixtureRoot, corepackName, "dist", "pnpm.js")),
+			npmRecord("pnpx", corepackVersion,
+				filepath.Join(inventoryFixtureRoot, corepackName, "dist", "pnpx.js")),
+			npmRecord("yarn", corepackVersion,
+				filepath.Join(inventoryFixtureRoot, corepackName, "dist", "yarn.js")),
+			npmRecord("yarnpkg", corepackVersion,
+				filepath.Join(inventoryFixtureRoot, corepackName, "dist", "yarnpkg.js")),
+			npmRecord("tsc", typeScriptSampleVersion,
+				filepath.Join(inventoryFixtureRoot, testNPMTypeScript, "bin", "tsc")),
+		})
+		assertNoCommand(t, records, geminiScopedName)
+		assertNoCommand(t, records, testNPMTypeScript)
 	})
 
-	t.Run("null-bin", func(t *testing.T) {
-		fixture := &inventoryFixture{
-			calls:    3,
-			listJSON: `{"dependencies":{"fsevents":{"version":"1.2.9"}}}`,
-			root:     inventoryFixtureRoot,
-			manifests: map[string]inventoryManifest{
-				manifestPath("fsevents"): {body: nullBinManifestBody},
-			},
-		}
+	t.Run("string-bin", func(t *testing.T) {
+		records := runInventoryCommands(t, &inventoryFixture{treeJSON: legacyTreeBody})
 
-		records := runInventoryCommands(t, fixture)
-		assertInventoryRecords(t, records, map[string]diagnostics.InstallRecord{})
+		assertInventoryRecords(t, records, []diagnostics.InstallRecord{
+			npmRecord(legacyCommand, legacyVersion,
+				filepath.Join(inventoryFixtureRoot, legacyScopedName, "bin", "codex.js")),
+		})
+		assertNoCommand(t, records, legacyScopedName)
+	})
+
+	t.Run("bin-key-with-slash", func(t *testing.T) {
+		records := runInventoryCommands(t, &inventoryFixture{treeJSON: slashBinTreeBody})
+
+		assertInventoryRecords(t, records, []diagnostics.InstallRecord{
+			npmRecord(slashCommand, slashVersion,
+				filepath.Join(inventoryFixtureRoot, slashBinPackage, "bin", "cli.js")),
+		})
+		assertNoCommand(t, records, slashBinKey)
+	})
+
+	t.Run("empty-global-tree", func(t *testing.T) {
+		records := runInventoryCommands(t, &inventoryFixture{treeJSON: emptyTreeBody})
+
+		assertInventoryRecords(t, records, []diagnostics.InstallRecord{})
+	})
+
+	t.Run("undecodable-bin-skipped", func(t *testing.T) {
+		records := runInventoryCommands(t, &inventoryFixture{treeJSON: brokenBinTreeBody})
+
+		assertInventoryRecords(t, records, []diagnostics.InstallRecord{
+			npmRecord("tsc", typeScriptSampleVersion,
+				filepath.Join(inventoryFixtureRoot, testNPMTypeScript, "bin", "tsc")),
+		})
 	})
 }
 
 func TestNpmCommandInventoryFailures(t *testing.T) {
 	t.Run("list executor error", func(t *testing.T) {
-		fixture := &inventoryFixture{
-			calls:   1,
-			listErr: errNPMListPackages,
-		}
+		records, err := runInventoryError(t, &inventoryFixture{treeErr: errNPMListPackages})
 
-		executor, assertCalls := newInventoryExecutor(t, fixture)
-		defer assertCalls()
-		adapter := NewAdapter(executor, testutil.NewMockLogger())
-
-		records, err := adapter.Commands(context.Background())
-		if !errors.Is(err, errNPMListPackages) {
-			t.Fatalf("Commands() error = %v, want errors.Is(_, %v)", err, errNPMListPackages)
-		}
-		if records != nil {
-			t.Errorf("Commands() records = %#v on error, want nil", records)
-		}
+		assertInventoryError(t, records, err, errNPMListPackages)
 	})
 
-	t.Run("root executor error", func(t *testing.T) {
-		fixture := &inventoryFixture{
-			calls:    2,
-			listJSON: `{"dependencies":{"@openai/codex":{"version":"0.42.0"}}}`,
-			rootErr:  errNPMListPackages,
-		}
+	t.Run("list output not json", func(t *testing.T) {
+		records, err := runInventoryError(t, &inventoryFixture{treeJSON: "npm ERR! not json"})
 
-		executor, assertCalls := newInventoryExecutor(t, fixture)
-		defer assertCalls()
-		adapter := NewAdapter(executor, testutil.NewMockLogger())
-
-		records, err := adapter.Commands(context.Background())
-		if err == nil {
-			t.Fatalf("Commands() error = nil, want an error")
-		}
-		if records != nil {
-			t.Errorf("Commands() records = %#v on error, want nil", records)
-		}
-	})
-
-	t.Run("manifest read error", func(t *testing.T) {
-		fixture := &inventoryFixture{
-			calls:    3,
-			listJSON: `{"dependencies":{"typescript":{"version":"5.0.0"}}}`,
-			root:     inventoryFixtureRoot,
-			manifests: map[string]inventoryManifest{
-				manifestPath(testNPMTypeScript): {err: errInventoryManifest},
-			},
-		}
-
-		executor, assertCalls := newInventoryExecutor(t, fixture)
-		defer assertCalls()
-		adapter := NewAdapter(executor, testutil.NewMockLogger())
-
-		records, err := adapter.Commands(context.Background())
-		if !errors.Is(err, errInventoryManifest) {
-			t.Fatalf("Commands() error = %v, want errors.Is(_, %v)", err, errInventoryManifest)
-		}
-		if records != nil {
-			t.Errorf("Commands() records = %#v on error, want nil", records)
-		}
-	})
-
-	t.Run("unusable bin field", func(t *testing.T) {
-		fixture := &inventoryFixture{
-			calls:    3,
-			listJSON: `{"dependencies":{"broken":{"version":"1.0.0"}}}`,
-			root:     inventoryFixtureRoot,
-			manifests: map[string]inventoryManifest{
-				manifestPath("broken"): {body: `{"bin":[1,2]}`},
-			},
-		}
-
-		executor, assertCalls := newInventoryExecutor(t, fixture)
-		defer assertCalls()
-		adapter := NewAdapter(executor, testutil.NewMockLogger())
-
-		records, err := adapter.Commands(context.Background())
-		if err == nil {
-			t.Fatalf("Commands() error = nil, want an unusable-bin error")
-		}
-		if records != nil {
-			t.Errorf("Commands() records = %#v on error, want nil", records)
-		}
+		assertInventoryError(t, records, err, nil)
 	})
 }
