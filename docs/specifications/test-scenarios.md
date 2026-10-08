@@ -377,19 +377,19 @@ pip_path=$(which pip)
 assert_contains "$pip_path" "venv"
 ```
 
-### Test 5.3: Multiple Node Version Managers
+### Test 5.3: Duplicate command report during update
 ```bash
-# Setup: Both nvm and asdf with node
 gz-pm update --all --check-duplicates
 
 # Expected:
-- Detects node from multiple sources
-- Shows PATH conflicts
-- Recommends consolidation
+- prints the status duplicates report and does not fail the update
+- Omits commands from a single provider
+- States command, kind, and provider facts
+- Does not recommend uninstall, relink, or PATH changes
 
 # Verify:
-assert_contains "$output" "Duplicate Installation Check"
-assert_contains "$output" "node.*brew.*asdf"
+assert_contains "$output" "command:"
+assert_contains "$output" "kind:"
 ```
 
 ### Test 5.4-5.10: Additional Environment Tests

@@ -279,11 +279,10 @@ print a fixed sentence. The CLI does not print download sizes here.
 **User Story**: As a developer, I want to know when the same tool is installed by multiple package managers, so I can avoid path conflicts and confusion.
 
 **Acceptance Criteria**:
-- `--check-duplicates` flag enables detection
-- Scan: `/usr/local/bin`, `~/.asdf/shims`, `/usr/bin`, `~/go/bin`
-- Report binaries managed by multiple managers
-- Provide recommendations (e.g., "use asdf for node, uninstall from brew")
-- Non-blocking (updates continue with warnings)
+- `--check-duplicates` prints the status duplicates report and does not fail the update
+- The report omits commands from a single provider
+- The report states command, kind, reasons, provider facts, versions, and real paths
+- A warning, a note, or a collection failure does not stop the update
 
 **Related Requirements**: REQ-UC001-006
 

@@ -24,15 +24,16 @@ func buildUpdateRequest(cmd *cobra.Command) (*dto.UpdateRequest, error) {
 		return nil, fmt.Errorf("validate update flags: %w", validationErr)
 	}
 	req := &dto.UpdateRequest{
-		All:           updateAll,
-		DryRun:        updateDryRun,
-		Strategy:      policy.Strategy,
-		Bump:          policy.Bump,
-		MiseDir:       policy.MiseDir,
-		MiseLocal:     policy.MiseLocal,
-		MiseTools:     policy.MiseTools,
-		PipAllowConda: updatePipAllowConda,
-		Policies:      make(map[manager.ManagerID]dto.UpdatePolicy, len(cfg.Managers)),
+		All:             updateAll,
+		DryRun:          updateDryRun,
+		Strategy:        policy.Strategy,
+		Bump:            policy.Bump,
+		MiseDir:         policy.MiseDir,
+		MiseLocal:       policy.MiseLocal,
+		MiseTools:       policy.MiseTools,
+		PipAllowConda:   updatePipAllowConda,
+		CheckDuplicates: updateCheckDuplicates,
+		Policies:        make(map[manager.ManagerID]dto.UpdatePolicy, len(cfg.Managers)),
 	}
 	req.ManagerIDs, err = parseUpdateManagers(updateManagers)
 	if err != nil {

@@ -20,7 +20,7 @@ gz-pm update --managers brew,asdf,npm   # Multiple specific managers
 gz-pm update --all --strategy latest    # Update strategy control
 gz-pm update --all --dry-run            # Preview changes
 gz-pm update --all --output json        # JSON output for scripts
-gz-pm update --all --check-duplicates   # Detect duplicate binaries
+gz-pm update --all --check-duplicates   # prints the status duplicates report and does not fail the update
 gz-pm update --manager pip --pip-allow-conda  # Override conda check
 ```
 
@@ -58,11 +58,10 @@ pip          ✅         ✅         24.0
 apt          🚫         ⛔         -          Linux only
 pacman       🚫         ⛔         -          Arch/Manjaro only
 
-🧪 Duplicate Installation Check:
-Found 2 potential conflicts:
-  • node: /usr/local/bin/node (brew), ~/.asdf/shims/node (asdf)
-  • python3: /usr/bin/python3 (system), ~/.asdf/shims/python3 (asdf)
-💡 Consider using single package manager per tool to avoid PATH conflicts
+command: node
+kind: note
+provider: mise
+provider-kind: version-manager
 
 ═══════════ 🚀 [1/5] brew — Updating ═══════════
 🍺 Updating Homebrew...
@@ -153,13 +152,11 @@ Found 2 potential conflicts:
    • Packages upgraded: 27
    • Total download size: 164.3MB
    • Disk space freed: 245MB
-   • Conflicts detected: 2 (non-blocking)
 
 💡 Recommended actions:
    • Update SDKMAN candidates:
      - sdk install java 21.0.2-oracle
      - sdk install maven 3.9.6
-   • Consider consolidating node versions (brew vs asdf)
 
 ⏰ Update completed in 3m 42s (222s total)
 
@@ -413,7 +410,7 @@ assert_contains "$result" "Memory:"
 
 # Test duplicate detection
 result=$(gz-pm update --all --check-duplicates 2>&1)
-assert_contains "$result" "Duplicate Installation Check"
+assert_contains "$result" "command:"
 
 # Test error reporting
 result=$(gz-pm update --manager nonexistent 2>&1)
@@ -495,11 +492,16 @@ echo "$json" | jq -r '.managers[0].name' | grep -q '.'
 ```
 
 **Multiple Version Managers**:
+
+`--check-duplicates` prints the status duplicates report and does not fail the update.
+
 ```text
-🧪 Duplicate Installation Check:
-Found potential conflicts:
-  • node: /usr/local/bin/node (brew), ~/.asdf/shims/node (asdf)
-  • Recommendation: Choose one primary manager for node
+command: node
+kind: note
+provider: mise
+provider-kind: version-manager
+provider: homebrew
+provider-kind: system-or-language
 ```
 
 ### Platform-Specific Behavior
@@ -588,13 +590,7 @@ Found potential conflicts:
     "packages_upgraded": 27,
     "total_download_mb": 164.3,
     "disk_freed_mb": 245,
-    "total_duration_seconds": 222,
-    "conflicts": {
-      "count": 2,
-      "details": [
-        {"binary": "node", "paths": ["/usr/local/bin/node", "~/.asdf/shims/node"]}
-      ]
-    }
+    "total_duration_seconds": 222
   },
   "exit_code": 0
 }

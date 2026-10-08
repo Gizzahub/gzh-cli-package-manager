@@ -163,24 +163,20 @@ update:
 **Phase**: v1.1
 **Source**: [UC-001-update-enhanced.md](docs/specifications/use-cases/UC-001-update-enhanced.md#L50)
 
-**Description**: Detect and report duplicate binary installations across managers.
+**Description**: Report commands installed by more than one provider. The report is the `gz-pm status duplicates` text or JSON.
 
 **Acceptance Criteria**:
-- [ ] `--check-duplicates` flag enables duplicate detection
-- [ ] Scan common binary paths: `/usr/local/bin`, `~/.asdf/shims`, etc.
-- [ ] Report binaries managed by multiple package managers
-- [ ] Provide recommendations for resolving conflicts
-- [ ] Non-blocking (updates continue with warnings)
+- [x] `--check-duplicates` prints the status duplicates report and does not fail the update
+- [x] The report omits commands from a single provider
+- [x] The report states command, kind, reasons, provider facts, versions, and real paths
+- [x] A warning, a note, or a collection failure does not change the update exit code
 
 **Example Output**:
 ```
-🧪 Duplicate Installation Check:
-Found 2 potential conflicts:
-  • node: /usr/local/bin/node (brew), ~/.asdf/shims/node (asdf)
-  • python3: /usr/bin/python3 (system), ~/.asdf/shims/python3 (asdf)
-
-💡 Recommended actions:
-  • Consider switching node to single manager to avoid conflicts
+command: node
+kind: note
+provider: mise
+provider-kind: version-manager
 ```
 
 **Test Scenarios**: Test 5.3
@@ -559,7 +555,7 @@ apt          🚫         ⛔         N/A        N/A (macOS only)
 | REQ-UC001-003 | UC-001 §2.2 | Test 7.1 | pkg/application/update/usecase.go | 🟡 Planned |
 | REQ-UC001-004 | UC-001 §4.1 | Test 2.1, 2.3 | cmd/gz-pm/formatter/enhanced.go | 🟡 Planned |
 | REQ-UC001-005 | UC-001 §4.2 | Test 2.2 | cmd/gz-pm/formatter/json.go | 🟡 Planned |
-| REQ-UC001-006 | UC-001 §5.1 | Test 5.3 | pkg/domain/diagnostics/duplicates.go | 🟡 Planned |
+| REQ-UC001-006 | UC-001 §5.1 | Test 5.3 | cmd/gz-pm/command/update.go | ✅ Implemented |
 | REQ-UC001-007 | UC-001 §6.1 | Test 5.1, 5.2 | pkg/infrastructure/detector/environment.go | 🟡 Planned |
 
 **Legend**:

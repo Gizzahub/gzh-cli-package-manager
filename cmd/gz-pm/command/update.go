@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,18 +13,19 @@ import (
 )
 
 var (
-	updateAll           bool
-	updateDryRun        bool
-	updateManagers      string
-	updateStrategy      string
-	updateOutput        string
-	updatePipAllowConda bool
-	updateBump          bool
-	updateMiseDir       string
-	updateMiseLocal     bool
-	updateMiseTools     []string
-	updateConfigPath    string
-	updateUseCase       input.UpdateUseCase
+	updateAll             bool
+	updateDryRun          bool
+	updateManagers        string
+	updateStrategy        string
+	updateOutput          string
+	updatePipAllowConda   bool
+	updateBump            bool
+	updateMiseDir         string
+	updateMiseLocal       bool
+	updateMiseTools       []string
+	updateConfigPath      string
+	updateUseCase         input.UpdateUseCase
+	updateCheckDuplicates bool
 )
 
 // SetUpdateUseCase injects the update use case dependency.
@@ -56,6 +58,10 @@ Examples:
 		}
 		if updateUseCase == nil {
 			return fmt.Errorf("update use case not initialized")
+		}
+
+		if updateCheckDuplicates {
+			writeUpdateDuplicateReport(cmd)
 		}
 
 		ctx := cmd.Context()
@@ -157,6 +163,29 @@ func displayUpdateSummary(summary *dto.UpdateSummary) {
 	fmt.Printf("   Total Duration: %.1fs\n", summary.TotalDuration)
 }
 
+// writeUpdateDuplicateReport prints the status duplicates report.
+// A warning, a note, or a collection failure is written to the command
+// error stream and does not stop the update.
+func writeUpdateDuplicateReport(cmd *cobra.Command) {
+	home, search, err := currentDuplicateEnvironment()
+	if err != nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "duplicate report: %v\n", err)
+		return
+	}
+	ctx := cmd.Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	findings, err := collectDuplicateFindings(ctx, managerAdapters, home, search)
+	if err != nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "duplicate report: %v\n", err)
+		return
+	}
+	if err := writeDuplicateReport(cmd.OutOrStdout(), updateOutput, findings); err != nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "duplicate report: %v\n", err)
+	}
+}
+
 func displayUpdateJSON(resp *dto.UpdateResponse) {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
@@ -180,4 +209,5 @@ func init() {
 	updateCmd.Flags().StringVar(&updateConfigPath, "config", "", "Update preferences YAML (default: $XDG_CONFIG_HOME/gz-pm/config.yaml)")
 	updateCmd.Flags().StringVarP(&updateOutput, "output", "o", outputFormatText, "Output format (text|json)")
 	updateCmd.Flags().BoolVar(&updatePipAllowConda, "pip-allow-conda", false, "Allow pip updates in conda environments")
+	updateCmd.Flags().BoolVar(&updateCheckDuplicates, "check-duplicates", false, "Print the status duplicates report without failing the update")
 }
