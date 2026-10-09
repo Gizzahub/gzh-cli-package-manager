@@ -1,4 +1,4 @@
-# CLAUDE.md
+# gzh-cli-package-manager
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -131,9 +131,6 @@ import (
 {type}({scope}): {imperative verb} {what}
 
 {detailed description}
-
-Model: claude-{model}
-Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 **Types**: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
