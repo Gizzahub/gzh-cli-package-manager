@@ -1,1 +1,168 @@
-CLAUDE.md
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+---
+
+## Quick Start (30s scan)
+
+**Binary**: `gz-pm` (Package Manager Control)
+**Status**: Active implementation and quality hardening; v1.0 release readiness remains to be verified
+**Architecture**: Clean Architecture + Hexagonal (Ports & Adapters)
+**Go Version**: 1.24+ consumer baseline; Go 1.26.7 recommended for development
+
+Think of it as a "package manager for package managers" - unified interface for the
+eleven adapters in `pkg/infrastructure/adapter/registry`:
+- **System**: Homebrew, apt, pacman, winget, scoop, chocolatey
+- **Version**: asdf, mise
+- **Language**: npm, pip, cargo
+
+mise updates tools that mise already manages. The contract is
+[docs/mise-update.md](docs/mise-update.md). `gz-pm` does not install mise itself.
+
+---
+
+## Top 10 Commands
+
+| Command | Purpose | Usage |
+|---------|---------|-------|
+| `make build` | Build binary → `build/gz-pm` | Before testing |
+| `make test-unit` | Unit tests (fast, no Docker) | Quick validation |
+| `make quality` | fmt + lint + test | Pre-commit |
+| `make test-coverage` | Full coverage report | Coverage check |
+| `make fmt` | Format code (required) | Before commit |
+| `make lint` | Full golangci-lint (pinned) | Fix issues |
+| `make lint-diff` | Incremental lint vs origin/master | First regression check |
+| `make install` | Install to $GOPATH/bin | Local install |
+| `make dev ARGS="..."` | Run in dev mode | Quick test |
+| `make clean` | Clean artifacts | Fresh start |
+
+---
+
+## Absolute Rules (DO/DON'T)
+
+### DO
+- ✅ Use `gzh-cli-core` for common utilities (logger, testutil, errors, config)
+- ✅ Follow Clean Architecture layers (Domain → Application → Infrastructure → Presentation)
+- ✅ Run `make quality` before every commit
+- ✅ Run `make lint-diff` first (compares against `origin/master`); treat hosted Lint as confirmation
+- ✅ Use golangci-lint **v2.13.1** via `make install-lint` (`bin/tools/`) or a matching PATH binary
+- ✅ Maintain 90%+ test coverage
+- ✅ Keep files < 300 lines (~10KB)
+
+### DON'T
+- ❌ Import external libraries in domain layer (stdlib only)
+- ❌ Add CGO dependencies (pure Go only)
+- ❌ Bypass use cases (CLI → infrastructure directly)
+- ❌ Create large God files (> 500 lines)
+- ❌ Mock in domain layer tests (pure functions only)
+- ❌ Expand wrapcheck `extra-ignore-sigs` unless the cmdutil helper already attaches operation context
+
+---
+
+## Directory Structure
+
+```
+.
+├── cmd/gz-pm/              # CLI entry (Presentation)
+├── pkg/
+│   ├── domain/          # Core logic (NO external deps)
+│   ├── application/     # Use cases + ports
+│   └── infrastructure/  # Adapters + repos
+├── internal/            # Private utilities
+├── docs/
+│   ├── .claude-context/ # Context docs (see below)
+│   └── 10-architecture/ # Full docs (layers, ADRs)
+└── Makefile             # Authoritative commands
+```
+
+---
+
+## Context Documentation
+
+| Guide | Purpose |
+|-------|---------|
+| [Architecture Guide](docs/.claude-context/architecture-guide.md) | Layer rules, ADRs, DI pattern |
+| [Testing Guide](docs/.claude-context/testing-guide.md) | Coverage targets, test organization |
+| [Build Guide](docs/.claude-context/build-guide.md) | Build commands, CGO policy |
+| [Common Tasks](docs/.claude-context/common-tasks.md) | Workflows, code style |
+
+---
+
+## Common Mistakes (Top 3)
+
+1. **Importing infrastructure in domain layer**
+   - ⚠️ Violates Clean Architecture
+   - ✅ Check: `go list -test -deps ./pkg/domain/... | grep infrastructure`
+
+2. **Skipping `make quality` / incremental lint before commit**
+   - ⚠️ CI will fail; local `HEAD~1` baseline misses multi-commit branches
+   - ✅ Run: `make lint-diff` (vs `origin/master`), then `make quality`
+   - ✅ Hosted Lint confirms; it is not the first review pass
+   - ✅ Missing `./bin/tools/golangci-lint`: `make install-lint` or PATH pin `v2.13.1`
+
+3. **Adding CGO dependencies**
+   - ⚠️ Breaks cross-compilation
+   - ✅ Check: `./scripts/check-cgo.sh`
+
+---
+
+## Shared Library (gzh-cli-core)
+
+**IMPORTANT**: Use `gzh-cli-core` for common utilities. DO NOT create local duplicates.
+
+```go
+import (
+    "github.com/gizzahub/gzh-cli-core/logger"
+    "github.com/gizzahub/gzh-cli-core/errors"
+    "github.com/gizzahub/gzh-cli-core/testutil"
+    "github.com/gizzahub/gzh-cli-core/config"
+    "github.com/gizzahub/gzh-cli-core/cli"
+)
+```
+
+---
+
+## Git Commit Format
+
+**Required format** (enforced in reviews):
+
+```
+{type}({scope}): {imperative verb} {what}
+
+{detailed description}
+
+Model: claude-{model}
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+**Types**: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
+**Scopes** (mandatory): `domain`, `application`, `infrastructure`, `cli`, `build`, `docs`, `test`
+
+---
+
+## Project Status
+
+- **Current Phase**: Active implementation and quality hardening
+- **Release Readiness**: Unit tests, lint baseline, cross-platform behavior, and release controls must be verified before a v1.0 release
+- **Test Coverage**: Target 90%+; obtain the current value from the coverage report rather than this document
+- **Platforms**: macOS, Linux, Windows (native winget + WSL2)
+
+---
+
+## Important Files
+
+- `PRODUCT.md` - Current goals, manager set, and dry-run contract
+- `docs/mise-update.md` - mise update strategies and dry-run behavior
+- `README.md` - Supported-manager table
+- `ARCHITECTURE.md` - Architecture overview + index
+- `docs/10-architecture/` - Full architecture documentation (split by topic)
+- `CONTRIBUTING.md` - Development guidelines
+- `PRD.md` - Original product draft; older than PRODUCT.md where they disagree
+- `REQUIREMENTS.md` - Functional/non-functional requirements
+- `docs/10-architecture/adr/` - Architecture Decision Records
+- `Makefile` - Build automation
+
+---
+
+**Last Updated**: 2026-10-02
