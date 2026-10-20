@@ -32,7 +32,7 @@ This project follows standard open-source community guidelines:
 
 ### Prerequisites
 
-- **Go 1.24.0+** (required - see ADR-004); Go 1.26.7 is recommended for development
+- **Go 1.24.0+** (required - see ADR-004); Go 1.27.3 is recommended for development
 - **Git** for version control
 - **Make** for build automation
 - **Docker** (optional, for integration tests)
@@ -61,7 +61,7 @@ make install
 
 ## Development Setup
 
-### 1. Install the recommended Go 1.26.7 development toolchain
+### 1. Install the recommended Go 1.27.3 development toolchain
 
 **macOS (Homebrew)**:
 ```bash
@@ -70,14 +70,14 @@ brew install go@1.26
 
 **Linux**:
 ```bash
-wget https://go.dev/dl/go1.26.7.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.26.7.linux-amd64.tar.gz
+wget https://go.dev/dl/go1.27.3.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.27.3.linux-amd64.tar.gz
 export PATH=$PATH:/usr/local/go/bin
 ```
 
 **Verify Installation**:
 ```bash
-go version  # Should show go1.26.7
+go version  # Should show go1.27.3
 ```
 
 Go 1.24.0+ remains the consumer minimum. Go 1.24.11 is exercised only by the
@@ -102,10 +102,10 @@ export CGO_ENABLED=0
 ```bash
 # Preferred: pin golangci-lint into the gitignored repo-local bin/tools
 make install-lint
-# → ./bin/tools/golangci-lint (v2.13.1); Make targets use this binary
+# → ./bin/tools/golangci-lint (v2.15.0); Make targets use this binary
 
 # Or install the same pin on PATH
-go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 
 # Testing tools
 go install github.com/onsi/ginkgo/v2/ginkgo@latest
@@ -419,7 +419,7 @@ type PackageManager interface {
 
 ### Linting
 
-We use pinned `golangci-lint` **v2.13.1** with strict settings. Make installs it
+We use pinned `golangci-lint` **v2.15.0** with strict settings. Make installs it
 under `./bin/tools/` via `make install-lint` so every target uses the same binary
 even when PATH is empty or carries another version.
 

@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Binary**: `gz-pm` (Package Manager Control)
 **Status**: Active implementation and quality hardening; v1.0 release readiness remains to be verified
 **Architecture**: Clean Architecture + Hexagonal (Ports & Adapters)
-**Go Version**: 1.24+ consumer baseline; Go 1.26.7 recommended for development
+**Go Version**: 1.24+ consumer baseline; Go 1.27.3 recommended for development
 
 Think of it as a "package manager for package managers" - unified interface for the
 eleven adapters in `pkg/infrastructure/adapter/registry`:
@@ -46,7 +46,7 @@ mise updates tools that mise already manages. The contract is
 - ✅ Follow Clean Architecture layers (Domain → Application → Infrastructure → Presentation)
 - ✅ Run `make quality` before every commit
 - ✅ Run `make lint-diff` first (compares against `origin/master`); treat hosted Lint as confirmation
-- ✅ Use golangci-lint **v2.13.1** via `make install-lint` (`bin/tools/`) or a matching PATH binary
+- ✅ Use golangci-lint **v2.15.0** via `make install-lint` (`bin/tools/`) or a matching PATH binary
 - ✅ Maintain 90%+ test coverage
 - ✅ Keep files < 300 lines (~10KB)
 
@@ -99,7 +99,7 @@ mise updates tools that mise already manages. The contract is
    - ⚠️ CI will fail; local `HEAD~1` baseline misses multi-commit branches
    - ✅ Run: `make lint-diff` (vs `origin/master`), then `make quality`
    - ✅ Hosted Lint confirms; it is not the first review pass
-   - ✅ Missing `./bin/tools/golangci-lint`: `make install-lint` or PATH pin `v2.13.1`
+   - ✅ Missing `./bin/tools/golangci-lint`: `make install-lint` or PATH pin `v2.15.0`
 
 3. **Adding CGO dependencies**
    - ⚠️ Breaks cross-compilation

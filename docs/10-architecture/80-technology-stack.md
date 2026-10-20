@@ -4,7 +4,7 @@
 
 ### 8.1 Core Technologies
 
-- **Language**: Go 1.24.0+ (pure Go, no CGO); Go 1.26.7 is the recommended development toolchain
+- **Language**: Go 1.24.0+ (pure Go, no CGO); Go 1.27.3 is the recommended development toolchain
 - **CLI Framework**: [Cobra](https://github.com/spf13/cobra)
 - **Configuration**: YAML ([gopkg.in/yaml.v3](https://pkg.go.dev/gopkg.in/yaml.v3))
 - **Logging**: [uber-go/zap](https://github.com/uber-go/zap) (structured logging)

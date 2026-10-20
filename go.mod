@@ -4,7 +4,7 @@ module github.com/gizzahub/gzh-cli-package-manager
 // recommends the development compiler without raising that minimum.
 go 1.24.0
 
-toolchain go1.26.7
+toolchain go1.27.3
 
 require (
 	github.com/spf13/cobra v1.10.2

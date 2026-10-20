@@ -6,7 +6,7 @@
 install-tools: install-lint install-fumpt ## Install all development tools
 	@echo "✅ All tools installed"
 
-# Reports the Go toolchain that built the installed linter, e.g. "go1.26.7",
+# Reports the Go toolchain that built the installed linter, e.g. "go1.27.3",
 # or nothing when it is absent or unreadable.
 #
 # Read from the binary's embedded build info rather than from golangci-lint's

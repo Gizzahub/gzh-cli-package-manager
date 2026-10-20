@@ -72,7 +72,7 @@ for _, mgr := range managers {
 **6. Compatibility with Parent Project**
 - At the time of this decision, gzh-cli used Go 1.24.0
 - The consumer baseline remains aligned with that historical contract
-- Current regular CI uses Go 1.26.7, with a separate Go 1.24.11 compatibility lane
+- Current regular CI uses Go 1.27.3, with a separate Go 1.24.11 compatibility lane
 
 ### Why Not Older Versions?
 
@@ -112,7 +112,7 @@ for _, mgr := range managers {
 
 4. **Future-Proof**
    - At the time of this decision, Go 1.24 was expected to be supported until at least 2026
-   - The current recommended development toolchain is Go 1.26.7
+   - The current recommended development toolchain is Go 1.27.3
    - Easier to adopt future features
 
 5. **Consistency with Ecosystem**
@@ -329,8 +329,8 @@ the authoritative enforcement mechanisms.
 ### Success Criteria
 
 - [ ] go.mod specifies `go 1.24`
-- [ ] toolchain directive recommends Go 1.26.7 for development
-- [ ] CI/CD uses Go 1.26.7 regularly and verifies Go 1.24.11 compatibility
+- [ ] toolchain directive recommends Go 1.27.3 for development
+- [ ] CI/CD uses Go 1.27.3 regularly and verifies Go 1.24.11 compatibility
 - [ ] README documents requirement
 - [ ] All developers using Go 1.24+
 

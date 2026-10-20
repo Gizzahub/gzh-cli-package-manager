@@ -27,4 +27,4 @@
 # golangci-lint is deliberately absent here: .make/vars.mk pins it and every
 # recipe invokes $(GOLANGCI_LINT_BIN) by absolute path, so PATH does not decide
 # which binary runs.
-go = "1.26.7"
+go = "1.27.3"

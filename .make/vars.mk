@@ -36,7 +36,7 @@ RACE_FLAG := -race
 # Linter settings
 # Keep the linter under the ignored repository-local /bin directory so every
 # Make target runs the same pinned binary regardless of PATH contents.
-GOLANGCI_LINT_VERSION := v2.13.1
+GOLANGCI_LINT_VERSION := v2.15.0
 GOLANGCI_LINT_BARE := $(patsubst v%,%,$(GOLANGCI_LINT_VERSION))
 GOLANGCI_LINT_DIR ?= $(CURDIR)/bin/tools
 GOLANGCI_LINT_BIN := $(GOLANGCI_LINT_DIR)/golangci-lint$(shell $(GO) env GOEXE)

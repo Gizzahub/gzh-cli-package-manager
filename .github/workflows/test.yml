@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        go: ['1.26.7']
+        go: ['1.27.3']
 
     steps:
     - name: Checkout code
@@ -35,7 +35,7 @@ jobs:
     - name: Verify Go version
       run: |
         # ADR-004 establishes Go 1.24 as the consumer baseline. This regular
-        # test job deliberately exercises the recommended Go 1.26.7 toolchain.
+        # test job deliberately exercises the recommended Go 1.27.3 toolchain.
         required_major=1
         required_minor=24
         required_patch=0
@@ -66,14 +66,14 @@ jobs:
         }
 
         verify_go_version "$installed_go"
-        test "$installed_go" = 'go1.26.7'
+        test "$installed_go" = 'go1.27.3'
 
         # Keep the parser and floor comparison covered without relying on a
         # particular runner image. The negative cases must remain rejected.
-        for candidate in go1.24.0 go1.24.11 go1.26.7 go2.0.0; do
+        for candidate in go1.24.0 go1.24.11 go1.27.3 go2.0.0; do
           verify_go_version "$candidate"
         done
-        for candidate in go1.23.99 go1.24rc1 go1.26.bad go1.26.7evil go1.26.7.8; do
+        for candidate in go1.23.99 go1.24rc1 go1.27.bad go1.27.3evil go1.27.3.8; do
           if verify_go_version "$candidate"; then
             echo "Expected Go version validation to reject $candidate"
             exit 1
@@ -153,12 +153,12 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
       with:
-        go-version: '1.26.7'
+        go-version: '1.27.3'
 
     - name: Run golangci-lint
       uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
       with:
-        version: v2.13.1
+        version: v2.15.0
         args: --timeout=5m
 
   vulncheck:
@@ -168,6 +168,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
-          go-version: '1.26.7'
+          go-version: '1.27.3'
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...

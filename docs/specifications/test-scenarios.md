@@ -769,7 +769,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.26.7'
+        go-version: '1.27.3'
 
     - name: Build gz-pm
       run: make build
