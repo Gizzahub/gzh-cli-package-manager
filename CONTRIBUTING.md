@@ -65,7 +65,7 @@ make install
 
 **macOS (Homebrew)**:
 ```bash
-brew install go@1.26
+brew install go
 ```
 
 **Linux**:
