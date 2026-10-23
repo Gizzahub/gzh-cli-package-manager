@@ -10,21 +10,27 @@ import (
 )
 
 func TestReleaseCoverageFloor(t *testing.T) {
-	for _, covered := range []int{84, 85, 86} {
+	for _, covered := range []int{8400, 8496, 8499, 8500, 8501, 8600} {
 		t.Run(fmt.Sprint(covered), func(t *testing.T) {
 			profile := filepath.Join(t.TempDir(), "coverage.out")
 			source := filepath.Join(repoRoot(t), "internal", "version", "version.go")
-			data := fmt.Sprintf("mode: set\n%s:32.1,33.2 %d 1\n%s:43.1,44.2 %d 0\n", source, covered, source, 100-covered)
+			data := fmt.Sprintf("mode: set\n%s:32.1,33.2 %d 1\n%s:43.1,44.2 %d 0\n", source, covered, source, 10000-covered)
 			if err := os.WriteFile(profile, []byte(data), 0o600); err != nil {
 				t.Fatal(err)
 			}
 			cmd := exec.Command(filepath.Join(repoRoot(t), "scripts", "release", "coverage-check.sh"), profile)
 			out, err := cmd.CombinedOutput()
-			if (err == nil) != (covered >= 85) {
+			if (err == nil) != (covered >= 8500) {
 				t.Fatalf("coverage %d: error=%v, output=%s", covered, err, out)
 			}
 		})
 	}
+	t.Run("missing report", func(t *testing.T) {
+		cmd := exec.Command(filepath.Join(repoRoot(t), "scripts", "release", "coverage-check.sh"), filepath.Join(t.TempDir(), "missing.out"))
+		if out, err := cmd.CombinedOutput(); err == nil {
+			t.Fatalf("missing report accepted: %s", out)
+		}
+	})
 }
 
 func TestHomebrewCaskRequiresBothUniqueChecksums(t *testing.T) {
