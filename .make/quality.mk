@@ -3,7 +3,7 @@
 
 .PHONY: lint fmt vet quality check
 .PHONY: fmt-diff lint-diff fmt-check lint-check
-.PHONY: fmt-md security
+.PHONY: fmt-md format-md-check format-md-all-check markdown-selector-test mdformat-install-test mdformat-native-test security
 
 # ==============================================================================
 # Standard Quality Checks
@@ -28,7 +28,7 @@ vet: ## Run go vet
 	@echo "Running go vet..."
 	$(GOVET) ./...
 
-quality: fmt lint test ## Run all quality checks (fmt + lint + test)
+quality: fmt format-md-check mdformat-install-test markdown-selector-test lint test ## Run all quality checks (fmt + Markdown check + installer/selector regression + lint + test)
 	@echo "✅ All quality checks passed"
 
 check: vet lint ## Quick check (vet + lint, no tests)
@@ -89,12 +89,28 @@ lint-check: install-lint ## Run lint without fixing (for CI)
 # Git 조회·필터·formatter 실패를 전파하고 공백/개행 경로를 NUL로 보존한다.
 # ignored venv와 symlink는 저장소 소유 Markdown 입력에서 제외한다.
 # ./ 접두사는 '-'로 시작하는 파일명이 formatter 옵션이 되는 것을 막는다.
-MDFORMAT_RUN = bash -o pipefail -c 'mode=$$1; shift; { if [ "$$mode" = changed ]; then git diff --name-only -z --diff-filter=d HEAD -- "*.md"; else git ls-files -z --cached --others --exclude-standard -- "*.md"; fi; } | while IFS= read -r -d "" f; do if [ -f "$$f" ] && [ ! -L "$$f" ]; then printf "%s\0" "./$$f"; fi; done | xargs -0 -r "$$@"' _
+MDFORMAT_BASE ?= origin/master
+MDFORMAT_RUN = "$(MDFORMAT_PYTHON)" -I scripts/mdformat-files.py
 
 fmt-md: install-mdformat ## Format markdown files with the pinned mdformat bundle
 	@echo "Formatting markdown..."
-	@$(MDFORMAT_RUN) all "$(MDFORMAT)"
+	@$(MDFORMAT_RUN) all --formatter "$(MDFORMAT)"
 	@echo "✅ Markdown formatted"
+
+format-md-check: install-mdformat ## Check changed Markdown without modifying files
+	@$(MDFORMAT_RUN) changed --base "$(MDFORMAT_BASE)" --formatter "$(MDFORMAT)" --check
+
+format-md-all-check: install-mdformat ## Check all repository-owned Markdown explicitly
+	@$(MDFORMAT_RUN) all --formatter "$(MDFORMAT)" --check
+
+markdown-selector-test: install-mdformat ## Verify Markdown selector fixtures
+	@"$(MDFORMAT_PYTHON)" -I scripts/test-mdformat-files.py
+
+mdformat-install-test: install-mdformat ## Verify isolated mdformat installer fixtures
+	@/bin/bash scripts/test-mdformat-install.sh "$(MDFORMAT_PYTHON)"
+
+mdformat-native-test: install-mdformat ## Verify actual installer and native selector
+	@"$(MDFORMAT_PYTHON)" -I scripts/test-mdformat-native.py
 
 # Reports failure when gosec is absent. Warning and exiting 0 made "no scan ran"
 # indistinguishable from "the scan found nothing", which is the more dangerous of

@@ -1,5 +1,18 @@
 # Markdown formatter 적용 기록
 
+## 현재 계약
+
+선택기는 저장소 전용 Python `scripts/mdformat-files.py`이며, installer는 healthy
+runtime도 Python >=3.11인지 확인한다. `UV_PYTHON`이 unset일 때만 >=3.11 runtime을
+기본 선택하고 명시값은 덮어쓰지 않는다. changed 검사는 `origin/master` merge-base,
+committed·staged·unstaged·untracked Markdown과 type-change를 포함하며 index/worktree
+불일치는 실패한다. Git index 120000 symlink(Windows에서 일반 파일로 materialize된 경우
+포함)는 제외한다.
+
+CI는 PR base SHA, dev branch의 `origin/master`, trunk push의 before SHA를 사용하고
+수동 실행은 전체 검사다. Ubuntu와 Windows native smoke는 각각 10분 초기 예산을 쓴다.
+constraints와 top-level version/plugin 검사는 installer 계약으로 계속 유지한다.
+
 ## 적용 계약
 
 ISSUE-352의 채택 묶음은 mdformat 1.0.0, mdformat-gfm 1.0.0,
@@ -17,9 +30,9 @@ xargs가 필요하다. 전역 formatter와 기존 Go 도구 pin은 변경하지 
 
 ## 범위와 기존 상태
 
-기존 `fmt-md`는 수동 Markdown 정렬 target이고 `quality`의 Go fmt·lint·test와
-별도다. 이 연결 관계를 유지했다. 전체 Markdown check target이나 CI 게이트는
-추가하지 않았다.
+`fmt-md`는 전체 Markdown을 명시적으로 정렬한다. `quality`는 기존 Go fmt·lint·test를
+유지하면서 `origin/master` 이후 Markdown을 읽기 전용으로 검사한다. 전체 검사는
+`make format-md-all-check`로 명시적으로만 실행한다.
 
 일반 Markdown 45개의 이전 묶음·새 묶음 출력은 모두 byte 동일했다.
 그중 42개는 기존부터 canonical 서식과 달랐으며 이번에 일괄 정렬하지 않았다.
