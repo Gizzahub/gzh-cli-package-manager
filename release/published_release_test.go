@@ -25,6 +25,8 @@ func TestPublishedReleaseUploadGuard(t *testing.T) {
 		{"invalid JSON", "HTTP/2.0 200 OK\n\nnot JSON", "0", false},
 		{"missing state", "HTTP/2.0 200 OK\n\n{}", "0", false},
 		{"wrong state type", "HTTP/2.0 200 OK\n\n{\"draft\":\"true\"}", "0", false},
+		{"multiple JSON values", "HTTP/2.0 200 OK\n\n{\"draft\":false}\n{\"draft\":true}", "0", false},
+		{"proxy absence", "HTTP/2.0 404 Not Found\n\n{\"message\":\"proxy unavailable\"}", "1", false},
 		{"HTML absence", "HTTP/2.0 404 Not Found\n\n<html>not found</html>", "1", false},
 		{"failed success response", "HTTP/2.0 200 OK\n\n{\"draft\":true}", "1", false},
 	} {

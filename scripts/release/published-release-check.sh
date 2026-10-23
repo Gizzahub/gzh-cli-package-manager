@@ -14,7 +14,7 @@ status=$(printf '%s\n' "$response" | awk 'NR == 1 { sub(/\r$/, ""); if ($1 ~ /^H
 body=$(printf '%s\n' "$response" | awk 'body { print } /^\r?$/ { body = 1 }')
 case "$status:$api_exit" in
 200:0)
-  if printf '%s\n' "$body" | jq -e 'type == "object" and .draft == true' >/dev/null; then
+  if printf '%s\n' "$body" | jq -se 'length == 1 and (.[0] | type == "object" and .draft == true)' >/dev/null; then
     echo 'Existing release is a draft; upload permitted.'
     exit 0
   fi
@@ -23,7 +23,7 @@ case "$status:$api_exit" in
   ;;
 404:*)
   # Validate the API response as well; a proxy HTML error is not absence proof.
-  if [ "$api_exit" -ne 0 ] && printf '%s\n' "$body" | jq -e 'type == "object" and (.message | type == "string")' >/dev/null; then
+  if [ "$api_exit" -ne 0 ] && printf '%s\n' "$body" | jq -se 'length == 1 and (.[0] | type == "object" and .message == "Not Found")' >/dev/null; then
     echo 'Release does not exist; draft creation permitted.'
     exit 0
   fi
