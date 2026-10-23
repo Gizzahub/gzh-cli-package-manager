@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
----
+______________________________________________________________________
 
 ## Quick Start (30s scan)
 
@@ -13,6 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Think of it as a "package manager for package managers" - unified interface for the
 eleven adapters in `pkg/infrastructure/adapter/registry`:
+
 - **System**: Homebrew, apt, pacman, winget, scoop, chocolatey
 - **Version**: asdf, mise
 - **Language**: npm, pip, cargo
@@ -20,28 +21,29 @@ eleven adapters in `pkg/infrastructure/adapter/registry`:
 mise updates tools that mise already manages. The contract is
 [docs/mise-update.md](docs/mise-update.md). `gz-pm` does not install mise itself.
 
----
+______________________________________________________________________
 
 ## Top 10 Commands
 
-| Command | Purpose | Usage |
-|---------|---------|-------|
-| `make build` | Build binary → `build/gz-pm` | Before testing |
-| `make test-unit` | Unit tests (fast, no Docker) | Quick validation |
-| `make quality` | fmt + lint + test | Pre-commit |
-| `make test-coverage` | Full coverage report | Coverage check |
-| `make fmt` | Format code (required) | Before commit |
-| `make lint` | Full golangci-lint (pinned) | Fix issues |
-| `make lint-diff` | Incremental lint vs origin/master | First regression check |
-| `make install` | Install to $GOPATH/bin | Local install |
-| `make dev ARGS="..."` | Run in dev mode | Quick test |
-| `make clean` | Clean artifacts | Fresh start |
+| Command               | Purpose                           | Usage                  |
+| --------------------- | --------------------------------- | ---------------------- |
+| `make build`          | Build binary → `build/gz-pm`      | Before testing         |
+| `make test-unit`      | Unit tests (fast, no Docker)      | Quick validation       |
+| `make quality`        | fmt + lint + test                 | Pre-commit             |
+| `make test-coverage`  | Full coverage report              | Coverage check         |
+| `make fmt`            | Format code (required)            | Before commit          |
+| `make lint`           | Full golangci-lint (pinned)       | Fix issues             |
+| `make lint-diff`      | Incremental lint vs origin/master | First regression check |
+| `make install`        | Install to $GOPATH/bin            | Local install          |
+| `make dev ARGS="..."` | Run in dev mode                   | Quick test             |
+| `make clean`          | Clean artifacts                   | Fresh start            |
 
----
+______________________________________________________________________
 
 ## Absolute Rules (DO/DON'T)
 
 ### DO
+
 - ✅ Use `gzh-cli-core` for common utilities (logger, testutil, errors, config)
 - ✅ Follow Clean Architecture layers (Domain → Application → Infrastructure → Presentation)
 - ✅ Run `make quality` before every commit
@@ -51,6 +53,7 @@ mise updates tools that mise already manages. The contract is
 - ✅ Keep files < 300 lines (~10KB)
 
 ### DON'T
+
 - ❌ Import external libraries in domain layer (stdlib only)
 - ❌ Add CGO dependencies (pure Go only)
 - ❌ Bypass use cases (CLI → infrastructure directly)
@@ -58,7 +61,7 @@ mise updates tools that mise already manages. The contract is
 - ❌ Mock in domain layer tests (pure functions only)
 - ❌ Expand wrapcheck `extra-ignore-sigs` unless the cmdutil helper already attaches operation context
 
----
+______________________________________________________________________
 
 ## Directory Structure
 
@@ -76,36 +79,39 @@ mise updates tools that mise already manages. The contract is
 └── Makefile             # Authoritative commands
 ```
 
----
+______________________________________________________________________
 
 ## Context Documentation
 
-| Guide | Purpose |
-|-------|---------|
-| [Architecture Guide](docs/.claude-context/architecture-guide.md) | Layer rules, ADRs, DI pattern |
-| [Testing Guide](docs/.claude-context/testing-guide.md) | Coverage targets, test organization |
-| [Build Guide](docs/.claude-context/build-guide.md) | Build commands, CGO policy |
-| [Common Tasks](docs/.claude-context/common-tasks.md) | Workflows, code style |
+| Guide                                                            | Purpose                             |
+| ---------------------------------------------------------------- | ----------------------------------- |
+| [Architecture Guide](docs/.claude-context/architecture-guide.md) | Layer rules, ADRs, DI pattern       |
+| [Testing Guide](docs/.claude-context/testing-guide.md)           | Coverage targets, test organization |
+| [Build Guide](docs/.claude-context/build-guide.md)               | Build commands, CGO policy          |
+| [Common Tasks](docs/.claude-context/common-tasks.md)             | Workflows, code style               |
 
----
+______________________________________________________________________
 
 ## Common Mistakes (Top 3)
 
 1. **Importing infrastructure in domain layer**
+
    - ⚠️ Violates Clean Architecture
    - ✅ Check: `go list -test -deps ./pkg/domain/... | grep infrastructure`
 
-2. **Skipping `make quality` / incremental lint before commit**
+1. **Skipping `make quality` / incremental lint before commit**
+
    - ⚠️ CI will fail; local `HEAD~1` baseline misses multi-commit branches
    - ✅ Run: `make lint-diff` (vs `origin/master`), then `make quality`
    - ✅ Hosted Lint confirms; it is not the first review pass
    - ✅ Missing `./bin/tools/golangci-lint`: `make install-lint` or PATH pin `v2.15.0`
 
-3. **Adding CGO dependencies**
+1. **Adding CGO dependencies**
+
    - ⚠️ Breaks cross-compilation
    - ✅ Check: `./scripts/check-cgo.sh`
 
----
+______________________________________________________________________
 
 ## Shared Library (gzh-cli-core)
 
@@ -121,7 +127,7 @@ import (
 )
 ```
 
----
+______________________________________________________________________
 
 ## Git Commit Format
 
@@ -136,7 +142,7 @@ import (
 **Types**: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
 **Scopes** (mandatory): `domain`, `application`, `infrastructure`, `cli`, `build`, `docs`, `test`
 
----
+______________________________________________________________________
 
 ## Project Status
 
@@ -145,7 +151,7 @@ import (
 - **Test Coverage**: Target 90%+; obtain the current value from the coverage report rather than this document
 - **Platforms**: macOS, Linux, Windows (native winget + WSL2)
 
----
+______________________________________________________________________
 
 ## Important Files
 
@@ -160,6 +166,6 @@ import (
 - `docs/10-architecture/adr/` - Architecture Decision Records
 - `Makefile` - Build automation
 
----
+______________________________________________________________________
 
 **Last Updated**: 2026-10-02

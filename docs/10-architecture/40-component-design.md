@@ -32,10 +32,10 @@ type ManagerAdapter interface {
 **Adding New Manager** (Plugin Architecture):
 
 1. Create adapter package: `pkg/infrastructure/adapter/manager/newmanager/`
-2. Implement `ManagerAdapter` interface
-3. Register in factory: `adapterFactory.Register("newmanager", adapter)`
-4. Add detection logic: platform-specific paths
-5. Write integration tests: Docker-based validation
+1. Implement `ManagerAdapter` interface
+1. Register in factory: `adapterFactory.Register("newmanager", adapter)`
+1. Add detection logic: platform-specific paths
+1. Write integration tests: Docker-based validation
 
 **Example**: Adding Pacman support
 
@@ -74,7 +74,7 @@ func (a *PacmanAdapter) Update(ctx context.Context, opts UpdateOptions) (*Update
 }
 ```
 
----
+______________________________________________________________________
 
 ### 4.2 Update Strategy Pattern
 
@@ -113,7 +113,7 @@ func NewStrategy(name string) UpdateStrategy {
 }
 ```
 
----
+______________________________________________________________________
 
 ### 4.3 Repository Pattern
 
@@ -137,11 +137,13 @@ type ConfigurationRepository interface {
 **Implementations**:
 
 1. **YAML Repository** (production):
+
    - Read/write: `~/.config/gz-pm/config.yml`
    - Atomic writes: temp file → rename
    - Schema validation
 
-2. **Memory Repository** (testing):
+1. **Memory Repository** (testing):
+
    - In-memory storage
    - Fast, isolated tests
    - No file I/O

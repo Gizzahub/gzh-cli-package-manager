@@ -212,10 +212,10 @@ assert_exit_code 0
 **Manual Verification**:
 
 1. Run on system with multiple package managers
-2. Verify each package manager is properly updated
-3. Check that upgrade recommendations are actionable
-4. Confirm failed updates are clearly reported
-5. Validate exit codes match specification
+1. Verify each package manager is properly updated
+1. Check that upgrade recommendations are actionable
+1. Confirm failed updates are clearly reported
+1. Validate exit codes match specification
 
 ### Edge Cases
 
@@ -274,27 +274,27 @@ assert_exit_code 0
 
 ### Flags
 
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--all` | `-a` | boolean | true | Update all detected managers |
-| `--manager` | `-m` | string | - | Update single specific manager |
-| `--managers` | | string | - | Comma-separated list of managers to update |
-| `--dry-run` | `-n` | boolean | false | Preview changes without executing |
-| `--output` | `-o` | string | text | Output format: text, json, simple |
-| `--strategy` | `-s` | string | stable | Update strategy: latest, stable, minor, fixed |
-| `--yes` | `-y` | boolean | false | Auto-confirm prompts |
-| `--quiet` | `-q` | boolean | false | Minimal output |
-| `--verbose` | `-v` | boolean | false | Detailed output |
+| Flag         | Short | Type    | Default | Description                                   |
+| ------------ | ----- | ------- | ------- | --------------------------------------------- |
+| `--all`      | `-a`  | boolean | true    | Update all detected managers                  |
+| `--manager`  | `-m`  | string  | -       | Update single specific manager                |
+| `--managers` |       | string  | -       | Comma-separated list of managers to update    |
+| `--dry-run`  | `-n`  | boolean | false   | Preview changes without executing             |
+| `--output`   | `-o`  | string  | text    | Output format: text, json, simple             |
+| `--strategy` | `-s`  | string  | stable  | Update strategy: latest, stable, minor, fixed |
+| `--yes`      | `-y`  | boolean | false   | Auto-confirm prompts                          |
+| `--quiet`    | `-q`  | boolean | false   | Minimal output                                |
+| `--verbose`  | `-v`  | boolean | false   | Detailed output                               |
 
 ### Exit Codes
 
-| Code | Meaning | When Used |
-|------|---------|-----------|
-| `0` | Success | All updates completed successfully |
-| `1` | Partial failure | Some updates failed, others succeeded |
-| `2` | Complete failure | No managers found or all updates failed |
-| `3` | Invalid arguments | Wrong flags or arguments provided |
-| `4` | Prerequisites not met | Network, permissions, or disk space issues |
+| Code | Meaning               | When Used                                  |
+| ---- | --------------------- | ------------------------------------------ |
+| `0`  | Success               | All updates completed successfully         |
+| `1`  | Partial failure       | Some updates failed, others succeeded      |
+| `2`  | Complete failure      | No managers found or all updates failed    |
+| `3`  | Invalid arguments     | Wrong flags or arguments provided          |
+| `4`  | Prerequisites not met | Network, permissions, or disk space issues |
 
 ## Examples
 
@@ -347,6 +347,7 @@ gz-pm update --all --strategy latest
 ### Configuration File
 
 Uses `~/.gz-pm/config.yaml` for:
+
 - Default update strategy
 - Manager-specific preferences
 - Excluded packages or managers
@@ -376,7 +377,7 @@ Uses `~/.gz-pm/config.yaml` for:
   [update-metadata-fidelity.md](../update-metadata-fidelity.md). Unobserved
   versions and sizes are not filled with `"unknown"`, `minor`, or `0` as facts.
 
----
+______________________________________________________________________
 
 **Use Case ID**: UC-001
 **Version**: 1.0

@@ -5,42 +5,47 @@
 **Deciders**: Project Team
 **Related**: ADR-001 (Standalone Extraction), REQUIREMENTS.md (FR-004)
 
----
+______________________________________________________________________
 
 ## Context
 
 We need to decide on the default output format for gzh-cli-package-manager commands. The original gzh-cli PM implemented an "enhanced output" format with progress indicators, colors, and structured information.
 
 **Output Format Options**:
+
 1. **Simple**: Plain text, minimal formatting (traditional CLI)
-2. **Enhanced**: Progress bars, colors, structured sections, emojis
-3. **JSON**: Machine-readable structured data
-4. **Let user choose** (no default, must specify flag)
+1. **Enhanced**: Progress bars, colors, structured sections, emojis
+1. **JSON**: Machine-readable structured data
+1. **Let user choose** (no default, must specify flag)
 
 **Use Cases**:
+
 - **Interactive terminal**: Human-readable, visual feedback
 - **CI/CD pipelines**: Parseable, no ANSI codes, predictable format
 - **Scripts**: Machine-readable, stable schema
 - **Logs**: Persistent, readable without terminal
 
 **Existing Specification**:
+
 - `specs/cli/pm/UC-001-update-enhanced.md` - 95% compliance target
 - Enhanced format is well-tested and mature
 - User feedback positive in gzh-cli
 
----
+______________________________________________________________________
 
 ## Decision
 
 **Use Enhanced Output as default with `--simple` and `--json` flags for alternatives.**
 
 **Default behavior**:
+
 ```bash
 $ gz-pm update --all
 # Shows enhanced output (progress bars, colors, structure)
 ```
 
 **Alternatives via flags**:
+
 ```bash
 $ gz-pm update --all --simple
 # Plain text, no colors, no progress bars
@@ -50,11 +55,12 @@ $ gz-pm update --all --json
 ```
 
 **Auto-detection** (smart defaults):
+
 - If `stdout` is not a TTY → Use simple format automatically
 - If `NO_COLOR` env var set → Disable colors
 - If `--json` flag → Always use JSON (overrides TTY detection)
 
----
+______________________________________________________________________
 
 ## Rationale
 
@@ -63,12 +69,14 @@ $ gz-pm update --all --json
 **1. Superior User Experience**
 
 Enhanced format provides:
+
 - **Progress visibility**: See what's happening in real-time
 - **Visual hierarchy**: Sections, headers, separators
-- **Status at a glance**: ✅ success, ❌ failure, ⏭️  skipped
+- **Status at a glance**: ✅ success, ❌ failure, ⏭️ skipped
 - **Reduced cognitive load**: Color coding, structured layout
 
 Example:
+
 ```
 📦 Package Manager Update - gz-pm v1.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -102,6 +110,7 @@ Example:
 ```
 
 vs Simple format:
+
 ```
 Homebrew: updated (45.3s)
 ASDF: updated (38.0s)
@@ -124,6 +133,7 @@ Total: 2/2 managers updated
 **4. Feedback for Long Operations**
 
 Package updates take 30s-5min:
+
 - Enhanced: Progress bar shows activity, prevents "is it frozen?"
 - Simple: Silent, users uncertain if it's working
 - Example:
@@ -140,6 +150,7 @@ Package updates take 30s-5min:
 **5. Accessibility**
 
 Enhanced format supports:
+
 - Color-blind users (not just color, also symbols: ✅ ❌ ⏭️)
 - Screen readers (structured sections, clear status)
 - High-contrast terminals (bold, underline, not just color)
@@ -147,6 +158,7 @@ Enhanced format supports:
 **6. Consistency with Modern CLI Tools**
 
 Modern CLI tools default to enhanced:
+
 - `gh` (GitHub CLI) - Progress bars, colors
 - `cargo` (Rust) - Detailed build output
 - `npm` - Progress indicators
@@ -157,14 +169,17 @@ Users expect rich output by default.
 ### Why Not Simple as Default?
 
 **1. Lacks Feedback**
+
 - Updates take minutes, users need progress indication
 - Simple output is silent → poor UX
 
 **2. Hard to Parse Visually**
+
 - Wall of text, no structure
 - Difficult to see at a glance what succeeded/failed
 
 **3. Less Professional**
+
 - Simple output feels unfinished
 - Doesn't showcase gz-pm's capabilities
 
@@ -185,50 +200,58 @@ $ gz-pm update --all
 ```
 
 **NO_COLOR Env Var** (standard):
+
 ```bash
 $ NO_COLOR=1 gz-pm update --all
 # Enhanced structure, but no colors
 ```
 
 **Benefits**:
+
 - No flags needed for CI (auto-detects)
 - Best experience in both contexts
 - Respects user preferences (NO_COLOR)
 
----
+______________________________________________________________________
 
 ## Consequences
 
 ### Positive ✅
 
 1. **Superior Interactive UX**
+
    - Users see progress in real-time
    - Clear status indicators
    - Professional appearance
    - Reduced anxiety during long operations
 
-2. **Clear Success/Failure Indication**
+1. **Clear Success/Failure Indication**
+
    - ✅ Green checkmark = success
    - ❌ Red X = failure
-   - ⏭️  Gray skip = not applicable
+   - ⏭️ Gray skip = not applicable
    - No ambiguity
 
-3. **Structured Information**
+1. **Structured Information**
+
    - Sections (Detection, Update, Summary)
    - Hierarchical layout
    - Easy to scan for relevant info
 
-4. **Automatic CI/CD Compatibility**
+1. **Automatic CI/CD Compatibility**
+
    - Non-TTY → Simple format automatically
    - No manual flag needed
    - Works in GitHub Actions, GitLab CI, Jenkins
 
-5. **Accessibility**
+1. **Accessibility**
+
    - Color + symbols (not color alone)
    - Screen reader friendly
    - Respects NO_COLOR standard
 
-6. **Marketing Value**
+1. **Marketing Value**
+
    - Screenshots look professional
    - Demos are impressive
    - "Why gz-pm?" → UX is a clear answer
@@ -236,6 +259,7 @@ $ NO_COLOR=1 gz-pm update --all
 ### Negative ❌
 
 1. **More Complex Implementation**
+
    - Enhanced output requires:
      - Progress tracking
      - ANSI code handling
@@ -244,29 +268,35 @@ $ NO_COLOR=1 gz-pm update --all
    - Estimated: 2-3 days vs 4 hours for simple
 
    **Mitigation**:
+
    - Code already exists in gzh-cli (port it)
    - Well-tested (95% spec compliance)
    - Worth the investment for UX
 
-2. **Potential Terminal Compatibility Issues**
+1. **Potential Terminal Compatibility Issues**
+
    - Some exotic terminals may not support ANSI codes
    - Very old terminals (rare)
 
    **Mitigation**:
+
    - Auto-detection of TTY capabilities
    - Fallback to simple if unsupported
    - `--simple` flag as escape hatch
 
-3. **Harder to Parse Output in Scripts**
+1. **Harder to Parse Output in Scripts**
+
    - Enhanced output is human-friendly, not script-friendly
    - Scripts might break if they parse stdout
 
    **Mitigation**:
+
    - Auto-detect non-TTY → Simple format
    - Provide `--json` for scripts
    - Document: "Don't parse stdout, use --json"
 
-4. **More Test Coverage Needed**
+1. **More Test Coverage Needed**
+
    - Must test:
      - Enhanced format compliance
      - TTY detection
@@ -275,22 +305,25 @@ $ NO_COLOR=1 gz-pm update --all
    - Estimated: 50+ tests
 
    **Mitigation**:
+
    - Tests exist in gzh-cli (port them)
    - High coverage = confidence in quality
 
 ### Neutral 🔄
 
 1. **Output Stability**
+
    - Enhanced format may evolve (new features)
    - Scripts shouldn't rely on stdout format anyway
    - Use `--json` for stable output
 
-2. **Localization**
+1. **Localization**
+
    - Enhanced format has more text (harder to translate)
    - v1.0: English only
    - v2.0: Consider i18n
 
----
+______________________________________________________________________
 
 ## Implementation
 
@@ -635,7 +668,7 @@ func NewUpdateCommand(updateUC port.UpdateUseCase) *cobra.Command {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
@@ -726,7 +759,7 @@ func TestEnhancedOutput_SpecCompliance(t *testing.T) {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Validation
 
@@ -746,6 +779,7 @@ func TestEnhancedOutput_SpecCompliance(t *testing.T) {
 ### Specification Compliance
 
 From `specs/cli/pm/UC-001-update-enhanced.md`:
+
 - ✅ Header with emoji and version
 - ✅ Detection phase with status indicators
 - ✅ Update phase with progress bars
@@ -756,7 +790,7 @@ From `specs/cli/pm/UC-001-update-enhanced.md`:
 
 **Target**: 95%+ compliance (38/40 criteria met)
 
----
+______________________________________________________________________
 
 ## Alternatives Considered
 
@@ -772,7 +806,7 @@ From `specs/cli/pm/UC-001-update-enhanced.md`:
 
 **Rejected**: JSON is for machines, not humans. Makes interactive use painful.
 
----
+______________________________________________________________________
 
 ## References
 
@@ -783,15 +817,15 @@ From `specs/cli/pm/UC-001-update-enhanced.md`:
 - **Progress Bar Library**: https://github.com/schollz/progressbar
 - **Color Library**: https://github.com/fatih/color
 
----
+______________________________________________________________________
 
 ## Revision History
 
-| Date | Changes | Author |
-|------|---------|--------|
+| Date       | Changes         | Author      |
+| ---------- | --------------- | ----------- |
 | 2025-01-27 | Initial version | Claude Code |
 
----
+______________________________________________________________________
 
 ## Status Notes
 
@@ -800,11 +834,13 @@ From `specs/cli/pm/UC-001-update-enhanced.md`:
 **Implementation Priority**: Week 7 (Presentation Layer)
 
 **Dependencies**:
+
 - Enhanced formatter requires progress tracking in use cases
 - TTY detection library (golang.org/x/term)
 - Color library (fatih/color) or similar
 
 **Future Enhancements**:
+
 - v1.1: Localization support (i18n)
 - v1.2: Custom themes (user-configurable colors)
 - v2.0: Interactive TUI mode (Bubble Tea)

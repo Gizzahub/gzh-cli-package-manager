@@ -5,6 +5,7 @@
 This is a common task. Follow this pattern:
 
 ### 1. Create adapter package
+
 `pkg/infrastructure/adapter/manager/newmanager/`
 
 ### 2. Implement ManagerAdapter interface
@@ -27,10 +28,12 @@ adapterFactory.Register("newmanager", adapter)
 ```
 
 ### 4. Write tests
+
 - Unit tests: `adapter_test.go` (mock executor)
 - Integration tests: `adapter_integration_test.go` (Docker container)
 
 ### 5. Target
+
 < 1 day per new manager
 
 ## Implementing a New Use Case
@@ -38,33 +41,37 @@ adapterFactory.Register("newmanager", adapter)
 ### Step-by-step workflow
 
 1. **Define domain entities** (`pkg/domain/`) - pure business logic
-2. **Create use case** (`pkg/application/`) - orchestration
-3. **Define ports** (`pkg/application/port/`) - interfaces
-4. **Implement adapters** (`pkg/infrastructure/`) - external integrations
-5. **Add CLI command** (`cmd/gz-pm/command/`) - user interface
-6. **Wire dependencies** (`cmd/gz-pm/main.go`) - manual DI
+1. **Create use case** (`pkg/application/`) - orchestration
+1. **Define ports** (`pkg/application/port/`) - interfaces
+1. **Implement adapters** (`pkg/infrastructure/`) - external integrations
+1. **Add CLI command** (`cmd/gz-pm/command/`) - user interface
+1. **Wire dependencies** (`cmd/gz-pm/main.go`) - manual DI
 
 ## Before Making Changes
 
 ### 1. Read architecture docs
+
 - `ARCHITECTURE.md`
 - Relevant ADRs in `docs/10-architecture/adr/`
 
 ### 2. Understand layer boundaries
+
 - Where does this change belong?
 
 ### 3. Check existing patterns
+
 - How are similar features implemented?
 
 ### 4. Verify test coverage
+
 - Will your changes maintain 90%+ coverage?
 
 ## During Implementation
 
 1. **Follow architecture rules**: Respect dependency directions
-2. **Keep files small**: Target < 300 lines per file
-3. **Write tests first** (TDD for domain/application layers)
-4. **No CGO dependencies**: Pure Go only
+1. **Keep files small**: Target < 300 lines per file
+1. **Write tests first** (TDD for domain/application layers)
+1. **No CGO dependencies**: Pure Go only
 
 ## Before Committing
 

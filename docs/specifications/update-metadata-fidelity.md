@@ -8,13 +8,13 @@ Release owner는 2026-09-01에 TASK-122 Recommended Direction을 승인했다.
 Pilot manager는 **npm**과 **pacman**이다. 두 adapter는 update 전에
 `ListPackages`로 현재 버전과 사용 가능 버전을 관측할 수 있다.
 
-| Field | Pilot 정확도 | Provenance |
-|---|---|---|
-| package name | update 결과가 이름을 줄 때만 | `UpdateResult.UpdatedPackages` |
-| OldVersion | 관측된 현재 버전만 | pre-update `ListPackages` |
-| NewVersion | 관측된 available 버전만 | pre-update `ListPackages` |
-| UpdateType | 관측한 두 버전으로만 계산 | derived, 직접 관측 아님 |
-| SizeBytes | 현재 unavailable | adapter가 download size를 보고하지 않음. 추정 금지 |
+| Field        | Pilot 정확도                 | Provenance                                         |
+| ------------ | ---------------------------- | -------------------------------------------------- |
+| package name | update 결과가 이름을 줄 때만 | `UpdateResult.UpdatedPackages`                     |
+| OldVersion   | 관측된 현재 버전만           | pre-update `ListPackages`                          |
+| NewVersion   | 관측된 available 버전만      | pre-update `ListPackages`                          |
+| UpdateType   | 관측한 두 버전으로만 계산    | derived, 직접 관측 아님                            |
+| SizeBytes    | 현재 unavailable             | adapter가 download size를 보고하지 않음. 추정 금지 |
 
 현재 npm·pacman 성공 경로와 dry-run은 `UpdatedPackages`를 비운다. 이 경우
 package row를 만들지 않고 `PackageCorrelation=unsupported`로 기록한다.

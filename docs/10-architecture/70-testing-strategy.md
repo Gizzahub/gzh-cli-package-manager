@@ -4,15 +4,15 @@
 
 ### 7.1 Test Coverage Goals
 
-| Layer | Target Coverage | Test Type | Dependencies |
-|-------|----------------|-----------|--------------|
-| Domain | 95%+ | Unit | None (pure logic) |
-| Application | 90%+ | Unit | Mocked ports |
-| Infrastructure | 85%+ | Integration | Docker containers |
-| Presentation | 80%+ | E2E | Full system |
-| **Overall** | **90%+** | Mixed | - |
+| Layer          | Target Coverage | Test Type   | Dependencies      |
+| -------------- | --------------- | ----------- | ----------------- |
+| Domain         | 95%+            | Unit        | None (pure logic) |
+| Application    | 90%+            | Unit        | Mocked ports      |
+| Infrastructure | 85%+            | Integration | Docker containers |
+| Presentation   | 80%+            | E2E         | Full system       |
+| **Overall**    | **90%+**        | Mixed       | -                 |
 
----
+______________________________________________________________________
 
 ### 7.2 Test Organization
 
@@ -40,7 +40,7 @@ test/
     └── testdata/
 ```
 
----
+______________________________________________________________________
 
 ### 7.3 Test Examples
 

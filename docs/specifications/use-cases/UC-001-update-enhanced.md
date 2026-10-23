@@ -428,6 +428,7 @@ echo "$json" | jq -r '.managers[0].name' | grep -q '.'
 ### Compliance Criteria
 
 **Output Format (95% target)**:
+
 - [ ] Section banners with Unicode box drawing (═══════════)
 - [ ] Emoji indicators (📦 🚀 ✅ ❌ ⚠️ 💡 ⏰)
 - [ ] Progress bars during operations
@@ -439,6 +440,7 @@ echo "$json" | jq -r '.managers[0].name' | grep -q '.'
 - [ ] Estimated and actual timing information
 
 **Functional Behavior (90% target)**:
+
 - [ ] All documented flags work correctly
 - [ ] Exit codes match specification exactly
 - [ ] Dry-run predictions match actual execution
@@ -448,6 +450,7 @@ echo "$json" | jq -r '.managers[0].name' | grep -q '.'
 - [ ] Permission error handling with sudo suggestions
 
 **Performance (90% target)**:
+
 - [ ] Pre-flight checks complete in < 10 seconds
 - [ ] Manager detection in < 5 seconds
 - [ ] Progress updates every 2-3 seconds
@@ -459,18 +462,21 @@ echo "$json" | jq -r '.managers[0].name' | grep -q '.'
 ### Resource Constraints
 
 **Insufficient Disk Space**:
+
 - Pre-flight check detects shortage
 - Shows required vs available space
 - Suggests cleanup commands
 - Prevents download start if critical
 
 **Network Issues**:
+
 - DNS resolution failures → Clear error with DNS check steps
 - Firewall blocking → Suggests checking firewall rules
 - Proxy authentication → Respects HTTP_PROXY environment
 - Partial connectivity → Continues with accessible repos
 
 **Memory Pressure**:
+
 - Monitors available memory
 - Warns if < 1GB available
 - Adjusts parallel operations
@@ -478,6 +484,7 @@ echo "$json" | jq -r '.managers[0].name' | grep -q '.'
 ### Environment Conflicts
 
 **Conda/Mamba Detection**:
+
 ```text
 ⚠️  Conda environment detected: /opt/miniconda3/envs/myproject
    • Use conda/mamba for package management instead
@@ -485,6 +492,7 @@ echo "$json" | jq -r '.managers[0].name' | grep -q '.'
 ```
 
 **Virtual Environment**:
+
 ```text
 💡 Virtual environment active: /home/user/project/venv
    • pip updates will affect this environment only
@@ -507,16 +515,19 @@ provider-kind: system-or-language
 ### Platform-Specific Behavior
 
 **macOS**:
+
 - Homebrew Cask support
 - Apple Silicon vs Intel detection
 - Xcode Command Line Tools check
 
 **Linux (Ubuntu/Debian)**:
+
 - apt requires sudo → Clear permission error
 - System vs user package separation
 - PPA repository handling
 
 **Linux (Arch/Manjaro)**:
+
 - pacman vs yay (AUR helper)
 - System package conflicts with user managers
 - Pacman lock file handling
@@ -524,6 +535,7 @@ provider-kind: system-or-language
 ### Version Conflicts
 
 **Breaking Changes**:
+
 ```text
 ❌ postgresql@14: Version conflict detected
    • Current: 14.9 (via Homebrew)
@@ -533,6 +545,7 @@ provider-kind: system-or-language
 ```
 
 **Dependency Conflicts**:
+
 ```text
 ⚠️  Dependency conflict detected:
    • package-a requires library-x >= 2.0
@@ -542,15 +555,15 @@ provider-kind: system-or-language
 
 ## Performance Expectations
 
-| Operation | Target | Acceptable Range |
-|-----------|--------|------------------|
-| Pre-flight checks | < 10s | 5-15s |
-| Manager detection | < 5s | 2-8s |
-| Single manager update | 30s-5min | Varies by packages |
-| All managers update | 2-15min | Varies heavily |
-| Dry-run analysis | < 30s | 10-45s |
-| Progress update frequency | 2-3s | 1-5s |
-| Memory usage (peak) | < 500MB | 200-800MB |
+| Operation                 | Target   | Acceptable Range   |
+| ------------------------- | -------- | ------------------ |
+| Pre-flight checks         | < 10s    | 5-15s              |
+| Manager detection         | < 5s     | 2-8s               |
+| Single manager update     | 30s-5min | Varies by packages |
+| All managers update       | 2-15min  | Varies heavily     |
+| Dry-run analysis          | < 30s    | 10-45s             |
+| Progress update frequency | 2-3s     | 1-5s               |
+| Memory usage (peak)       | < 500MB  | 200-800MB          |
 
 ## JSON Output Schema
 
@@ -596,7 +609,7 @@ provider-kind: system-or-language
 }
 ```
 
----
+______________________________________________________________________
 
 **Use Case ID**: UC-001-enhanced
 **Version**: 1.0

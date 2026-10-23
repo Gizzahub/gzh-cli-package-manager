@@ -25,6 +25,7 @@ brew install gz-pm
 ```
 
 **2. Go Install**:
+
 ```bash
 go install github.com/gizzahub/gzh-cli-package-manager/cmd/gz-pm@latest
 ```

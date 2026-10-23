@@ -5,13 +5,14 @@
 **Deciders**: Project Team
 **Related**: ADR-004 (Go 1.24+ Requirement), ADR-001 (Standalone Extraction)
 
----
+______________________________________________________________________
 
 ## Context
 
 We need to decide whether to allow CGO (C Go) dependencies in gzh-cli-package-manager. CGO allows Go programs to call C libraries and use C code.
 
 **Considerations**:
+
 - Cross-platform compilation requirements (macOS, Linux, Windows)
 - Binary distribution simplicity
 - Performance needs (SQLite, compression, crypto)
@@ -19,29 +20,32 @@ We need to decide whether to allow CGO (C Go) dependencies in gzh-cli-package-ma
 - Build complexity and CI/CD
 
 **Common CGO Use Cases**:
-1. **SQLite** - `github.com/mattn/go-sqlite3` (CGO) vs `modernc.org/sqlite` (pure Go)
-2. **Compression** - C libraries (faster) vs Go stdlib (simpler)
-3. **Crypto** - Platform-specific vs Go crypto
-4. **GUI** - Native bindings vs web-based TUI
 
----
+1. **SQLite** - `github.com/mattn/go-sqlite3` (CGO) vs `modernc.org/sqlite` (pure Go)
+1. **Compression** - C libraries (faster) vs Go stdlib (simpler)
+1. **Crypto** - Platform-specific vs Go crypto
+1. **GUI** - Native bindings vs web-based TUI
+
+______________________________________________________________________
 
 ## Decision
 
 **Prohibit CGO dependencies. Use pure Go implementations only.**
 
 **Build Configuration**:
+
 ```bash
 # Makefile
 CGO_ENABLED=0 go build -o build/gz-pm ./cmd/pm
 ```
 
 **Dependency Policy**:
+
 - ❌ Forbidden: Libraries requiring CGO
 - ✅ Required: Pure Go alternatives
 - ⚠️ Exception process: Requires architecture review + ADR
 
----
+______________________________________________________________________
 
 ## Rationale
 
@@ -50,6 +54,7 @@ CGO_ENABLED=0 go build -o build/gz-pm ./cmd/pm
 **1. Cross-Compilation Simplicity**
 
 Without CGO:
+
 ```bash
 # Build for all platforms from any OS
 GOOS=linux GOARCH=amd64 go build -o gz-pm-linux-amd64
@@ -58,6 +63,7 @@ GOOS=windows GOARCH=amd64 go build -o gz-pm-windows-amd64.exe
 ```
 
 With CGO:
+
 ```bash
 # Requires cross-compilation toolchains
 # macOS → Linux: Need Linux C compiler
@@ -68,6 +74,7 @@ With CGO:
 **2. Single Static Binary**
 
 Without CGO:
+
 ```bash
 # Truly static binary
 $ ldd gz-pm
@@ -78,6 +85,7 @@ $ ./build/gz-pm version  # Just works
 ```
 
 With CGO:
+
 ```bash
 # Dynamic linking issues
 $ ldd gz-pm
@@ -91,17 +99,18 @@ $ ./gz-pm
 
 **3. Faster Build Times**
 
-| Scenario | No CGO | With CGO | Difference |
-|----------|--------|----------|------------|
-| Clean build | 5s | 45s | **9x slower** |
-| Incremental | 1s | 8s | **8x slower** |
-| CI builds | 30s | 5min | **10x slower** |
+| Scenario    | No CGO | With CGO | Difference     |
+| ----------- | ------ | -------- | -------------- |
+| Clean build | 5s     | 45s      | **9x slower**  |
+| Incremental | 1s     | 8s       | **8x slower**  |
+| CI builds   | 30s    | 5min     | **10x slower** |
 
 **Reason**: C compilation is slower than Go compilation
 
 **4. Simpler CI/CD**
 
 Without CGO (GitHub Actions):
+
 ```yaml
 - uses: actions/setup-go@v5
   with:
@@ -110,6 +119,7 @@ Without CGO (GitHub Actions):
 ```
 
 With CGO:
+
 ```yaml
 - uses: actions/setup-go@v5
 - name: Install cross-compilation toolchains
@@ -123,6 +133,7 @@ With CGO:
 **5. Distribution Simplicity**
 
 Without CGO:
+
 ```bash
 # Homebrew formula
 url "https://github.com/gizzahub/gzh-cli-package-manager/releases/download/v1.0.0/gz-pm-darwin-arm64.tar.gz"
@@ -133,6 +144,7 @@ go install github.com/gizzahub/gzh-cli-package-manager/cmd/gz-pm@latest
 ```
 
 With CGO:
+
 ```bash
 # Homebrew formula needs dependencies
 depends_on "sqlite"  # Must be installed first
@@ -144,12 +156,14 @@ depends_on "gcc"     # Build-time dependency
 **6. Security: Smaller Attack Surface**
 
 Without CGO:
+
 - No C memory management bugs
 - No buffer overflows from C code
 - No dependency on system libc (varies by distro)
 - Supply chain: Only Go code to audit
 
 With CGO:
+
 - Vulnerable C libraries (SQLite CVEs, zlib CVEs)
 - Memory safety issues
 - Platform-specific exploits
@@ -157,6 +171,7 @@ With CGO:
 **7. Reproducible Builds**
 
 Without CGO:
+
 ```bash
 # Same Go version → identical binary
 $ go build
@@ -170,6 +185,7 @@ abc123...  # Identical
 ```
 
 With CGO:
+
 - Different results based on C compiler version
 - Platform-specific libc versions
 - Hard to reproduce exact builds
@@ -177,11 +193,13 @@ With CGO:
 **8. Easier Debugging**
 
 Without CGO:
+
 - Go debugger (Delve) works perfectly
 - Stack traces are pure Go
 - No C/Go boundary issues
 
 With CGO:
+
 - Mixed Go/C stack traces
 - Debugging C code requires gdb
 - Harder to diagnose crashes
@@ -191,6 +209,7 @@ With CGO:
 **1. Performance is Acceptable**
 
 Our bottlenecks are I/O, not CPU:
+
 - Network requests (Homebrew API): 100-500ms
 - Shell command execution (brew update): 5-30s
 - File I/O (config read): 1-5ms
@@ -199,25 +218,27 @@ Pure Go crypto/compression adds < 10ms overhead (negligible).
 
 **2. Pure Go Alternatives Exist**
 
-| Use Case | CGO Library | Pure Go Alternative | Trade-off |
-|----------|-------------|---------------------|-----------|
-| SQLite | `github.com/mattn/go-sqlite3` | `modernc.org/sqlite` | 5-10% slower, but still fast |
-| Compression | C zlib | `compress/gzip` (stdlib) | Comparable performance |
-| Crypto | OpenSSL | `crypto/*` (stdlib) | Excellent performance |
-| JSON | C parsers | `encoding/json` (stdlib) | Fast enough for our data |
+| Use Case    | CGO Library                   | Pure Go Alternative      | Trade-off                    |
+| ----------- | ----------------------------- | ------------------------ | ---------------------------- |
+| SQLite      | `github.com/mattn/go-sqlite3` | `modernc.org/sqlite`     | 5-10% slower, but still fast |
+| Compression | C zlib                        | `compress/gzip` (stdlib) | Comparable performance       |
+| Crypto      | OpenSSL                       | `crypto/*` (stdlib)      | Excellent performance        |
+| JSON        | C parsers                     | `encoding/json` (stdlib) | Fast enough for our data     |
 
 **3. No GUI Needed**
+
 - CLI tool (no native UI bindings)
 - TUI via Bubble Tea (pure Go)
 - No need for GTK, Qt, Cocoa
 
----
+______________________________________________________________________
 
 ## Consequences
 
 ### Positive ✅
 
 1. **One-Command Cross-Compilation**
+
    ```bash
    make build-all
    # Produces:
@@ -229,7 +250,8 @@ Pure Go crypto/compression adds < 10ms overhead (negligible).
    # In ~30 seconds
    ```
 
-2. **Universal Binaries**
+1. **Universal Binaries**
+
    - Works on any Linux distro (Alpine, Ubuntu, RHEL)
    - No "libc version" issues
    - No runtime dependencies
@@ -242,26 +264,30 @@ Pure Go crypto/compression adds < 10ms overhead (negligible).
      # No base image needed!
      ```
 
-3. **Faster CI Pipelines**
+1. **Faster CI Pipelines**
+
    - Builds complete in < 2 minutes
    - No toolchain installation
    - Parallel builds across platforms
    - Lower CI costs (less compute time)
 
-4. **Easier Releases**
+1. **Easier Releases**
+
    ```bash
    goreleaser release --snapshot
    # Handles all platforms automatically
    # No custom cross-compilation scripts
    ```
 
-5. **Developer Experience**
+1. **Developer Experience**
+
    - Any developer can build for any platform
    - No Xcode needed to build macOS binary from Linux
    - No MinGW needed to build Windows binary from macOS
    - Onboarding: `git clone && make build`
 
-6. **Predictable Behavior**
+1. **Predictable Behavior**
+
    - Same Go version → same behavior on all platforms
    - No platform-specific C library quirks
    - Easier to debug "works on my machine" issues
@@ -269,21 +295,25 @@ Pure Go crypto/compression adds < 10ms overhead (negligible).
 ### Negative ❌
 
 1. **Slightly Slower Performance (Some Cases)**
+
    - Pure Go SQLite ~5-10% slower than CGO SQLite
    - Impact: Negligible (we don't use DB in v1.0)
    - Mitigation: Profile first, optimize only if needed
 
-2. **Limited Library Choices**
+1. **Limited Library Choices**
+
    - Can't use popular CGO libraries
    - Example: `go-sqlite3` is most popular, but we use `modernc.org/sqlite`
    - Mitigation: Pure Go ecosystem is mature
 
-3. **Future Constraints**
+1. **Future Constraints**
+
    - If we need GPU acceleration (unlikely)
    - If we need native OS APIs (can use syscall package)
    - Mitigation: Exception process exists (requires ADR)
 
-4. **Can't Use System Libraries**
+1. **Can't Use System Libraries**
+
    - No direct OpenSSL calls (must use Go crypto)
    - No system SQLite (must bundle pure Go version)
    - Mitigation: Go stdlib crypto is excellent
@@ -291,16 +321,18 @@ Pure Go crypto/compression adds < 10ms overhead (negligible).
 ### Neutral 🔄
 
 1. **Binary Size**
+
    - Pure Go binaries: ~10-15MB (includes runtime)
    - CGO binaries: ~8-12MB (+ system dependencies)
    - Trade-off: Slightly larger, but self-contained
 
-2. **Language Purity**
+1. **Language Purity**
+
    - Entire codebase is Go (no C)
    - Easier to onboard Go developers
    - But can't leverage C ecosystem
 
----
+______________________________________________________________________
 
 ## Implementation
 
@@ -399,7 +431,7 @@ echo "✅ No CGO dependencies found"
 }
 ```
 
----
+______________________________________________________________________
 
 ## Pure Go Alternatives
 
@@ -443,36 +475,41 @@ import (
 // No need for OpenSSL bindings
 ```
 
----
+______________________________________________________________________
 
 ## Exception Process
 
 If a future requirement **absolutely needs** CGO:
 
 1. **Document why pure Go is insufficient**
+
    - Performance benchmarks
    - Feature gaps
    - Alternatives considered
 
-2. **Write new ADR**
+1. **Write new ADR**
+
    - ADR-XXX: Exception for [specific library]
    - Must justify breaking this rule
 
-3. **Architecture review**
+1. **Architecture review**
+
    - Team consensus required
    - Security review (attack surface)
 
-4. **Update build system**
+1. **Update build system**
+
    - Document cross-compilation requirements
    - Update CI/CD
    - Provide Docker build environment
 
 **Examples that might justify exception**:
+
 - GPU acceleration for ML (unlikely for package manager)
 - Platform-specific APIs not available via syscall (rare)
 - Critical performance bottleneck (must prove with benchmarks)
 
----
+______________________________________________________________________
 
 ## Validation
 
@@ -522,7 +559,7 @@ ls -lh dist/
 - [ ] No dynamic library dependencies
 - [ ] Dependency check script passes
 
----
+______________________________________________________________________
 
 ## Case Studies
 
@@ -531,6 +568,7 @@ ls -lh dist/
 **Scenario**: v1.1 wants to use SQLite for config storage.
 
 **CGO Approach** (rejected):
+
 ```go
 import _ "github.com/mattn/go-sqlite3"  // Requires CGO
 // Breaks cross-compilation
@@ -538,6 +576,7 @@ import _ "github.com/mattn/go-sqlite3"  // Requires CGO
 ```
 
 **Pure Go Approach** (accepted):
+
 ```go
 import _ "modernc.org/sqlite"  // Pure Go
 // Works everywhere
@@ -549,12 +588,14 @@ import _ "modernc.org/sqlite"  // Pure Go
 **Scenario**: Need to compress config files.
 
 **CGO Approach** (rejected):
+
 ```go
 // Use C zlib for 10% better performance
 import "github.com/klauspost/compress/zlib"  // Uses CGO
 ```
 
 **Pure Go Approach** (accepted):
+
 ```go
 import "compress/gzip"  // Go stdlib
 // Performance difference negligible for our data sizes
@@ -565,6 +606,7 @@ import "compress/gzip"  // Go stdlib
 **Scenario**: Detect platform-specific details.
 
 **No CGO needed**:
+
 ```go
 import "runtime"
 
@@ -582,7 +624,7 @@ func getPlatform() Platform {
 // No C needed, pure Go runtime package
 ```
 
----
+______________________________________________________________________
 
 ## Alternatives Considered
 
@@ -591,6 +633,7 @@ func getPlatform() Platform {
 **Proposal**: Allow CGO only for "critical" dependencies.
 
 **Rejected because**:
+
 - Slippery slope (what's "critical"?)
 - Complicates build system
 - Hard to maintain (some builds work, others don't)
@@ -598,10 +641,12 @@ func getPlatform() Platform {
 ### Alternative 2: Provide Two Builds
 
 **Proposal**:
+
 - `gz-pm` (pure Go, default)
 - `gz-pm-cgo` (with CGO, optional)
 
 **Rejected because**:
+
 - User confusion ("which version?")
 - Doubles maintenance burden
 - Doubles CI time
@@ -612,11 +657,12 @@ func getPlatform() Platform {
 **Proposal**: Core is pure Go, plugins can use CGO.
 
 **Rejected for v1.0**:
+
 - We don't have plugin system yet
 - Premature optimization
 - Can reconsider in v2.0
 
----
+______________________________________________________________________
 
 ## References
 
@@ -626,21 +672,22 @@ func getPlatform() Platform {
 - **Pure Go SQLite**: https://pkg.go.dev/modernc.org/sqlite
 - **Static Binaries**: https://mt165.co.uk/blog/static-link-go/
 
----
+______________________________________________________________________
 
 ## Revision History
 
-| Date | Changes | Author |
-|------|---------|--------|
+| Date       | Changes         | Author      |
+| ---------- | --------------- | ----------- |
 | 2025-01-27 | Initial version | Claude Code |
 
----
+______________________________________________________________________
 
 ## Status Notes
 
 **Current Status**: Accepted
 
 **Enforcement**:
+
 - Makefile enforces `CGO_ENABLED=0`
 - Pre-commit hook checks dependencies
 - CI validates static binaries

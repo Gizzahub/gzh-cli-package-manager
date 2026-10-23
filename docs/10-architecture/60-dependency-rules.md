@@ -13,23 +13,27 @@ Presentation → Application → Domain ← Infrastructure
 **Rules**:
 
 1. **Domain Layer**:
+
    - ✅ CAN: Use Go stdlib
    - ❌ CANNOT: Import any other layer
    - ❌ CANNOT: Import external libraries (except testing)
 
-2. **Application Layer**:
+1. **Application Layer**:
+
    - ✅ CAN: Import domain layer
    - ✅ CAN: Define port interfaces
    - ❌ CANNOT: Import infrastructure implementations
    - ❌ CANNOT: Import presentation layer
 
-3. **Infrastructure Layer**:
+1. **Infrastructure Layer**:
+
    - ✅ CAN: Import domain layer (to implement interfaces)
    - ✅ CAN: Import external libraries
    - ✅ CAN: Import application ports (to implement them)
    - ❌ CANNOT: Import presentation layer
 
-4. **Presentation Layer**:
+1. **Presentation Layer**:
+
    - ✅ CAN: Import application layer
    - ✅ CAN: Import infrastructure (for DI only)
    - ✅ CAN: Import frameworks (Cobra)
@@ -46,7 +50,7 @@ go list -test -deps ./pkg/application/... | grep -E "(infrastructure|cmd)"
 # Should return empty (no violations)
 ```
 
----
+______________________________________________________________________
 
 ### 6.2 Import Rules
 

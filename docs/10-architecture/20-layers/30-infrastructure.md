@@ -5,6 +5,7 @@
 **Responsibility**: External system integrations
 
 **Dependencies**:
+
 - Domain layer (implements domain interfaces)
 - Application layer (implements output ports)
 - External libraries (allowed here)

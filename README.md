@@ -136,19 +136,19 @@ becomes *available* when its executable is found on the host and reports a clear
 error when it is not. The columns below therefore describe where each underlying
 manager runs, not where `gz-pm` compiles.
 
-| Manager | macOS | Linux | Windows |
-|---------|-------|-------|---------|
-| **Homebrew** | ✅ | ✅ | ❌ |
-| **ASDF** | ✅ | ✅ | ❌ |
-| **mise** | ✅ | ✅ | ⚠️ |
-| **npm** (Node.js) | ✅ | ✅ | ⚠️ |
-| **pip** (Python) | ✅ | ✅ | ⚠️ |
-| **cargo** (Rust) | ✅ | ✅ | ⚠️ |
-| **apt** (Debian/Ubuntu) | ❌ | ✅ | ❌ |
-| **pacman** (Arch) | ❌ | ✅ | ❌ |
-| **winget** (Windows) | ❌ | ❌ | ✅ |
-| **scoop** (Windows) | ❌ | ❌ | ✅ |
-| **chocolatey** (Windows) | ❌ | ❌ | ✅ |
+| Manager                  | macOS | Linux | Windows |
+| ------------------------ | ----- | ----- | ------- |
+| **Homebrew**             | ✅    | ✅    | ❌      |
+| **ASDF**                 | ✅    | ✅    | ❌      |
+| **mise**                 | ✅    | ✅    | ⚠️      |
+| **npm** (Node.js)        | ✅    | ✅    | ⚠️      |
+| **pip** (Python)         | ✅    | ✅    | ⚠️      |
+| **cargo** (Rust)         | ✅    | ✅    | ⚠️      |
+| **apt** (Debian/Ubuntu)  | ❌    | ✅    | ❌      |
+| **pacman** (Arch)        | ❌    | ✅    | ❌      |
+| **winget** (Windows)     | ❌    | ❌    | ✅      |
+| **scoop** (Windows)      | ❌    | ❌    | ✅      |
+| **chocolatey** (Windows) | ❌    | ❌    | ✅      |
 
 mise supports `latest/stable/minor/micro/fixed` policies, explicit `--bump`,
 configuration scope selection, and persisted per-manager update preferences.
@@ -246,6 +246,7 @@ gz-pm follows **Clean Architecture** with **Hexagonal (Ports & Adapters)** patte
 ```
 
 **Key Principles**:
+
 - Pure Go (no CGO dependencies)
 - Interface-based design (easy to test and extend)
 - Dependency injection (manual, explicit)
@@ -391,7 +392,7 @@ Apache License 2.0 - see [LICENSE](LICENSE) file.
   criteria a 1.0 would have to meet
 - **Test Coverage**: Target 90%+; generate a current report with `make test-coverage`
 
----
+______________________________________________________________________
 
 **Made with ❤️ by archmagece**
 

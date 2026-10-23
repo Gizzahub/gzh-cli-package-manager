@@ -5,6 +5,7 @@
 **Responsibility**: Core business logic and entities
 
 **No Dependencies On**:
+
 - External libraries (except Go stdlib)
 - Infrastructure details
 - Frameworks (Cobra, YAML libraries)

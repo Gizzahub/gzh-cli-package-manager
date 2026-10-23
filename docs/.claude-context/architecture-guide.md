@@ -36,24 +36,28 @@
 **Dependency Direction**: Dependencies ONLY flow inward (outer → inner).
 
 ### 1. Domain Layer (`pkg/domain/`)
+
 - Pure Go stdlib only - NO external libraries
 - NO imports from application/infrastructure/presentation
 - Contains: entities, value objects, domain services, repository interfaces
 - Test: Pure unit tests, no mocks needed (95%+ coverage target)
 
 ### 2. Application Layer (`pkg/application/`)
+
 - Imports: domain layer ONLY
 - Defines port interfaces (input/output)
 - Contains: use cases, DTOs, orchestration logic
 - Test: Mock all ports with gomock (90%+ coverage target)
 
 ### 3. Infrastructure Layer (`pkg/infrastructure/`)
+
 - Implements domain/application interfaces
 - External libraries allowed here
 - Contains: adapters (Homebrew, asdf, npm), repositories, executors
 - Test: Docker-based integration tests (85%+ coverage target)
 
 ### 4. Presentation Layer (`cmd/gz-pm/`)
+
 - Imports: application + infrastructure (for DI only)
 - Contains: CLI commands, input validation, output formatting
 - Thin layer - delegates to application use cases
@@ -74,17 +78,20 @@ find pkg cmd -name "*.go" -exec wc -l {} \; | awk '$1 > 500 {print $2 ": " $1 " 
 ## Key Design Decisions (ADRs)
 
 ### ADR-002: Clean Architecture
+
 - **Why**: 5+ year lifespan, 90%+ test coverage, easy plugin architecture
 - **Impact**: Clear layer boundaries, dependency inversion, high testability
 - **Trade-off**: More files/boilerplate vs long-term maintainability
 
 ### ADR-006: No CGO Dependencies
+
 - **Why**: Cross-compilation simplicity, static binaries, faster builds
 - **Impact**: `CGO_ENABLED=0` enforced in Makefile
 - **Consequence**: Must use pure Go alternatives (e.g., `modernc.org/sqlite` not `go-sqlite3`)
 - **Validation**: Run `./scripts/check-cgo.sh` to ensure no CGO deps
 
 ### Go Version Requirement
+
 - **Consumer minimum**: Go 1.24.0+ (ADR-004)
 - **Recommended development toolchain**: Go 1.27.3 (`toolchain go1.27.3`)
 - **Compatibility evidence**: CI builds, tests, and vets with Go 1.24.11 using
@@ -122,11 +129,11 @@ func main() {
 ## Common Pitfalls to Avoid
 
 1. ❌ Importing infrastructure in domain layer
-2. ❌ Bypassing use cases (CLI → infrastructure directly)
-3. ❌ Large God files (> 500 lines)
-4. ❌ External libraries in domain layer
-5. ❌ CGO dependencies
-6. ❌ Mocking in domain layer tests (should be pure functions)
+1. ❌ Bypassing use cases (CLI → infrastructure directly)
+1. ❌ Large God files (> 500 lines)
+1. ❌ External libraries in domain layer
+1. ❌ CGO dependencies
+1. ❌ Mocking in domain layer tests (should be pure functions)
 
 ## Project-Specific Patterns
 

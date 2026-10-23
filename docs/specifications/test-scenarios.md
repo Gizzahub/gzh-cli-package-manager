@@ -5,27 +5,28 @@
 
 ## Test Categories Overview
 
-| Category | Scenarios | Priority | Platform Coverage |
-|----------|-----------|----------|-------------------|
-| 1. Basic Functionality | 15 | P0 | All |
-| 2. Output Formats | 8 | P0 | All |
-| 3. Platform-Specific | 12 | P1 | Platform-dependent |
-| 4. Error Handling | 20 | P0 | All |
-| 5. Environment Detection | 10 | P1 | All |
-| 6. Manager-Specific | 18 | P1 | Manager-dependent |
-| 7. Dry Run vs Execution | 6 | P0 | All |
-| 8. Configuration/Strategy | 8 | P1 | All |
-| 9. Performance | 10 | P2 | All |
-| 10. Recovery/Rollback | 8 | P1 | All |
-| 11. Integration | 6 | P1 | All |
-| 12. Regression | 9 | P2 | All |
-| **Total** | **130** | | |
+| Category                  | Scenarios | Priority | Platform Coverage  |
+| ------------------------- | --------- | -------- | ------------------ |
+| 1. Basic Functionality    | 15        | P0       | All                |
+| 2. Output Formats         | 8         | P0       | All                |
+| 3. Platform-Specific      | 12        | P1       | Platform-dependent |
+| 4. Error Handling         | 20        | P0       | All                |
+| 5. Environment Detection  | 10        | P1       | All                |
+| 6. Manager-Specific       | 18        | P1       | Manager-dependent  |
+| 7. Dry Run vs Execution   | 6         | P0       | All                |
+| 8. Configuration/Strategy | 8         | P1       | All                |
+| 9. Performance            | 10        | P2       | All                |
+| 10. Recovery/Rollback     | 8         | P1       | All                |
+| 11. Integration           | 6         | P1       | All                |
+| 12. Regression            | 9         | P2       | All                |
+| **Total**                 | **130**   |          |                    |
 
----
+______________________________________________________________________
 
 ## 1. Basic Functionality Tests (15 scenarios)
 
 ### Test 1.1: Simple Update Success
+
 ```bash
 # Setup: System with brew and npm installed
 gz-pm update --all --dry-run
@@ -43,6 +44,7 @@ assert_contains "$output" "npm"
 ```
 
 ### Test 1.2: Single Manager Update
+
 ```bash
 # Setup: System with multiple managers
 gz-pm update --manager brew --dry-run
@@ -59,6 +61,7 @@ assert_not_contains "$output" "npm"
 ```
 
 ### Test 1.3: Multiple Specific Managers
+
 ```bash
 # Setup: System with brew, asdf, npm
 gz-pm update --managers brew,npm --dry-run
@@ -75,6 +78,7 @@ assert_not_contains "$output" "asdf"
 ```
 
 ### Test 1.4: No Managers Found
+
 ```bash
 # Setup: Clean system with no package managers
 gz-pm update --all
@@ -92,6 +96,7 @@ assert_exit_code 2
 ```
 
 ### Test 1.5: All Managers Up-to-Date
+
 ```bash
 # Setup: System with all packages already latest
 gz-pm update --all
@@ -107,6 +112,7 @@ assert_not_contains "$output" "Downloaded"
 ```
 
 ### Test 1.6-1.15: Additional Basic Tests
+
 - Default behavior (no flags) == `--all`
 - Help flag shows usage
 - Version flag shows gz-pm version
@@ -118,11 +124,12 @@ assert_not_contains "$output" "Downloaded"
 - Update with package manager removed during operation
 - Update logs created correctly
 
----
+______________________________________________________________________
 
 ## 2. Output Format Tests (8 scenarios)
 
 ### Test 2.1: Text Output (Default)
+
 ```bash
 gz-pm update --all --dry-run
 
@@ -139,6 +146,7 @@ assert_contains "$output" "━━━"
 ```
 
 ### Test 2.2: JSON Output Format
+
 ```bash
 gz-pm update --all --dry-run --output json
 
@@ -154,6 +162,7 @@ assert_contains "$(echo "$output" | jq -r '.summary.total_managers')" "[0-9]+"
 ```
 
 ### Test 2.3: Simple Output Format
+
 ```bash
 gz-pm update --all --dry-run --output simple
 
@@ -168,6 +177,7 @@ assert_not_contains "$output" "━━━"
 ```
 
 ### Test 2.4: Auto-Detection (Non-TTY)
+
 ```bash
 # Pipe output (non-TTY)
 gz-pm update --all --dry-run | cat
@@ -183,16 +193,18 @@ assert_not_contains "$output" $'\033'  # No ANSI escape codes
 ```
 
 ### Test 2.5-2.8: Additional Output Tests
+
 - NO_COLOR environment variable respected
 - Verbose flag adds detail
 - Quiet flag reduces output
 - Output consistency across formats (same data)
 
----
+______________________________________________________________________
 
 ## 3. Platform-Specific Tests (12 scenarios)
 
 ### Test 3.1: macOS Package Managers
+
 ```bash
 # Setup: macOS system
 # Platform: darwin (x86_64 or arm64)
@@ -209,6 +221,7 @@ assert_contains "$output" "apt.*🚫"
 ```
 
 ### Test 3.2: Linux (Ubuntu) Package Managers
+
 ```bash
 # Setup: Ubuntu system
 # Platform: linux (x86_64 or aarch64)
@@ -225,6 +238,7 @@ assert_contains "$output" "pacman.*🚫"
 ```
 
 ### Test 3.3: Linux (Arch) Package Managers
+
 ```bash
 # Setup: Arch Linux system
 gz-pm update --all --dry-run
@@ -239,6 +253,7 @@ assert_contains "$output" "apt.*🚫"
 ```
 
 ### Test 3.4-3.12: Additional Platform Tests
+
 - Apple Silicon (arm64) vs Intel (x86_64) detection
 - Homebrew installation path differences (Intel vs ARM)
 - Linux distro detection (Ubuntu vs Arch vs Fedora)
@@ -249,11 +264,12 @@ assert_contains "$output" "apt.*🚫"
 - Package manager availability checks
 - Platform-specific error messages
 
----
+______________________________________________________________________
 
 ## 4. Error Handling Tests (20 scenarios)
 
 ### Test 4.1: Network Connectivity Issues
+
 ```bash
 # Simulate: Block network access
 # (Use Docker network isolation or iptables)
@@ -272,6 +288,7 @@ assert_contains "$output" "Retry"
 ```
 
 ### Test 4.2: DNS Resolution Failure
+
 ```bash
 # Simulate: Invalid DNS (point to 127.0.0.1)
 gz-pm update --manager sdkman
@@ -287,6 +304,7 @@ assert_contains "$output" "nslookup"
 ```
 
 ### Test 4.3: Permission Denied
+
 ```bash
 # Setup: Run as non-privileged user
 # Platform: Linux
@@ -303,6 +321,7 @@ assert_contains "$output" "sudo gz-pm"
 ```
 
 ### Test 4.4: Insufficient Disk Space
+
 ```bash
 # Simulate: System with very low disk space (<500MB)
 gz-pm update --manager brew
@@ -320,6 +339,7 @@ assert_contains "$output" "cleanup"
 ```
 
 ### Test 4.5-4.20: Additional Error Tests
+
 - Package manager not responding (timeout)
 - Corrupted package download (checksum fail)
 - Version conflict (dependency incompatibility)
@@ -336,11 +356,12 @@ assert_contains "$output" "cleanup"
 - Package cache corruption
 - Concurrent gz-pm processes
 
----
+______________________________________________________________________
 
 ## 5. Environment Detection Tests (10 scenarios)
 
 ### Test 5.1: Conda Environment Active
+
 ```bash
 # Setup: Activate conda environment
 conda activate myproject
@@ -360,6 +381,7 @@ assert_contains "$output" "--pip-allow-conda"
 ```
 
 ### Test 5.2: Python Virtual Environment Active
+
 ```bash
 # Setup: Python virtual environment
 python -m venv venv
@@ -378,6 +400,7 @@ assert_contains "$pip_path" "venv"
 ```
 
 ### Test 5.3: Duplicate command report during update
+
 ```bash
 gz-pm update --all --check-duplicates
 
@@ -393,6 +416,7 @@ assert_contains "$output" "kind:"
 ```
 
 ### Test 5.4-5.10: Additional Environment Tests
+
 - asdf with .tool-versions file (respect version pinning)
 - sdkman with multiple Java versions
 - rbenv vs rvm detection
@@ -401,11 +425,12 @@ assert_contains "$output" "kind:"
 - CI/CD environment detection (disable interactivity)
 - SSH session vs local terminal (TTY detection)
 
----
+______________________________________________________________________
 
 ## 6. Package Manager Specific Tests (18 scenarios)
 
 ### Test 6.1: Homebrew - Formula and Cask
+
 ```bash
 # macOS only
 gz-pm update --manager brew
@@ -418,6 +443,7 @@ gz-pm update --manager brew
 ```
 
 ### Test 6.2: Homebrew - Tap Management
+
 ```bash
 # Verify:
 - Third-party taps updated
@@ -426,6 +452,7 @@ gz-pm update --manager brew
 ```
 
 ### Test 6.3: ASDF - Plugin Updates
+
 ```bash
 gz-pm update --manager asdf
 
@@ -436,6 +463,7 @@ gz-pm update --manager asdf
 ```
 
 ### Test 6.4-6.18: Additional Manager Tests
+
 - ASDF: .tool-versions compatibility filters
 - ASDF: Post-install hooks (npm for node, pip for python)
 - npm: Global vs local package handling
@@ -452,11 +480,12 @@ gz-pm update --manager asdf
 - rbenv/rvm: Ruby version management
 - pyenv: Python version management
 
----
+______________________________________________________________________
 
 ## 7. Dry Run vs Execution Tests (6 scenarios)
 
 ### Test 7.1: Dry Run Prediction Accuracy
+
 ```bash
 # Capture dry-run output
 dry_result=$(gz-pm update --all --dry-run --output json)
@@ -471,6 +500,7 @@ real_result=$(gz-pm update --all --output json)
 ```
 
 ### Test 7.2: No Changes When Up-to-Date (Dry Run)
+
 ```bash
 # System already updated
 gz-pm update --all --dry-run
@@ -481,16 +511,18 @@ assert_contains "$output" "No changes"
 ```
 
 ### Test 7.3-7.6: Additional Dry Run Tests
+
 - Dry-run doesn't create state files
 - Dry-run doesn't modify package databases
 - Dry-run time estimate accuracy
 - Dry-run detects errors (network, permissions)
 
----
+______________________________________________________________________
 
 ## 8. Configuration and Strategy Tests (8 scenarios)
 
 ### Test 8.1: Update Strategy - Latest
+
 ```bash
 gz-pm update --all --strategy latest
 
@@ -500,6 +532,7 @@ gz-pm update --all --strategy latest
 ```
 
 ### Test 8.2: Update Strategy - Stable
+
 ```bash
 gz-pm update --all --strategy stable
 
@@ -509,6 +542,7 @@ gz-pm update --all --strategy stable
 ```
 
 ### Test 8.3: Update Strategy - Minor
+
 ```bash
 gz-pm update --all --strategy minor
 
@@ -518,17 +552,19 @@ gz-pm update --all --strategy minor
 ```
 
 ### Test 8.4-8.8: Additional Strategy Tests
+
 - Fixed strategy (no updates)
 - Per-manager strategy configuration
 - Global default strategy from config file
 - Strategy override via command line
 - Version pinning from config file
 
----
+______________________________________________________________________
 
 ## 9. Performance and Resource Tests (10 scenarios)
 
 ### Test 9.1: Large Package Set
+
 ```bash
 # Setup: System with 100+ packages
 time gz-pm update --all --dry-run
@@ -543,6 +579,7 @@ assert_less_than "$duration" 60
 ```
 
 ### Test 9.2-9.10: Additional Performance Tests
+
 - Parallel manager updates (no conflicts)
 - Serial manager updates (for reliability)
 - Progress indication refresh rate
@@ -550,14 +587,15 @@ assert_less_than "$duration" 60
 - Cleanup of temporary files
 - Log file size management (rotation)
 - Network bandwidth limiting
-- CPU usage reasonable (<50% average)
+- CPU usage reasonable (\<50% average)
 - Scalability with manager count
 
----
+______________________________________________________________________
 
 ## 10. Recovery and Rollback Tests (8 scenarios)
 
 ### Test 10.1: Interrupted Update Recovery
+
 ```bash
 # Start update, kill mid-way
 gz-pm update --all &
@@ -574,6 +612,7 @@ gz-pm update --all
 ```
 
 ### Test 10.2-10.8: Additional Recovery Tests
+
 - Failed package installation (others continue)
 - Network interruption recovery
 - Disk full during download
@@ -583,11 +622,12 @@ gz-pm update --all
 - Partial state validation
 - Resume interrupted downloads
 
----
+______________________________________________________________________
 
 ## 11. Integration Tests (6 scenarios)
 
 ### Test 11.1: Full Workflow
+
 ```bash
 # Complete workflow:
 gz-pm status                    # Before state
@@ -599,17 +639,19 @@ gz-pm status                    # After state
 ```
 
 ### Test 11.2-11.6: Additional Integration Tests
+
 - Multi-user environment (shared vs user packages)
 - Config file integration (read preferences)
 - Export after update (config generation)
 - Bootstrap new system after update
 - Status check accuracy after updates
 
----
+______________________________________________________________________
 
 ## 12. Regression Tests (9 scenarios)
 
 ### Test 12.1: Version Detection Accuracy
+
 ```bash
 # Verify version parsing for all managers
 # Test edge cases: pre-release, custom builds
@@ -617,6 +659,7 @@ gz-pm status                    # After state
 ```
 
 ### Test 12.2-12.9: Additional Regression Tests
+
 - Configuration file format compatibility
 - Backward compatible command syntax
 - State file schema migration
@@ -627,7 +670,7 @@ gz-pm status                    # After state
 - Platform detection accuracy
 - Manager detection heuristics
 
----
+______________________________________________________________________
 
 ## Test Execution Framework
 
@@ -786,7 +829,7 @@ jobs:
         path: test-results/
 ```
 
----
+______________________________________________________________________
 
 **Document Version**: 1.0
 **Last Updated**: 2025-01-27

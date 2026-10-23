@@ -5,10 +5,12 @@
 **Responsibility**: Use case orchestration and workflows
 
 **Dependencies**:
+
 - Domain layer (entities, interfaces)
 - Port interfaces (defined here)
 
 **No Dependencies On**:
+
 - Infrastructure implementations
 - Frameworks
 

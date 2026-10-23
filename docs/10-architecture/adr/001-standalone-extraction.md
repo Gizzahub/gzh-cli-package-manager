@@ -5,66 +5,75 @@
 **Deciders**: Project Team
 **Related**: ADR-002 (Clean Architecture), ADR-003 (Hexagonal Ports)
 
----
+______________________________________________________________________
 
 ## Context
 
 The PM (package manager) functionality currently exists within the gzh-cli monolith project (~11,662 lines across cmd/pm and internal/pm). We need to decide whether to:
+
 1. Keep PM functionality within gzh-cli
-2. Extract to standalone gzh-cli-package-manager project
-3. Create shared library used by both
+1. Extract to standalone gzh-cli-package-manager project
+1. Create shared library used by both
 
 **Constraints**:
+
 - gzh-cli serves multiple purposes (Git, IDE, network, PM)
 - PM functionality is cohesive and self-contained
 - Different release cycles desired for PM vs other tools
 - PM could be valuable as standalone CLI or library
 
----
+______________________________________________________________________
 
 ## Decision
 
 **Extract PM functionality into standalone `gzh-cli-package-manager` project with binary name `gz-pm`.**
 
 **Scope**:
+
 - All code from `cmd/pm` and `internal/pm`
 - Related specifications from `specs/cli/pm`
 - Integration tests from `test/integration/pm`
 - Documentation specific to PM features
 
 **Not Extracted**:
+
 - Shared logging utilities (will be copied, not shared library)
 - Git-related functionality
 - IDE monitoring
 - Network environment management
 
----
+______________________________________________________________________
 
 ## Rationale
 
 ### Why Standalone Project?
 
 **1. Independent Versioning and Releases**
+
 - PM updates don't require releasing entire gzh-cli
 - Can iterate faster on PM-specific features
 - Users who only want PM don't need full gzh-cli
 
 **2. Focused Scope and Clarity**
+
 - Single responsibility: package manager orchestration
 - Easier to explain: "Manage all your package managers with one tool"
 - Lower cognitive load for contributors
 
 **3. Reusability as Library**
+
 - Can be imported by other Go projects
 - Example: `import "github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"`
 - Enables automation scripts, custom integrations
 
 **4. Team Scalability**
+
 - Dedicated team can own PM project
 - Clear ownership boundaries
 - Parallel development without conflicts
 
 **5. Documentation Quality**
+
 - Focused documentation for PM use cases
 - Easier to maintain specifications
 - Better user onboarding (single-purpose tool)
@@ -74,6 +83,7 @@ The PM (package manager) functionality currently exists within the gzh-cli monol
 **Alternative Considered**: Create `gzh-common` library with shared utilities.
 
 **Rejected Because**:
+
 - Increased maintenance burden (3 repos instead of 2)
 - Versioning complexity (breaking changes affect both consumers)
 - Premature abstraction (YAGNI - You Aren't Gonna Need It)
@@ -81,33 +91,38 @@ The PM (package manager) functionality currently exists within the gzh-cli monol
 
 **Future Path**: If shared code grows significantly (>1,000 lines), revisit shared library approach.
 
----
+______________________________________________________________________
 
 ## Consequences
 
 ### Positive ✅
 
 1. **Clear Product Identity**
+
    - `gz-pm` is discoverable standalone tool
    - Can build dedicated community around PM orchestration
    - Easier marketing/positioning
 
-2. **Faster Innovation**
+1. **Faster Innovation**
+
    - Add package managers without gzh-cli release cycle
    - Experiment with new features (TUI, plugins)
    - Respond quickly to package manager API changes
 
-3. **Better Testing**
+1. **Better Testing**
+
    - Isolated test suite runs faster
    - Docker integration tests don't affect gzh-cli CI
    - Coverage metrics specific to PM functionality
 
-4. **Reduced Complexity**
+1. **Reduced Complexity**
+
    - New contributors understand smaller codebase
    - Issues are scoped to PM domain
    - Debugging is more straightforward
 
-5. **Flexible Distribution**
+1. **Flexible Distribution**
+
    - Homebrew formula for just `gz-pm`
    - Go install without gzh-cli dependencies
    - Smaller binary size (~15MB vs ~33MB)
@@ -115,30 +130,35 @@ The PM (package manager) functionality currently exists within the gzh-cli monol
 ### Negative ❌
 
 1. **Increased Repository Overhead**
+
    - Two repos to maintain (gzh-cli + gz-pm)
    - Duplicate CI/CD configuration
    - Separate issue tracking
 
    **Mitigation**: Use GitHub templates, share workflows
 
-2. **Code Duplication**
+1. **Code Duplication**
+
    - Logger interface copied to gz-pm
    - Config utilities duplicated
    - ~200 lines of shared code
 
    **Mitigation**: Acceptable for now, extract to library if grows >1,000 lines
 
-3. **User Migration Required**
+1. **User Migration Required**
+
    - Existing `gz pm` users must transition to `gz-pm`
    - Documentation updates needed
    - Support two tools during transition period
 
    **Mitigation**:
+
    - Maintain `gz pm` in gzh-cli as thin wrapper (calls gz-pm)
    - Comprehensive migration guide
    - 6-month deprecation timeline
 
-4. **Cross-Project Coordination**
+1. **Cross-Project Coordination**
+
    - Changes affecting both projects need coordination
    - Shared logger interface must stay compatible
    - Breaking changes require care
@@ -148,45 +168,51 @@ The PM (package manager) functionality currently exists within the gzh-cli monol
 ### Neutral 🔄
 
 1. **Partial Compatibility with gzh-cli**
+
    - Core functionality maintained
    - Configuration format compatible
    - JSON output structure preserved
    - Command naming changed (`gz-pm` vs `gz pm`)
 
-2. **Build/Release Process Changes**
+1. **Build/Release Process Changes**
+
    - Separate goreleaser configuration
    - Independent GitHub Actions
    - Distinct release schedules
 
----
+______________________________________________________________________
 
 ## Implementation Notes
 
 ### Migration Path
 
 **Phase 1: Extract (Week 3)**
+
 1. Copy `cmd/pm` → `cmd/gz-pm`
-2. Copy `internal/pm` → `pkg/{domain,application,infrastructure}` (refactored)
-3. Copy tests → `test/`
-4. Copy specs → `docs/specifications/`
+1. Copy `internal/pm` → `pkg/{domain,application,infrastructure}` (refactored)
+1. Copy tests → `test/`
+1. Copy specs → `docs/specifications/`
 
 **Phase 2: Refactor (Week 4-7)**
+
 1. Apply Clean Architecture (see ADR-002)
-2. Remove gzh-cli dependencies
-3. Update tests for standalone execution
-4. Create new CLI entry point
+1. Remove gzh-cli dependencies
+1. Update tests for standalone execution
+1. Create new CLI entry point
 
 **Phase 3: Validation (Week 8)**
+
 1. Integration tests pass on all platforms
-2. Specification compliance verified (95%+)
-3. Performance benchmarks meet targets
-4. Documentation complete
+1. Specification compliance verified (95%+)
+1. Performance benchmarks meet targets
+1. Documentation complete
 
 **Phase 4: Release (Week 9)**
+
 1. Beta release (v0.9.0)
-2. User testing (10+ beta testers)
-3. Address critical feedback
-4. v1.0.0 release
+1. User testing (10+ beta testers)
+1. Address critical feedback
+1. v1.0.0 release
 
 ### Compatibility Layer in gzh-cli
 
@@ -209,11 +235,12 @@ func Execute() {
 ```
 
 **Deprecation Timeline**:
+
 - Month 1-3: Both tools coexist, `gz pm` delegates to `gz-pm`
 - Month 4-6: Warning message when using `gz pm`
 - Month 7+: `gz pm` removed from gzh-cli
 
----
+______________________________________________________________________
 
 ## Validation
 
@@ -230,31 +257,37 @@ func Execute() {
 ### Risks
 
 **Risk 1: Low Adoption**
+
 - **Impact**: High
 - **Mitigation**: Excellent UX, show value immediately, community building
 
 **Risk 2: Feature Divergence**
+
 - **Impact**: Medium
 - **Mitigation**: Maintain compatibility layer, clear communication
 
 **Risk 3: Ecosystem Fragmentation**
+
 - **Impact**: Low
 - **Mitigation**: gz-pm can still be used as library by gzh-cli if needed
 
----
+______________________________________________________________________
 
 ## Alternatives Considered
 
 ### Alternative 1: Keep in gzh-cli Monolith
+
 **Rejected**: Violates Single Responsibility Principle, slower release cycle, harder to test in isolation
 
 ### Alternative 2: Shared Library Approach
+
 **Rejected**: Premature abstraction, increased complexity for uncertain benefit
 
 ### Alternative 3: Complete Rewrite in Different Language
+
 **Rejected**: Go is appropriate, rewrite wastes validated code, team knows Go
 
----
+______________________________________________________________________
 
 ## References
 
@@ -263,15 +296,15 @@ func Execute() {
 - **ARCHITECTURE**: `/ARCHITECTURE.md` - Clean architecture enables extraction
 - **Original Discussion**: gzh-cli Planning Session 2025-01-27
 
----
+______________________________________________________________________
 
 ## Revision History
 
-| Date | Changes | Author |
-|------|---------|--------|
+| Date       | Changes         | Author      |
+| ---------- | --------------- | ----------- |
 | 2025-01-27 | Initial version | Claude Code |
 
----
+______________________________________________________________________
 
 ## Status Notes
 

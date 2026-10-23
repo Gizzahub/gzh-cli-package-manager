@@ -27,18 +27,18 @@ adapter implementation exist.
 
 ## Inventory (design-time snapshot)
 
-| Manager ID | CLI composition root | Detection repository | Constructor |
-|---|---|---|---|
-| `apt` | `cmd/gz-pm/main.go:newManagerAdapters` | `pkg/infrastructure/repository/memory/detecting_manager.go:registerAdapters` | `apt.NewAdapter` |
-| `brew` | same | same | `homebrew.NewAdapter` |
-| `pacman` | same | same | `pacman.NewAdapter` |
-| `npm` | same | same | `npm.NewAdapter` |
-| `pip` | same | same | `pip.NewAdapter` |
-| `cargo` | same | same | `cargo.NewAdapter` |
-| `asdf` | same | same | `asdf.NewAdapter` |
-| `winget` | same | same | `winget.NewAdapter` |
-| `scoop` | same | same | `scoop.NewAdapter` |
-| `choco` | same | same | `chocolatey.NewAdapter` |
+| Manager ID | CLI composition root                   | Detection repository                                                         | Constructor             |
+| ---------- | -------------------------------------- | ---------------------------------------------------------------------------- | ----------------------- |
+| `apt`      | `cmd/gz-pm/main.go:newManagerAdapters` | `pkg/infrastructure/repository/memory/detecting_manager.go:registerAdapters` | `apt.NewAdapter`        |
+| `brew`     | same                                   | same                                                                         | `homebrew.NewAdapter`   |
+| `pacman`   | same                                   | same                                                                         | `pacman.NewAdapter`     |
+| `npm`      | same                                   | same                                                                         | `npm.NewAdapter`        |
+| `pip`      | same                                   | same                                                                         | `pip.NewAdapter`        |
+| `cargo`    | same                                   | same                                                                         | `cargo.NewAdapter`      |
+| `asdf`     | same                                   | same                                                                         | `asdf.NewAdapter`       |
+| `winget`   | same                                   | same                                                                         | `winget.NewAdapter`     |
+| `scoop`    | same                                   | same                                                                         | `scoop.NewAdapter`      |
+| `choco`    | same                                   | same                                                                         | `chocolatey.NewAdapter` |
 
 ## Later registry members
 
@@ -74,8 +74,8 @@ than maintain their own constructor lists. The factory's key set and constructor
 mapping become the single source of truth. A focused drift test should assert:
 
 1. every supported runtime ID has a non-nil adapter;
-2. the registry contains no duplicate or unexpected IDs; and
-3. both consumers receive the same key set.
+1. the registry contains no duplicate or unexpected IDs; and
+1. both consumers receive the same key set.
 
 If an implementation review finds that the factory would violate package ownership
 or create an import cycle, the fallback is a declarative supported-manager matrix in

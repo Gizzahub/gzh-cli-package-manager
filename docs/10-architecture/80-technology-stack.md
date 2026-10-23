@@ -34,6 +34,7 @@ require (
 ```
 
 **No Heavy Dependencies**:
+
 - No ORM (file-based config)
 - No database (YAML persistence)
 - No web framework (CLI only)

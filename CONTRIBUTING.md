@@ -15,7 +15,7 @@ Welcome! We're excited that you're interested in contributing to gz-pm. This gui
 - [Documentation](#documentation)
 - [Release Process](#release-process)
 
----
+______________________________________________________________________
 
 ## Code of Conduct
 
@@ -26,7 +26,7 @@ This project follows standard open-source community guidelines:
 - **Be collaborative** - Work together to improve the project
 - **Be patient** - Remember that everyone was a beginner once
 
----
+______________________________________________________________________
 
 ## Getting Started
 
@@ -57,18 +57,20 @@ make test
 make install
 ```
 
----
+______________________________________________________________________
 
 ## Development Setup
 
 ### 1. Install the recommended Go 1.27.3 development toolchain
 
 **macOS (Homebrew)**:
+
 ```bash
 brew install go
 ```
 
 **Linux**:
+
 ```bash
 wget https://go.dev/dl/go1.27.3.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go1.27.3.linux-amd64.tar.gz
@@ -76,6 +78,7 @@ export PATH=$PATH:/usr/local/go/bin
 ```
 
 **Verify Installation**:
+
 ```bash
 go version  # Should show go1.27.3
 ```
@@ -151,7 +154,7 @@ make test-coverage
 go test -v ./pkg/domain/manager/...
 ```
 
----
+______________________________________________________________________
 
 ## Architecture Overview
 
@@ -193,20 +196,24 @@ gz-pm follows **Clean Architecture** with **Hexagonal (Ports & Adapters)** patte
 ### Key Architectural Rules
 
 1. **Dependency Rule**: Dependencies only point inward
+
    - Presentation → Application → Domain
    - Infrastructure → Domain (implements interfaces)
    - **Never**: Domain → Application or Infrastructure
 
-2. **Pure Domain Layer**: No external dependencies
+1. **Pure Domain Layer**: No external dependencies
+
    - Only Go stdlib imports allowed
    - Pure functions, testable without mocks
 
-3. **Interface-Based Design**: All external dependencies via ports
+1. **Interface-Based Design**: All external dependencies via ports
+
    - Domain defines repository interfaces
    - Application defines executor, logger ports
    - Infrastructure implements ports
 
-4. **No CGO**: Pure Go only (see ADR-006)
+1. **No CGO**: Pure Go only (see ADR-006)
+
    - Cross-compilation support
    - Static binaries
    - Simple builds
@@ -249,7 +256,7 @@ pkg/
     └── executor/       # Command execution
 ```
 
----
+______________________________________________________________________
 
 ## Coding Standards
 
@@ -268,6 +275,7 @@ goimports -w .
 ```
 
 **Requirements**:
+
 - Use `gofmt` for formatting (enforced in CI)
 - Use `goimports` for import management
 - Line length: prefer < 100 characters, max 120
@@ -298,6 +306,7 @@ func UpdateMgr(...) { ... }                 // Unclear abbreviation
 ```
 
 **Rules**:
+
 - Interfaces: Noun or noun phrase (`ManagerRepository`, `Executor`)
 - Structs: Noun (`Manager`, `UpdateResult`)
 - Functions/Methods: Verb or verb phrase (`FindInstalled`, `Update`)
@@ -334,6 +343,7 @@ func (uc *UpdateAllUseCase) Execute(ctx context.Context, req *dto.UpdateAllReque
 ```
 
 **Rules**:
+
 - Always wrap errors with `fmt.Errorf("context: %w", err)`
 - Use `%w` for error wrapping (Go 1.13+)
 - Provide actionable context in error messages
@@ -363,6 +373,7 @@ func (r *YAMLRepository) Load() (*Config, error) {
 ```
 
 **Rules**:
+
 - First parameter is always `context.Context`
 - Check `ctx.Done()` in long-running operations
 - Pass context down the call chain
@@ -397,6 +408,7 @@ type PackageManager interface {
 ```
 
 **Rules**:
+
 - Prefer many small interfaces over large ones
 - Compose interfaces when needed
 - Clients implement only what they need
@@ -405,14 +417,15 @@ type PackageManager interface {
 
 **From `~/.claude/ctx/FILE_SIZE_LIMITS.md`**:
 
-| File Size | Status | Action Required |
-|-----------|--------|-----------------|
-| < 10KB | ✅ Ideal | Maintain |
-| 10-50KB | ⚠️ Warning | Consider splitting |
-| 50-100KB | ⚠️ Problem | Split recommended |
-| > 100KB | ❌ Critical | Must split |
+| File Size | Status      | Action Required    |
+| --------- | ----------- | ------------------ |
+| < 10KB    | ✅ Ideal    | Maintain           |
+| 10-50KB   | ⚠️ Warning  | Consider splitting |
+| 50-100KB  | ⚠️ Problem  | Split recommended  |
+| > 100KB   | ❌ Critical | Must split         |
 
 **Guidelines**:
+
 - Target: Files under 500 lines (~10KB)
 - Max: 1000 lines (rarely justified)
 - Split large files by responsibility
@@ -439,6 +452,7 @@ Actions hosted Lint is confirmation of the full tree, not the day-to-day gate.
 Override the diff base when needed: `make lint-diff LINT_DIFF_BASE=<rev>` (default `origin/master`).
 
 **Enabled Linters**:
+
 - `gofmt`, `goimports` - Formatting
 - `govet` - Suspicious constructs
 - `errcheck` - Unchecked errors
@@ -452,7 +466,7 @@ Override the diff base when needed: `make lint-diff LINT_DIFF_BASE=<rev>` (defau
 
 **Linter Configuration**: `.golangci.yml`
 
----
+______________________________________________________________________
 
 ## Common Patterns and Best Practices
 
@@ -469,6 +483,7 @@ Location: `pkg/infrastructure/adapter/manager/cmdutil/`
 The `cmdutil` package provides standardized helpers for command execution patterns used across package manager adapters.
 
 **When to use**:
+
 - Executing commands and validating results
 - Extracting version information from command output
 - Checking command availability (e.g., `which` results)
@@ -513,6 +528,7 @@ func (a *Adapter) Detect(ctx context.Context) (bool, error) {
 ```
 
 **Benefits**:
+
 - Reduces code duplication (~20-30 lines per adapter)
 - Standardizes error messages
 - Simplifies adapter implementation
@@ -525,6 +541,7 @@ Location: `pkg/infrastructure/adapter/manager/testutil/`
 Provides shared mock implementations for testing adapters.
 
 **Available mocks**:
+
 - `MockExecutor`: Mock command executor
 - `MockLogger`: Mock logger
 - Helper functions: `SuccessResult()`, `FailureResult()`
@@ -546,6 +563,7 @@ func TestAdapter_Detect(t *testing.T) {
 ```
 
 **Benefits**:
+
 - Consistent mock behavior across tests
 - Reduces test boilerplate (~25 lines per test file)
 - Easier test maintenance
@@ -556,7 +574,7 @@ Follow these steps when adding support for a new package manager:
 
 1. **Create adapter package**: `pkg/infrastructure/adapter/manager/newmanager/`
 
-2. **Implement ManagerAdapter interface** using cmdutil helpers:
+1. **Implement ManagerAdapter interface** using cmdutil helpers:
 
 ```go
 package newmanager
@@ -625,42 +643,47 @@ func TestAdapter_Detect(t *testing.T) {
 When refactoring code, follow these principles:
 
 **1. Identify Duplication**
+
 - Look for repeated error handling patterns
 - Find similar parsing logic across files
 - Identify test mock duplication
 
 **2. Extract to Shared Utilities**
+
 - Create focused, single-purpose functions
 - Add comprehensive unit tests (aim for 100%)
 - Update existing code to use new utilities
 
 **3. Validate Changes**
+
 - All existing tests must pass
 - No decrease in code coverage
 - Run `make quality` before committing
 
 **4. Document Patterns**
+
 - Update this section with new patterns
 - Add examples for complex utilities
 - Reference related ADRs if applicable
 
 **Example refactoring** (Phase 2: cmdutil extraction):
+
 - **Before**: 5 adapters with ~92 lines of duplicated error handling
 - **After**: Single `cmdutil` package with 100% test coverage
 - **Impact**: Easier maintenance, consistent error messages, faster adapter development
 
----
+______________________________________________________________________
 
 ## Testing Requirements
 
 ### Test Coverage Goals
 
-| Layer | Target | Minimum |
-|-------|--------|---------|
-| **Domain** | 95% | 90% |
-| **Application** | 90% | 85% |
-| **Infrastructure** | 85% | 75% |
-| **Overall** | 90% | 85% |
+| Layer              | Target | Minimum |
+| ------------------ | ------ | ------- |
+| **Domain**         | 95%    | 90%     |
+| **Application**    | 90%    | 85%     |
+| **Infrastructure** | 85%    | 75%     |
+| **Overall**        | 90%    | 85%     |
 
 ### Test Categories
 
@@ -846,11 +869,12 @@ mockgen -source=pkg/application/port/output/executor.go \
 ```
 
 **Mock Conventions**:
+
 - Place mocks in `mock/` subdirectory
 - Name: `<interface>_mock.go`
 - Package: `mock`
 
----
+______________________________________________________________________
 
 ## Pull Request Process
 
@@ -907,6 +931,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 **Types**:
+
 - `feat` - New feature
 - `fix` - Bug fix
 - `docs` - Documentation only
@@ -915,6 +940,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - `chore` - Maintenance tasks
 
 **Scopes** (mandatory):
+
 - `domain` - Domain layer changes
 - `application` - Application layer
 - `infrastructure` - Infrastructure layer
@@ -987,11 +1013,12 @@ Closes #XXX
 ### 5. Review Process
 
 1. **Automated Checks** - CI runs tests, linting, coverage
-2. **Code Review** - At least 1 approval required
-3. **Architecture Review** - For significant changes
-4. **Documentation Review** - For user-facing changes
+1. **Code Review** - At least 1 approval required
+1. **Architecture Review** - For significant changes
+1. **Documentation Review** - For user-facing changes
 
 **Review Guidelines**:
+
 - Be constructive and specific
 - Suggest improvements, don't just criticize
 - Ask questions to understand intent
@@ -1002,7 +1029,7 @@ Closes #XXX
 - **Squash and merge** for feature branches
 - **Rebase and merge** for clean linear history (preferred)
 
----
+______________________________________________________________________
 
 ## Documentation
 
@@ -1045,6 +1072,7 @@ func (a *HomebrewAdapter) Update(ctx context.Context, opts UpdateOptions) (*Upda
 ```
 
 **Documentation Requirements**:
+
 - Public types: Describe purpose and usage
 - Public functions: Describe behavior, parameters, return values, examples
 - Complex logic: Inline comments explaining why (not what)
@@ -1058,7 +1086,7 @@ When adding features, update:
 - `docs/specifications/use-cases/` - If new use case
 - `docs/specifications/test-scenarios.md` - Add test scenarios
 
----
+______________________________________________________________________
 
 ## Release Process
 
@@ -1083,30 +1111,34 @@ local build reports.
 1. **Choose the commit**: it must be on `master`, with its hosted Test and
    CodeQL runs green.
 
-2. **Dry-run the release build** against that commit, so the tag is not the
+1. **Dry-run the release build** against that commit, so the tag is not the
    first time the release path runs:
+
    ```bash
    gh workflow run build.yml --ref master -f version=1.0.0
    ```
+
    The dispatch refuses to run against a tag ref, because the tag branch would
    silently win over the requested version.
 
-3. **Create and push the tag** — this is the irreversible step:
+1. **Create and push the tag** — this is the irreversible step:
+
    ```bash
    git tag -a v1.0.0 -m "Release v1.0.0"
    git push origin v1.0.0
    ```
+
    Pushing the tag is what publishes the module version: `proxy.golang.org`
    serves it from the tag alone, with no GitHub release involved, and
    `sum.golang.org` records its hash permanently. Deleting the tag afterwards
    does not reclaim the version number. Nothing later in this checklist can
    undo this step.
 
-4. **Wait for the Build workflow**, which verifies the release inputs,
+1. **Wait for the Build workflow**, which verifies the release inputs,
    cross-builds the five supported targets, generates `checksums.txt`, and
    creates a **draft** release with those artifacts attached.
 
-5. **Review and publish the draft**. Open the URL from the workflow's job
+1. **Review and publish the draft**. Open the URL from the workflow's job
    summary, check the attached archives and checksums, write the release notes,
    and then click **Publish release**. Until you do, the release is invisible to
    anyone without push access — absent from the releases list,
@@ -1116,7 +1148,7 @@ local build reports.
    object while the first is still a draft, which leaves a published release
    carrying no artifacts alongside the invisible draft that has them.
 
----
+______________________________________________________________________
 
 ## Getting Help
 
@@ -1138,6 +1170,7 @@ local build reports.
 ### Common Issues
 
 **Build Fails**:
+
 ```bash
 # Check Go version
 go version  # Must be 1.24+
@@ -1148,6 +1181,7 @@ make build
 ```
 
 **Tests Fail**:
+
 ```bash
 # Run with verbose output
 go test -v ./pkg/domain/...
@@ -1157,6 +1191,7 @@ go test -count=1 ./...  # Disable cache
 ```
 
 **Linter Errors**:
+
 ```bash
 # Auto-fix where possible
 golangci-lint run --fix
@@ -1165,26 +1200,27 @@ golangci-lint run --fix
 golangci-lint run --verbose
 ```
 
----
+______________________________________________________________________
 
 ## License
 
 By contributing, you agree that your contributions will be licensed under the same license as the project (see `LICENSE` file).
 
----
+______________________________________________________________________
 
 ## Thank You!
 
 Thank you for contributing to gz-pm! Your efforts help make package management better for everyone.
 
 **Quick Links**:
+
 - [Architecture Overview](ARCHITECTURE.md)
 - [Product Requirements](PRD.md)
 - [Requirements Specification](REQUIREMENTS.md)
 - [Specifications](docs/specifications/)
 - [ADRs](docs/10-architecture/adr/)
 
----
+______________________________________________________________________
 
 **Document Version**: 1.0
 **Last Updated**: 2025-01-27

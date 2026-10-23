@@ -77,6 +77,7 @@ gzh-cli-package-manager/
 ```
 
 **File Size Policy** (LLM-Friendly):
+
 - **Ideal**: < 300 lines (< 10KB)
 - **Maximum**: 500 lines (< 20KB)
 - **Split if**: > 500 lines or multiple responsibilities

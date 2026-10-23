@@ -19,12 +19,12 @@ pkg/infrastructure/adapter/manager/homebrew/
 
 ## Coverage Targets
 
-| Layer | Target | Minimum |
-|-------|--------|---------|
-| Domain | 95% | 90% |
-| Application | 90% | 85% |
-| Infrastructure | 85% | 75% |
-| **Overall** | **90%** | **85%** |
+| Layer          | Target  | Minimum |
+| -------------- | ------- | ------- |
+| Domain         | 95%     | 90%     |
+| Application    | 90%     | 85%     |
+| Infrastructure | 85%     | 75%     |
+| **Overall**    | **90%** | **85%** |
 
 ## Running Tests
 
@@ -82,6 +82,7 @@ output := testutil.CaptureOutput(func() {
 ## Testing by Layer
 
 ### Domain Layer
+
 - Pure unit tests
 - NO mocks
 - NO external dependencies
@@ -96,6 +97,7 @@ func TestManagerEntity(t *testing.T) {
 ```
 
 ### Application Layer
+
 - Mock all ports with gomock
 - Test use case orchestration
 - Verify port interactions
@@ -111,6 +113,7 @@ func TestUpdateUseCase(t *testing.T) {
 ```
 
 ### Infrastructure Layer
+
 - Unit tests with mocked executor
 - Integration tests with Docker
 - Test adapter implementations
@@ -127,10 +130,10 @@ func TestHomebrewAdapter(t *testing.T) {
 
 **Critical for LLM-friendly codebase**:
 
-| Size | Status | Action |
-|------|--------|--------|
-| < 10KB (~300 lines) | ✅ Ideal | Maintain |
-| 10-50KB | ⚠️ Warning | Consider splitting |
-| > 50KB | ❌ Problem | Must split |
+| Size                | Status     | Action             |
+| ------------------- | ---------- | ------------------ |
+| < 10KB (~300 lines) | ✅ Ideal   | Maintain           |
+| 10-50KB             | ⚠️ Warning | Consider splitting |
+| > 50KB              | ❌ Problem | Must split         |
 
 **Reason**: Keep files digestible for AI code analysis and human review.

@@ -5,23 +5,25 @@
 **Deciders**: Project Team
 **Related**: ADR-006 (No CGO Dependencies)
 
----
+______________________________________________________________________
 
 ## Context
 
 We need to decide minimum Go version for gzh-cli-package-manager. Considerations:
+
 - Language features needed for clean code
 - Compatibility with users' Go installations
 - Performance improvements in newer versions
 - Standard library enhancements
 
 **Options**:
-1. Go 1.21 (LTS, widespread adoption)
-2. Go 1.22 (current stable at planning time)
-3. Go 1.23 (current at implementation start)
-4. Go 1.24+ (latest, cutting-edge features)
 
----
+1. Go 1.21 (LTS, widespread adoption)
+1. Go 1.22 (current stable at planning time)
+1. Go 1.23 (current at implementation start)
+1. Go 1.24+ (latest, cutting-edge features)
+
+______________________________________________________________________
 
 ## Decision
 
@@ -29,15 +31,17 @@ We need to decide minimum Go version for gzh-cli-package-manager. Considerations
 
 **Justification**: Parent project (gzh-cli) already uses Go 1.24.0, and we benefit from latest language improvements.
 
----
+______________________________________________________________________
 
 ## Rationale
 
 ### Why Go 1.24+?
 
 **1. Range-over-Func (Iterators)**
+
 - Clean iteration over custom types
 - Example use case: Iterate managers
+
 ```go
 // Go 1.24+ with iterators
 for mgr := range repo.Managers() {
@@ -52,24 +56,29 @@ for _, mgr := range managers {
 ```
 
 **2. Improved Type Inference**
+
 - Less verbose generic code
 - Cleaner function signatures
 
 **3. Enhanced Error Handling**
+
 - Better error wrapping in stdlib
 - Improved `errors.Join()` functionality
 
 **4. Performance Improvements**
+
 - Faster compilation times (~10-15% vs 1.21)
 - Better runtime performance
 - Improved GC in Go 1.23+
 
 **5. Standard Library Enhancements**
+
 - `log/slog` improvements (structured logging)
 - `slices`, `maps` packages matured
 - `cmp.Or()` for cleaner default value handling
 
 **6. Compatibility with Parent Project**
+
 - At the time of this decision, gzh-cli used Go 1.24.0
 - The consumer baseline remains aligned with that historical contract
 - Current regular CI uses Go 1.27.3, with a separate Go 1.24.11 compatibility lane
@@ -77,45 +86,53 @@ for _, mgr := range managers {
 ### Why Not Older Versions?
 
 **Go 1.21 (Rejected)**
+
 - Missing iterators (range-over-func)
 - Older `log/slog` (less features)
 - Slower compilation
 
 **Go 1.22 (Rejected)**
+
 - Parent project already on 1.24
 - Would require maintaining different version
 
 **Go 1.23 (Considered)**
+
 - Would be acceptable
 - But 1.24 is available and provides additional improvements
 
----
+______________________________________________________________________
 
 ## Consequences
 
 ### Positive ✅
 
 1. **Modern Language Features**
+
    - Iterators for cleaner code
    - Better generics support
    - Improved error handling patterns
 
-2. **Performance Benefits**
+1. **Performance Benefits**
+
    - Faster builds (matters for large codebase)
    - Better runtime performance
    - Smaller binaries with better optimization
 
-3. **Standard Library Improvements**
+1. **Standard Library Improvements**
+
    - `log/slog` for structured logging (no external deps)
    - `slices`, `maps` packages reduce utility code
    - `cmp` package for comparisons
 
-4. **Future-Proof**
+1. **Future-Proof**
+
    - At the time of this decision, Go 1.24 was expected to be supported until at least 2026
    - The current recommended development toolchain is Go 1.27.3
    - Easier to adopt future features
 
-5. **Consistency with Ecosystem**
+1. **Consistency with Ecosystem**
+
    - At the time of this decision, gzh-cli was already on 1.24
    - Many Go projects moving to 1.23+
    - Good developer experience
@@ -123,31 +140,37 @@ for _, mgr := range managers {
 ### Negative ❌
 
 1. **User Installation Requirements**
+
    - Users must have Go 1.24.0+ to build from source
    - Some users may be on older versions
    - Corporate environments may lag
 
    **Mitigation**:
+
    - Provide pre-built binaries (most users use these)
    - Document installation instructions
    - Go is easy to upgrade
 
-2. **CI/CD Environment**
+1. **CI/CD Environment**
+
    - Must ensure CI runners have Go 1.24+
    - GitHub Actions: easy (specify in workflow)
    - Self-hosted runners: may need upgrades
 
    **Mitigation**:
+
    - GitHub Actions supports all versions
    - Docker images with Go 1.24+
    - Documented in CONTRIBUTING.md
 
-3. **Potentially Cutting-Edge**
+1. **Potentially Cutting-Edge**
+
    - Go 1.24 is relatively new (as of 2025-01)
    - May have undiscovered bugs
    - Smaller community experience base
 
    **Mitigation**:
+
    - Go team has strong testing
    - We're not using experimental features
    - Can downgrade to 1.23 if critical issues found
@@ -155,14 +178,16 @@ for _, mgr := range managers {
 ### Neutral 🔄
 
 1. **No Backward Compatibility Needed**
+
    - This is a new project (no legacy code)
    - Can use latest features without migration
 
-2. **Cross-Compilation**
+1. **Cross-Compilation**
+
    - Go 1.24 cross-compiles well
    - Supports all target platforms (macOS, Linux, Windows)
 
----
+______________________________________________________________________
 
 ## Implementation
 
@@ -220,6 +245,7 @@ jobs:
 ### Documentation
 
 **README.md**:
+
 ```markdown
 ## Requirements
 
@@ -244,7 +270,7 @@ go version  # Should show go1.24 or higher
 \`\`\`
 ```
 
----
+______________________________________________________________________
 
 ## Language Features We Use
 
@@ -310,13 +336,14 @@ func compareVersions(a, b string) int {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Validation
 
 ### Version Enforcement
 
 **Build-time check**:
+
 ```bash
 go version
 # Fails if Go < 1.24
@@ -334,13 +361,14 @@ the authoritative enforcement mechanisms.
 - [ ] README documents requirement
 - [ ] All developers using Go 1.24+
 
----
+______________________________________________________________________
 
 ## Migration Path (If Needed)
 
 If critical bug found in Go 1.24:
 
 1. **Downgrade to 1.23**:
+
    ```bash
    # Update go.mod
    go 1.23
@@ -350,27 +378,31 @@ If critical bug found in Go 1.24:
    # - Test thoroughly
    ```
 
-2. **Community Communication**:
+1. **Community Communication**:
+
    - Issue announcement
    - Update README
    - Tag new release
 
 **Likelihood**: Very low (Go has excellent stability)
 
----
+______________________________________________________________________
 
 ## Alternatives Considered
 
 ### Alternative 1: Go 1.21 (LTS)
+
 **Rejected**: Missing modern features, parent project uses 1.24
 
 ### Alternative 2: Go 1.22
+
 **Rejected**: Parent project already on 1.24, no benefit to being behind
 
 ### Alternative 3: Flexible "1.21+"
+
 **Rejected**: Makes it harder to use new features, code becomes conservative
 
----
+______________________________________________________________________
 
 ## References
 
@@ -379,15 +411,15 @@ If critical bug found in Go 1.24:
 - **Go Version Policy**: https://go.dev/doc/devel/release
 - **Parent Project** (gzh-cli): used Go 1.24.0 in go.mod when this ADR was written
 
----
+______________________________________________________________________
 
 ## Revision History
 
-| Date | Changes | Author |
-|------|---------|--------|
+| Date       | Changes         | Author      |
+| ---------- | --------------- | ----------- |
 | 2025-01-27 | Initial version | Claude Code |
 
----
+______________________________________________________________________
 
 ## Status Notes
 

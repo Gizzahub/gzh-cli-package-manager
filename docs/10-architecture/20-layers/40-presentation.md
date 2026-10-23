@@ -5,6 +5,7 @@
 **Responsibility**: User interface (CLI)
 
 **Dependencies**:
+
 - Application layer (use cases)
 - Infrastructure layer (for dependency injection)
 - Cobra framework

@@ -17,29 +17,29 @@ gz-pm <manager> <subcommand> [args] [--output text|json] [--dry-run]
 ```
 
 | Manager CLI name | Adapter ID | Native binary |
-|------------------|------------|---------------|
+| ---------------- | ---------- | ------------- |
 | `winget`         | `winget`   | `winget`      |
 | `scoop`          | `scoop`    | `scoop`       |
 | `chocolatey`     | `choco`    | `choco`       |
 
 ### Common subcommands
 
-| Subcommand  | Args | Flags | Behavior |
-|-------------|------|-------|----------|
-| `list`      | none | `--output` | Detect → `ListPackages` via adapter |
-| `search`    | `<query>` (required) | `--output` | Detect → `Search` via adapter |
-| `install`   | `<id>` (required) | `--dry-run` | Detect → `Installer.Install` |
-| `uninstall` | `<id>` (required) | `--dry-run` | Detect → `Installer.Uninstall` |
-| `upgrade`   | `[id]` optional | `--all`, `--dry-run` | Detect → `Adapter.Update` |
+| Subcommand  | Args                 | Flags                | Behavior                            |
+| ----------- | -------------------- | -------------------- | ----------------------------------- |
+| `list`      | none                 | `--output`           | Detect → `ListPackages` via adapter |
+| `search`    | `<query>` (required) | `--output`           | Detect → `Search` via adapter       |
+| `install`   | `<id>` (required)    | `--dry-run`          | Detect → `Installer.Install`        |
+| `uninstall` | `<id>` (required)    | `--dry-run`          | Detect → `Installer.Uninstall`      |
+| `upgrade`   | `[id]` optional      | `--all`, `--dry-run` | Detect → `Adapter.Update`           |
 
 ### Manager-specific subcommands
 
-| Manager | Subcommand | Args | Behavior |
-|---------|------------|------|----------|
-| winget | `source list` | none | `SourceLister.ListSources` → parse `winget source list` |
-| scoop | `bucket list` | none | `BucketManager.ListBuckets` |
-| scoop | `bucket add` | `<name> [url]` | `BucketManager.AddBucket` |
-| scoop | `bucket remove` / `rm` | `<name>` | `BucketManager.RemoveBucket` |
+| Manager | Subcommand             | Args           | Behavior                                                |
+| ------- | ---------------------- | -------------- | ------------------------------------------------------- |
+| winget  | `source list`          | none           | `SourceLister.ListSources` → parse `winget source list` |
+| scoop   | `bucket list`          | none           | `BucketManager.ListBuckets`                             |
+| scoop   | `bucket add`           | `<name> [url]` | `BucketManager.AddBucket`                               |
+| scoop   | `bucket remove` / `rm` | `<name>`       | `BucketManager.RemoveBucket`                            |
 
 Examples:
 
@@ -96,11 +96,11 @@ type BucketManager interface {
 
 Implemented by:
 
-| Adapter | Installer | SourceLister | BucketManager | Searcher |
-|---------|-----------|--------------|---------------|----------|
-| winget | ✅ | ✅ | — | ✅ |
-| scoop | ✅ | — | ✅ | ✅ |
-| chocolatey | ✅ (+ UAC wrap) | — | — | ✅ |
+| Adapter    | Installer       | SourceLister | BucketManager | Searcher |
+| ---------- | --------------- | ------------ | ------------- | -------- |
+| winget     | ✅              | ✅           | —             | ✅       |
+| scoop      | ✅              | —            | ✅            | ✅       |
+| chocolatey | ✅ (+ UAC wrap) | —            | —             | ✅       |
 
 ### Out of scope / residual
 
@@ -163,17 +163,17 @@ Bucket list JSON:
 
 ## Error policy
 
-| Condition | Exit | Message pattern |
-|-----------|------|-----------------|
-| Adapters not injected | non-zero | `<manager>: adapters not initialized` |
-| Adapter missing for ID | non-zero | `<manager>: adapter not registered` |
-| Manager not installed / not on PATH | non-zero | `<manager> is not available on this system (not installed or not in PATH)` |
-| Detect call fails | non-zero | `<manager>: detect failed: …` |
-| List/search/install/uninstall/upgrade fails | non-zero | `<manager> <action> failed: …` |
-| Search/install without required args | non-zero | cobra `ExactArgs` / `RangeArgs` validation |
-| Unknown `--output` | non-zero | `unknown output format "…" (supported: text, json)` |
-| Capability not implemented | non-zero | `<manager> does not support <capability>` |
-| Chocolatey elevation-related failure | non-zero | original error + `(hint: … re-run as Administrator)` |
+| Condition                                   | Exit     | Message pattern                                                            |
+| ------------------------------------------- | -------- | -------------------------------------------------------------------------- |
+| Adapters not injected                       | non-zero | `<manager>: adapters not initialized`                                      |
+| Adapter missing for ID                      | non-zero | `<manager>: adapter not registered`                                        |
+| Manager not installed / not on PATH         | non-zero | `<manager> is not available on this system (not installed or not in PATH)` |
+| Detect call fails                           | non-zero | `<manager>: detect failed: …`                                              |
+| List/search/install/uninstall/upgrade fails | non-zero | `<manager> <action> failed: …`                                             |
+| Search/install without required args        | non-zero | cobra `ExactArgs` / `RangeArgs` validation                                 |
+| Unknown `--output`                          | non-zero | `unknown output format "…" (supported: text, json)`                        |
+| Capability not implemented                  | non-zero | `<manager> does not support <capability>`                                  |
+| Chocolatey elevation-related failure        | non-zero | original error + `(hint: … re-run as Administrator)`                       |
 
 Notes:
 
@@ -196,11 +196,11 @@ cmd/gz-pm/command (presentation)
 
 ## Acceptance (issues 22–24)
 
-| AC | Status |
-|----|--------|
-| Spec: command structure / output / error policy | ✅ this document |
-| `gz-pm winget` list/search/install/uninstall/upgrade/source list + tests | ✅ mock executor |
-| `gz-pm scoop` list/search/install/uninstall/upgrade/bucket + tests | ✅ mock executor |
+| AC                                                                          | Status           |
+| --------------------------------------------------------------------------- | ---------------- |
+| Spec: command structure / output / error policy                             | ✅ this document |
+| `gz-pm winget` list/search/install/uninstall/upgrade/source list + tests    | ✅ mock executor |
+| `gz-pm scoop` list/search/install/uninstall/upgrade/bucket + tests          | ✅ mock executor |
 | `gz-pm chocolatey` list/search/install/uninstall/upgrade + UAC wrap + tests | ✅ mock executor |
 
 Progress bars and real UAC elevation remain out of scope.

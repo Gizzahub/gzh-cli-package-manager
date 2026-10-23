@@ -24,12 +24,12 @@ one CLI (and importable command tree) it:
 This is a feature-library project — a single PRODUCT.md is sufficient. It
 replaces a PRD.
 
-| 제공하는 것 (Is)                              | 되지 않을 것 (Is Not)                       |
-| --------------------------------------------- | ------------------------------------------- |
-| 설치된 매니저 감지·상태 보고                  | 패키지 매니저 자체 구현                     |
-| 여러 매니저의 일괄 업데이트 오케스트레이션    | 매니저 자체를 설치해 주는 부트스트래퍼      |
-| dry-run·전략(latest/stable/minor/micro/fixed) 선택 | 개별 패키지 install/remove/search        |
-| text·json 출력, 매니저별 종료 코드            | GUI·TUI·REST API·클라우드 동기화            |
+| 제공하는 것 (Is)                                   | 되지 않을 것 (Is Not)                  |
+| -------------------------------------------------- | -------------------------------------- |
+| 설치된 매니저 감지·상태 보고                       | 패키지 매니저 자체 구현                |
+| 여러 매니저의 일괄 업데이트 오케스트레이션         | 매니저 자체를 설치해 주는 부트스트래퍼 |
+| dry-run·전략(latest/stable/minor/micro/fixed) 선택 | 개별 패키지 install/remove/search      |
+| text·json 출력, 매니저별 종료 코드                 | GUI·TUI·REST API·클라우드 동기화       |
 
 ______________________________________________________________________
 

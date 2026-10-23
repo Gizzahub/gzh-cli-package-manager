@@ -5,13 +5,14 @@
 **Deciders**: Project Team
 **Related**: ADR-001 (Standalone Extraction), ADR-003 (Hexagonal Ports)
 
----
+______________________________________________________________________
 
 ## Context
 
 We need to decide on the architectural pattern for gzh-cli-package-manager. The original gzh-cli PM code (~11,662 lines) uses a relatively flat structure with some separation of concerns, but lacks formal layering.
 
 **Project Goals** (from PRD):
+
 - 5+ year lifespan
 - 90%+ test coverage
 - Easy addition of new package managers
@@ -19,18 +20,20 @@ We need to decide on the architectural pattern for gzh-cli-package-manager. The 
 - Long-term maintainability
 
 **Architectural Options**:
-1. Keep flat structure (minimal refactoring)
-2. Adopt Clean Architecture with defined layers
-3. Use microservices-style architecture
-4. Event-driven architecture
 
----
+1. Keep flat structure (minimal refactoring)
+1. Adopt Clean Architecture with defined layers
+1. Use microservices-style architecture
+1. Event-driven architecture
+
+______________________________________________________________________
 
 ## Decision
 
 **Adopt Clean Architecture with 4 distinct layers: Domain, Application, Infrastructure, and Presentation.**
 
 **Layer Structure**:
+
 ```
 Presentation (cmd/pm)
     ↓
@@ -43,34 +46,39 @@ Infrastructure (pkg/infrastructure)
 
 **Dependency Rule**: Dependencies flow inward only. Outer layers depend on inner layers, never the reverse.
 
----
+______________________________________________________________________
 
 ## Rationale
 
 ### Why Clean Architecture?
 
 **1. Long-Term Maintainability**
+
 - Clear boundaries make code easier to understand years later
 - Changes in one layer don't ripple to others
 - Onboarding new developers faster (predictable structure)
 
 **2. Testability**
+
 - Domain layer: pure functions, no mocks needed (95%+ coverage achievable)
 - Application layer: mock all ports (90%+ coverage)
 - Infrastructure layer: Docker-based integration tests (85%+ coverage)
 - **Overall target: 90%+ maintained for years**
 
 **3. Flexibility**
+
 - Swap CLI for GUI without touching business logic
 - Change from YAML to Database without affecting domain
 - Add new package managers as plugins (adapter pattern)
 
 **4. Team Collaboration**
+
 - Clear ownership: domain experts own domain layer, infra experts own adapters
 - Parallel development: layers can evolve independently
 - Code reviews easier: reviewers focus on relevant layer
 
 **5. Business Logic Protection**
+
 - Domain layer has zero external dependencies
 - Update strategies, version logic are pure functions
 - Easy to verify correctness (no mocking frameworks needed)
@@ -78,49 +86,57 @@ Infrastructure (pkg/infrastructure)
 ### Why Not Other Patterns?
 
 **Flat Structure (Alternative 1)**
+
 - **Rejected**: Hard to maintain at 11,662 lines
 - **Reason**: No clear boundaries → accidental coupling increases over time
 - **Risk**: "Big ball of mud" anti-pattern after 2-3 years
 
 **Microservices (Alternative 2)**
+
 - **Rejected**: Overkill for CLI tool
 - **Reason**: Adds network latency, deployment complexity
 - **When to reconsider**: If we build hosted service (v2.0+)
 
 **Event-Driven (Alternative 3)**
+
 - **Rejected**: Unnecessary complexity
 - **Reason**: Package updates are sequential operations, not async events
 - **When to use**: If we add real-time notifications (future)
 
----
+______________________________________________________________________
 
 ## Consequences
 
 ### Positive ✅
 
 1. **Predictable Structure**
+
    - New developers know where code belongs
    - "Where does version comparison logic go?" → Domain layer
    - "Where does Homebrew API call go?" → Infrastructure layer
 
-2. **Independent Testing**
+1. **Independent Testing**
+
    - Domain: `go test ./pkg/domain/... -v` (no setup needed)
    - Application: Mock all ports, test orchestration logic
    - Infrastructure: Docker containers with real package managers
    - Each layer's tests run in < 30 seconds
 
-3. **Technology Independence**
-   - Not locked into Cobra (could use  Bubble Tea TUI)
+1. **Technology Independence**
+
+   - Not locked into Cobra (could use Bubble Tea TUI)
    - Not locked into YAML (could use SQLite, etcd)
    - Not locked into Go stdlib (could use external libs in infra)
 
-4. **Plugin Architecture**
+1. **Plugin Architecture**
+
    - Adding Pacman: Create `infrastructure/adapter/manager/pacman`
    - Implement `ManagerAdapter` interface
    - Register in factory
    - **Estimated time: < 1 day per new manager**
 
-5. **Clear Review Guidelines**
+1. **Clear Review Guidelines**
+
    - Domain PR: Check business logic correctness
    - Application PR: Check workflow orchestration
    - Infrastructure PR: Check external integration
@@ -129,39 +145,47 @@ Infrastructure (pkg/infrastructure)
 ### Negative ❌
 
 1. **Initial Complexity**
+
    - More files than flat structure (~50 files vs ~20)
    - Learning curve for Clean Architecture concepts
    - Junior developers may struggle initially
 
    **Mitigation**:
+
    - Comprehensive ARCHITECTURE.md documentation
    - Code examples for each layer
    - Onboarding guide with video walkthrough
 
-2. **Boilerplate Code**
+1. **Boilerplate Code**
+
    - Port interfaces need definition
    - DTOs for cross-layer communication
    - Adapter implementations for each manager
 
    **Mitigation**:
+
    - Code generators for adapters (`make generate-adapter name=pacman`)
    - Templates in `docs/development/patterns.md`
    - Acceptable trade-off for long-term maintainability
 
-3. **Indirection Overhead**
+1. **Indirection Overhead**
+
    - More function calls between layers
    - Slight performance impact (measurable but not noticeable)
 
    **Mitigation**:
+
    - Performance tests in CI (must be within 10% of baseline)
    - Go compiler optimizes away most indirection
    - Real bottleneck is network/disk I/O, not CPU
 
-4. **Potential Over-Engineering**
+1. **Potential Over-Engineering**
+
    - Risk of creating unnecessary abstractions
    - "Analysis paralysis" when deciding layer boundaries
 
    **Mitigation**:
+
    - Follow established patterns from DDD/Clean Architecture literature
    - YAGNI principle: don't create abstractions until needed
    - Code reviews catch over-abstraction
@@ -169,40 +193,46 @@ Infrastructure (pkg/infrastructure)
 ### Neutral 🔄
 
 1. **Learning Investment**
+
    - Team must learn Clean Architecture principles
    - Initial development slower (weeks 3-4)
    - Pays off in weeks 5+ with faster feature development
 
-2. **File Organization**
+1. **File Organization**
+
    - More directories to navigate
    - IDE helps (jump to definition)
    - Tree view shows structure clearly
 
----
+______________________________________________________________________
 
 ## Implementation Guidelines
 
 ### Layer Definitions
 
 **Domain Layer** (`pkg/domain/`):
+
 - **Contains**: Entities, Value Objects, Domain Services, Repository Interfaces
 - **Dependencies**: Go stdlib only (no external libraries)
 - **Example**: `Manager`, `Package`, `UpdateStrategy`
 - **Rule**: No `import` statements to other layers
 
 **Application Layer** (`pkg/application/`):
+
 - **Contains**: Use Cases, DTOs, Input/Output Ports
 - **Dependencies**: Domain layer, port interfaces
 - **Example**: `UpdateAllManagersUseCase`
 - **Rule**: No infrastructure imports (use ports)
 
 **Infrastructure Layer** (`pkg/infrastructure/`):
+
 - **Contains**: Adapters, Repository Implementations, External Integrations
 - **Dependencies**: Domain (interfaces), Application (ports), External libraries
 - **Example**: `HomebrewAdapter`, `YAMLConfigRepository`
 - **Rule**: Implements domain and application interfaces
 
 **Presentation Layer** (`cmd/pm/`):
+
 - **Contains**: CLI Commands, Input Validation, Output Formatting
 - **Dependencies**: Application (use cases), Infrastructure (for DI)
 - **Example**: `UpdateCommand`, `TextFormatter`
@@ -237,6 +267,7 @@ func main() {
 ```
 
 **Why Manual DI?**
+
 - Explicit, understandable
 - No magic/reflection
 - Compile-time safety
@@ -254,6 +285,7 @@ func main() {
 ### Testing Strategy Per Layer
 
 **Domain Layer**:
+
 ```go
 // No setup, pure functions
 func TestStableStrategy_SelectVersion(t *testing.T) {
@@ -264,6 +296,7 @@ func TestStableStrategy_SelectVersion(t *testing.T) {
 ```
 
 **Application Layer**:
+
 ```go
 // Mock all ports
 func TestUpdateAllUseCase(t *testing.T) {
@@ -277,6 +310,7 @@ func TestUpdateAllUseCase(t *testing.T) {
 ```
 
 **Infrastructure Layer**:
+
 ```go
 // Docker-based integration tests
 func TestHomebrewAdapter_Update(t *testing.T) {
@@ -289,13 +323,14 @@ func TestHomebrewAdapter_Update(t *testing.T) {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Validation
 
 ### Architectural Conformance
 
 **Dependency Check**:
+
 ```bash
 # Domain layer must not import other layers
 go list -test -deps ./pkg/domain/... | grep -E "(application|infrastructure|cmd)" && echo "VIOLATION" || echo "OK"
@@ -305,12 +340,14 @@ go list -test -deps ./pkg/application/... | grep -E "(infrastructure|cmd)" && ec
 ```
 
 **File Size Check** (LLM-Friendly):
+
 ```bash
 # No file should exceed 500 lines
 find pkg cmd -name "*.go" -exec wc -l {} \; | awk '$1 > 500 {print $2 ": " $1 " lines (TOO LARGE)"}'
 ```
 
 **Cyclomatic Complexity**:
+
 ```bash
 gocyclo -over 15 pkg cmd
 # Should return empty (all functions < 15 complexity)
@@ -324,11 +361,12 @@ gocyclo -over 15 pkg cmd
 - [ ] Adding new package manager takes < 1 day
 - [ ] New developers productive within 1 week
 
----
+______________________________________________________________________
 
 ## Migration from Flat Structure
 
 **Original gzh-cli Structure**:
+
 ```
 cmd/pm/
   update/
@@ -339,6 +377,7 @@ internal/pm/
 ```
 
 **New Clean Architecture**:
+
 ```
 pkg/domain/
   manager/
@@ -360,33 +399,40 @@ cmd/pm/
 ```
 
 **Benefits**:
+
 - 600-line God file → 5 files of 100-300 lines each
 - Clear responsibilities
 - Each piece independently testable
 
----
+______________________________________________________________________
 
 ## Alternatives Considered
 
 ### Alternative 1: Keep Flat Structure
+
 **Why Rejected**:
+
 - Technical debt accumulates quickly in flat structures
 - Testing becomes harder as coupling increases
 - Violates project's 5+ year lifespan goal
 
 ### Alternative 2: Hexagonal Architecture Only (No Explicit Layers)
+
 **Why Rejected**:
+
 - Hexagonal is good for ports/adapters but doesn't enforce layering
 - Clean Architecture provides both layering AND hexagonal
 - Adopted Hexagonal as complementary pattern (see ADR-003)
 
 ### Alternative 3: DDD Tactical Patterns (Aggregates, Entities, Value Objects)
+
 **Why Partially Adopted**:
+
 - Using Entities and Value Objects from DDD
 - Not using Aggregates (overkill for this domain)
 - Not using Domain Events (YAGNI for v1.0)
 
----
+______________________________________________________________________
 
 ## References
 
@@ -396,15 +442,15 @@ cmd/pm/
 - **ARCHITECTURE.md**: `/ARCHITECTURE.md` - Full architecture documentation
 - **Go Clean Architecture Example**: https://github.com/bxcodec/go-clean-arch
 
----
+______________________________________________________________________
 
 ## Revision History
 
-| Date | Changes | Author |
-|------|---------|--------|
+| Date       | Changes         | Author      |
+| ---------- | --------------- | ----------- |
 | 2025-01-27 | Initial version | Claude Code |
 
----
+______________________________________________________________________
 
 ## Status Notes
 

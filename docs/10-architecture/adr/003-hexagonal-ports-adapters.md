@@ -5,34 +5,38 @@
 **Deciders**: Project Team
 **Related**: ADR-002 (Clean Architecture)
 
----
+______________________________________________________________________
 
 ## Context
 
 Clean Architecture (ADR-002) provides layering, but we need a pattern for how layers interact, especially:
+
 - How application layer calls external systems (Homebrew, ASDF, file system)
 - How to make external dependencies swappable
 - How to test business logic without external dependencies
 
 **Design Goal**: Application core should be independent of:
+
 - CLI frameworks (Cobra)
 - Package manager implementations (Homebrew, APT)
 - File system and OS specifics
 - Network I/O
 
----
+______________________________________________________________________
 
 ## Decision
 
 **Adopt Hexagonal Architecture (Ports & Adapters pattern) to complement Clean Architecture layers.**
 
 **Key Concepts**:
+
 - **Ports**: Interfaces defining how application interacts with external world
 - **Adapters**: Implementations of ports for specific technologies
 - **Primary/Driving Adapters**: Trigger application (CLI, future REST API)
 - **Secondary/Driven Adapters**: Used by application (Database, External APIs)
 
 **Structure**:
+
 ```
           Primary Adapters
         (CLI, REST API, GUI)
@@ -54,13 +58,14 @@ Clean Architecture (ADR-002) provides layering, but we need a pattern for how la
     (Homebrew, YAML, Shell Executor)
 ```
 
----
+______________________________________________________________________
 
 ## Rationale
 
 ### Why Hexagonal Architecture?
 
 **1. Testability Without Mocks**
+
 - Application core has no knowledge of external systems
 - Tests use simple in-memory adapters
 - Example: Test update logic without actual Homebrew installation
@@ -76,32 +81,37 @@ mockAdapter := &MockBrewAdapter{
 ```
 
 **2. Swappable Implementations**
+
 - Replace Cobra with Bubble Tea TUI → Change primary adapter only
 - Replace YAML with SQLite → Change secondary adapter only
 - Application core unchanged
 
 **3. Delayed Technology Decisions**
+
 - Build core first with in-memory adapters
 - Choose real implementations later
 - Example: Started with in-memory config, added YAML later
 
 **4. Clear Boundaries**
+
 - Port interfaces document application's needs
 - Adapters isolated to infrastructure layer
 - Easy to find code: "Where's the Homebrew logic?" → `infrastructure/adapter/manager/homebrew/`
 
 **5. Plugin Architecture**
+
 - New package managers → Implement `ManagerAdapter` port
 - Register in factory → No core changes
 - Community can contribute adapters
 
----
+______________________________________________________________________
 
 ## Consequences
 
 ### Positive ✅
 
 1. **Framework Independence**
+
    - Not locked into Cobra
    - Could build web UI using same core
    - Example migration path:
@@ -114,24 +124,28 @@ mockAdapter := &MockBrewAdapter{
      TUI screen → call use case
      ```
 
-2. **Test Isolation**
+1. **Test Isolation**
+
    - Unit tests: in-memory adapters (fast)
    - Integration tests: real adapters in Docker (comprehensive)
    - E2E tests: full system with real environment
    - **Each test level independent**
 
-3. **Parallel Development**
+1. **Parallel Development**
+
    - Team A: Build core with mock adapters
    - Team B: Implement Homebrew adapter
    - Team C: Implement ASDF adapter
    - **No blocking dependencies**
 
-4. **Explicit Dependencies**
+1. **Explicit Dependencies**
+
    - Port interfaces document what application needs
    - Example: `CommandExecutor` port shows we need shell execution
    - New developers understand dependencies from interfaces
 
-5. **Future-Proof**
+1. **Future-Proof**
+
    - Technology changes contained to adapters
    - Example: Homebrew v5 → Update adapter only
    - Core business logic unaffected
@@ -139,31 +153,37 @@ mockAdapter := &MockBrewAdapter{
 ### Negative ❌
 
 1. **Interface Proliferation**
+
    - Many small interfaces (one per external dependency)
    - Can feel like boilerplate
    - Example: `Logger`, `Executor`, `Notifier`, `Repository`
 
    **Mitigation**:
+
    - Interface Segregation Principle (small, focused interfaces)
    - Generated documentation shows all ports
    - Worth it for testability gains
 
-2. **Indirection Layers**
+1. **Indirection Layers**
+
    - Port → Adapter → External system (3 hops)
    - Slight performance overhead
    - Example: Use Case → Port → Adapter → Homebrew CLI
 
    **Mitigation**:
+
    - Performance impact negligible (I/O is bottleneck)
    - Compiler optimizes indirection
    - Clarity > minimal performance cost
 
-3. **Learning Curve**
+1. **Learning Curve**
+
    - Developers must understand ports vs adapters
    - "Where do I add code?" questions initially
    - Example confusion: "Is this a port or adapter?"
 
    **Mitigation**:
+
    - Clear naming: `*Port` vs `*Adapter`
    - Documentation with examples
    - Code review catches misplacements
@@ -171,26 +191,29 @@ mockAdapter := &MockBrewAdapter{
 ### Neutral 🔄
 
 1. **Port Interface Design**
+
    - Must get interfaces right upfront
    - Changes affect multiple adapters
    - Example: Adding parameter to `Execute()` breaks all adapters
 
    **Approach**: Start with simple interfaces, evolve carefully
 
-2. **Adapter Implementations**
+1. **Adapter Implementations**
+
    - Each adapter is independent
    - Code duplication across adapters acceptable
    - Example: Both Homebrew and APT parse version strings
 
    **Trade-off**: Duplication > wrong abstraction
 
----
+______________________________________________________________________
 
 ## Implementation
 
 ### Port Definitions
 
 **Input Ports** (Application → Presentation):
+
 ```go
 // pkg/application/port/input/update_port.go
 package input
@@ -202,6 +225,7 @@ type UpdateUseCase interface {
 ```
 
 **Output Ports** (Application → Infrastructure):
+
 ```go
 // pkg/application/port/output/executor_port.go
 package output
@@ -221,6 +245,7 @@ type ManagerRepository interface {
 ### Adapter Implementations
 
 **Primary Adapter** (CLI → Application):
+
 ```go
 // cmd/pm/command/update.go
 package command
@@ -243,6 +268,7 @@ func NewUpdateCommand(updateUC port.UpdateUseCase) *cobra.Command {
 ```
 
 **Secondary Adapter** (Application → Homebrew):
+
 ```go
 // pkg/infrastructure/adapter/manager/homebrew/adapter.go
 package homebrew
@@ -288,19 +314,21 @@ func main() {
 ```
 
 **Flow**:
-1. CLI Command (primary adapter) calls UpdateUseCase (input port)
-2. UpdateUseCase calls ManagerRepository (output port)
-3. ManagerRepository calls ManagerAdapter implementations
-4. ManagerAdapter calls CommandExecutor (output port)
-5. Shell executor (secondary adapter) runs actual commands
 
----
+1. CLI Command (primary adapter) calls UpdateUseCase (input port)
+1. UpdateUseCase calls ManagerRepository (output port)
+1. ManagerRepository calls ManagerAdapter implementations
+1. ManagerAdapter calls CommandExecutor (output port)
+1. Shell executor (secondary adapter) runs actual commands
+
+______________________________________________________________________
 
 ## Port Design Principles
 
 ### Interface Segregation
 
 **BAD** - One big interface:
+
 ```go
 type PackageManager interface {
     Detect() bool
@@ -315,6 +343,7 @@ type PackageManager interface {
 ```
 
 **GOOD** - Small, focused interfaces:
+
 ```go
 type ManagerDetector interface {
     Detect(ctx context.Context) (bool, error)
@@ -338,7 +367,7 @@ type ManagerExporter interface {
 - Input ports: Verb-based (`UpdateUseCase`, `BootstrapUseCase`)
 - Output ports: Noun-based (`ManagerRepository`, `CommandExecutor`)
 
----
+______________________________________________________________________
 
 ## Testing with Ports & Adapters
 
@@ -370,6 +399,7 @@ func TestUpdateAllUseCase(t *testing.T) {
 ```
 
 **Benefits**:
+
 - No external dependencies
 - Fast (< 1ms per test)
 - Deterministic
@@ -394,17 +424,19 @@ func TestHomebrewAdapter_Update(t *testing.T) {
 ```
 
 **Benefits**:
+
 - Validates actual integration
 - Catches API changes
 - Confidence in production behavior
 
----
+______________________________________________________________________
 
 ## Examples of Ports
 
 ### Current Ports (v1.0)
 
 **Input Ports** (Use Case Interfaces):
+
 - `UpdateUseCase`
 - `BootstrapUseCase`
 - `SyncUseCase`
@@ -412,6 +444,7 @@ func TestHomebrewAdapter_Update(t *testing.T) {
 - `StatusUseCase`
 
 **Output Ports** (Dependency Interfaces):
+
 - `CommandExecutor` - Execute shell commands
 - `ManagerRepository` - Manager CRUD operations
 - `ConfigurationRepository` - Config load/save
@@ -425,13 +458,14 @@ func TestHomebrewAdapter_Update(t *testing.T) {
 - `MetricsCollector` - Usage metrics
 - `SecretsManager` - Secure token storage
 
----
+______________________________________________________________________
 
 ## Validation
 
 ### Architecture Conformance
 
 **Check port usage**:
+
 ```bash
 # Application layer should only import port interfaces
 grep -r "import.*infrastructure" pkg/application/ && echo "VIOLATION" || echo "OK"
@@ -450,7 +484,7 @@ find pkg/application/port -name "*.go" | wc -l
 - [ ] Integration tests use real adapters
 - [ ] Adding new package manager: < 1 day (adapter implementation)
 
----
+______________________________________________________________________
 
 ## Alternatives Considered
 
@@ -476,7 +510,7 @@ func (uc *UpdateUseCase) Execute() {
 
 **Rejected**: Anti-pattern, hides dependencies, hard to test
 
----
+______________________________________________________________________
 
 ## References
 
@@ -486,15 +520,15 @@ func (uc *UpdateUseCase) Execute() {
 - **ADR-002**: Clean Architecture provides the layering
 - **ARCHITECTURE.md**: `/ARCHITECTURE.md` - Implementation details
 
----
+______________________________________________________________________
 
 ## Revision History
 
-| Date | Changes | Author |
-|------|---------|--------|
+| Date       | Changes         | Author      |
+| ---------- | --------------- | ----------- |
 | 2025-01-27 | Initial version | Claude Code |
 
----
+______________________________________________________________________
 
 ## Status Notes
 

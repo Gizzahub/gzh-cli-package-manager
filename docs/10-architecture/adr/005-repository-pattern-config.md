@@ -5,17 +5,19 @@
 **Deciders**: Project Team
 **Related**: ADR-002 (Clean Architecture), ADR-003 (Hexagonal Ports)
 
----
+______________________________________________________________________
 
 ## Context
 
 We need to decide how to manage configuration data for gzh-cli-package-manager. Configuration includes:
+
 - Package manager settings and preferences
 - Update strategies per manager
 - Bootstrap/sync templates
 - User preferences (output format, logging level)
 
 **Requirements**:
+
 - Support local file-based storage (v1.0)
 - Flexible enough for future cloud/database backends
 - Testable without file system dependencies
@@ -23,18 +25,20 @@ We need to decide how to manage configuration data for gzh-cli-package-manager. 
 - Version migration support
 
 **Options**:
-1. Direct file I/O in use cases (no abstraction)
-2. Repository pattern with interface abstraction
-3. ORM/database-first approach
-4. Key-value store (etcd, consul)
 
----
+1. Direct file I/O in use cases (no abstraction)
+1. Repository pattern with interface abstraction
+1. ORM/database-first approach
+1. Key-value store (etcd, consul)
+
+______________________________________________________________________
 
 ## Decision
 
 **Adopt Repository Pattern with YAML file-based implementation for v1.0.**
 
 **Repository Interfaces** (Domain Layer):
+
 ```go
 type ConfigurationRepository interface {
     Load(ctx context.Context) (*Config, error)
@@ -50,6 +54,7 @@ type ManagerConfigRepository interface {
 ```
 
 **Implementation** (Infrastructure Layer):
+
 ```go
 // YAML-based implementation for v1.0
 type YAMLConfigRepository struct {
@@ -59,13 +64,14 @@ type YAMLConfigRepository struct {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Rationale
 
 ### Why Repository Pattern?
 
 **1. Abstraction from Storage Details**
+
 - Use cases don't care if config is in YAML, JSON, SQLite, or cloud
 - Example:
   ```go
@@ -77,6 +83,7 @@ type YAMLConfigRepository struct {
   ```
 
 **2. Testability**
+
 - Unit tests use in-memory implementation
 - No file I/O in fast test suites
 - Example:
@@ -90,6 +97,7 @@ type YAMLConfigRepository struct {
   ```
 
 **3. Future Flexibility**
+
 - v1.0: YAML files in `~/.gz-pm/`
 - v1.1: SQLite for better querying
 - v1.2: Cloud sync (Dropbox, Google Drive)
@@ -97,11 +105,13 @@ type YAMLConfigRepository struct {
 - **Application layer unchanged**
 
 **4. Clean Architecture Compliance**
+
 - Repository interface in Domain layer (no dependencies)
 - Repository implementation in Infrastructure layer
 - Use cases depend on interface, not implementation
 
 **5. Migration Support**
+
 - Repository can handle version upgrades
 - Example:
   ```go
@@ -121,21 +131,25 @@ type YAMLConfigRepository struct {
 ### Why YAML for v1.0?
 
 **1. Human-Readable**
+
 - Users can edit config manually
 - Easy to understand structure
 - Comments supported
 
 **2. Ecosystem Compatibility**
+
 - Standard in DevOps tooling
 - gzh-cli already uses YAML
 - Migration from gzh-cli easier
 
 **3. Simple Implementation**
+
 - `gopkg.in/yaml.v3` is mature and fast
 - No complex schema management
 - Straightforward serialization
 
 **4. Version Control Friendly**
+
 - Text format works well with git
 - Diffs are readable
 - Team can share configs via repo
@@ -143,6 +157,7 @@ type YAMLConfigRepository struct {
 ### Why Not Other Options?
 
 **Direct File I/O (Alternative 1)**
+
 - **Rejected**: Tight coupling to file system
 - **Reason**: Hard to test, impossible to add cloud sync later
 - **Example Problem**:
@@ -155,28 +170,32 @@ type YAMLConfigRepository struct {
   ```
 
 **Database-First (Alternative 3)**
+
 - **Rejected for v1.0**: Overkill for CLI tool
 - **Reason**: Adds complexity, requires migration scripts
 - **When to reconsider**: v1.2+ if querying becomes complex
 
 **Key-Value Store (Alternative 4)**
+
 - **Rejected for v1.0**: External dependency
 - **Reason**: Users don't want to run etcd for a CLI tool
 - **When to use**: v2.0 team/enterprise features
 
----
+______________________________________________________________________
 
 ## Consequences
 
 ### Positive ✅
 
 1. **Swappable Storage Backends**
+
    - v1.0: YAML files
    - v1.1: SQLite for faster lookups
    - v1.2: Cloud storage for sync
    - Application code unchanged
 
-2. **Fast Unit Tests**
+1. **Fast Unit Tests**
+
    - In-memory repository for tests
    - No file system setup/teardown
    - Tests run in < 10ms
@@ -188,17 +207,20 @@ type YAMLConfigRepository struct {
      result, _ := uc.Execute(ctx, req)
      ```
 
-3. **Thread-Safe Config Access**
+1. **Thread-Safe Config Access**
+
    - Repository handles locking
    - Concurrent reads/writes safe
    - Use cases don't worry about race conditions
 
-4. **Version Migration Support**
+1. **Version Migration Support**
+
    - Repository handles schema changes
    - Users upgrade seamlessly
    - Example: v1 YAML → v2 YAML with new fields
 
-5. **Separation of Concerns**
+1. **Separation of Concerns**
+
    - Domain: Defines what config is needed (interface)
    - Application: Uses config via interface
    - Infrastructure: Handles file I/O, parsing
@@ -206,6 +228,7 @@ type YAMLConfigRepository struct {
 ### Negative ❌
 
 1. **Abstraction Overhead**
+
    - Repository interface + implementation = more files
    - Simple config load becomes multi-layer
    - Example:
@@ -217,7 +240,8 @@ type YAMLConfigRepository struct {
 
    **Mitigation**: Worth it for testability and future flexibility
 
-2. **Initial Implementation Cost**
+1. **Initial Implementation Cost**
+
    - Must write repository interface + implementation
    - In-memory version for tests
    - YAML version for production
@@ -225,12 +249,14 @@ type YAMLConfigRepository struct {
 
    **Mitigation**: One-time cost, pays off in maintainability
 
-3. **Potential Over-Engineering**
+1. **Potential Over-Engineering**
+
    - Config might stay simple (YAML forever)
    - Repository abstraction unused
    - Risk: "YAGNI" (You Aren't Gonna Need It)
 
    **Mitigation**:
+
    - Pattern is standard in Clean Architecture
    - Testability alone justifies it
    - Team can add backends if needed
@@ -238,16 +264,18 @@ type YAMLConfigRepository struct {
 ### Neutral 🔄
 
 1. **Configuration Format**
+
    - YAML for v1.0
    - Can coexist with JSON, TOML via adapters
    - Format choice independent of repository pattern
 
-2. **File Location**
+1. **File Location**
+
    - v1.0: `~/.gz-pm/config.yaml`
    - v1.1+: Could be `~/.config/gz-pm/` (XDG)
    - Repository hides location from application
 
----
+______________________________________________________________________
 
 ## Implementation
 
@@ -546,7 +574,7 @@ func main() {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Configuration File Format
 
@@ -607,7 +635,7 @@ CREATE TABLE manager_configs (
 );
 ```
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
@@ -662,7 +690,7 @@ func TestYAMLConfigRepository_RoundTrip(t *testing.T) {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Migration Path
 
@@ -694,7 +722,7 @@ func (m *ConfigMigrator) MigrateToSQLite(ctx context.Context) error {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Validation
 
@@ -718,22 +746,25 @@ grep -r "YAMLConfigRepository\|SQLiteConfigRepository" pkg/application/ && echo 
 - [ ] Configuration persists across runs
 - [ ] Thread-safe concurrent access
 
----
+______________________________________________________________________
 
 ## Alternatives Considered
 
 ### Alternative 1: Direct File I/O in Use Cases
+
 **Rejected**: Violates Clean Architecture, impossible to test without filesystem
 
 ### Alternative 2: Global Configuration Singleton
+
 **Rejected**: Hard to test, thread-safety issues, tight coupling
 
 ### Alternative 3: Viper Configuration Library
+
 **Considered**: Viper provides rich config management
 **Rejected for v1.0**: Adds external dependency, repository pattern gives us same flexibility with less complexity
 **Reconsider**: v1.2+ if config becomes very complex
 
----
+______________________________________________________________________
 
 ## References
 
@@ -743,27 +774,29 @@ grep -r "YAMLConfigRepository\|SQLiteConfigRepository" pkg/application/ && echo 
 - **ADR-002**: Clean Architecture layers
 - **ADR-003**: Port interfaces and adapters
 
----
+______________________________________________________________________
 
 ## Revision History
 
-| Date | Changes | Author |
-|------|---------|--------|
+| Date       | Changes         | Author      |
+| ---------- | --------------- | ----------- |
 | 2025-01-27 | Initial version | Claude Code |
 
----
+______________________________________________________________________
 
 ## Status Notes
 
 **Current Status**: Accepted
 
 **Implementation Plan**:
+
 - Week 4: Domain layer (Config entity + repository interface)
 - Week 5: Infrastructure layer (YAML repository implementation)
 - Week 6: Testing (in-memory repository + tests)
 - Week 7: Integration (wire into use cases)
 
 **Future Enhancements**:
+
 - v1.1: SQLite implementation for faster querying
 - v1.2: Cloud sync support (Dropbox, Google Drive adapters)
 - v2.0: Team shared configs (etcd, consul adapters)
