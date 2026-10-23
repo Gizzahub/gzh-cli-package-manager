@@ -44,6 +44,9 @@ Examples:
   # Preview what would be installed
   gz-pm bootstrap --config mysetup.yaml --dry-run`,
 	RunE: func(_ *cobra.Command, _ []string) error {
+		if bootstrapOutput != outputFormatText && bootstrapOutput != outputFormatJSON {
+			return fmt.Errorf("unknown output format %q (supported: text, json)", bootstrapOutput)
+		}
 		if bootstrapUseCase == nil {
 			fmt.Println("❌ Error: Bootstrap use case not initialized")
 			return nil

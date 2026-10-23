@@ -37,6 +37,9 @@ jobs:
     - name: Check license payload
       run: ./scripts/release/payload-check.sh
 
+    - name: Enforce release coverage floor
+      run: make test-coverage release-coverage-check
+
   build:
     name: Build
     needs: verify-release-inputs
@@ -141,6 +144,28 @@ jobs:
         mkdir -p dist
         ./scripts/release/checksums.sh --input-dir artifacts --output dist/checksums.txt
 
+    - name: Generate Homebrew cask candidate
+      env:
+        REQUESTED_VERSION: ${{ github.event.inputs.version || '' }}
+      run: |
+        set -euo pipefail
+        if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+          version="${GITHUB_REF#refs/tags/v}"
+        elif [[ -n "$REQUESTED_VERSION" ]]; then
+          version="$REQUESTED_VERSION"
+        else
+          echo "No release version requested; skipping release cask candidate."
+          exit 0
+        fi
+        ./scripts/release/homebrew-cask.sh "$version" dist/checksums.txt > dist/gz-pm.rb
+
+    - name: Upload Homebrew cask candidate
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      with:
+        name: homebrew-cask
+        path: dist/gz-pm.rb
+        if-no-files-found: ignore
+
     - name: Upload checksums
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
@@ -183,6 +208,7 @@ jobs:
           artifacts/**/*.tar.gz
           artifacts/**/*.zip
           artifacts/**/checksums.txt
+          artifacts/**/gz-pm.rb
         # Create the release as a draft so it is inspected before it is public.
         # A draft can be deleted; a published release may already have been
         # fetched by watchers or polling tooling, and you cannot know which.

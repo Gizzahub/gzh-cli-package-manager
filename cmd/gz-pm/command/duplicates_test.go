@@ -127,8 +127,8 @@ func testDuplicateSummaryUnchanged(t *testing.T) {
 	})
 	statusUseCase = nil
 	out, err := executeStatus(t)
-	if err != nil {
-		t.Fatalf("summary exit: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "status use case not initialized") {
+		t.Fatalf("uninitialized summary should fail: %v", err)
 	}
 	if inventory.calls != 0 {
 		t.Fatalf("summary-unchanged: collector calls = %d", inventory.calls)

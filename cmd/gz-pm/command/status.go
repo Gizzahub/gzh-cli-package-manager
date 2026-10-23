@@ -43,9 +43,11 @@ Example:
   gz-pm status --verbose # Show packages and details
   gz-pm status -v        # Short form`,
 	RunE: func(_ *cobra.Command, _ []string) error {
+		if statusOutput != outputFormatText && statusOutput != outputFormatJSON {
+			return fmt.Errorf("unknown output format %q (supported: text, json)", statusOutput)
+		}
 		if statusUseCase == nil {
-			fmt.Println("❌ Error: Status use case not initialized")
-			return nil
+			return fmt.Errorf("status use case not initialized")
 		}
 
 		ctx := context.Background()
@@ -56,8 +58,7 @@ Example:
 
 		resp, err := statusUseCase.GetStatus(ctx, req)
 		if err != nil {
-			fmt.Printf("❌ Error: %v\n", err)
-			return nil
+			return fmt.Errorf("get status: %w", err)
 		}
 
 		// Handle output format
