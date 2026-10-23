@@ -58,7 +58,7 @@ func TestHomebrewCaskRequiresBothUniqueChecksums(t *testing.T) {
 				t.Fatalf("valid=%v, error=%v, output=%s", tc.valid, err, out)
 			}
 			if tc.valid {
-				for _, want := range []string{arm, intel, `version "0.1.0"`, "/releases/download/v#{version}/", `binary "gz-pm-darwin-#{arch}/gz-pm"`} {
+				for _, want := range []string{arm, intel, `version "0.1.0"`, "/releases/download/v#{version}/", `binary "gz-pm-darwin-#{arch}/gz-pm"`, "postflight_steps do\n    on_macos do", `run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{staged_path}}/gz-pm-darwin-#{arch}/gz-pm"]`} {
 					if !strings.Contains(string(out), want) {
 						t.Errorf("cask missing %s", want)
 					}

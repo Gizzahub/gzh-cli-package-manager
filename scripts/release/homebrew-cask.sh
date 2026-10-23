@@ -34,5 +34,11 @@ cask "gz-pm" do
   homepage "https://github.com/Gizzahub/gzh-cli-package-manager"
 
   binary "gz-pm-darwin-#{arch}/gz-pm"
+
+  postflight_steps do
+    on_macos do
+      run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{staged_path}}/gz-pm-darwin-#{arch}/gz-pm"]
+    end
+  end
 end
 EOF
