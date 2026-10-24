@@ -75,11 +75,3 @@ install-mdformat: ## install the pinned Markdown bundle into bin/tools
 	@$(MDFORMAT_PYTHON_OK) || { echo "mdformat requires Python >=3.11 at $(MDFORMAT_PYTHON)" >&2; exit 1; }
 	@$(MDFORMAT_VERSION_OK) || { echo "mdformat version/plugin set mismatch: $(MDFORMAT)" >&2; exit 1; }
 	@$(MDFORMAT_DEPS_OK) || { echo "mdformat dependencies do not match $(MDFORMAT_CONSTRAINTS)" >&2; exit 1; }
-
-install-goreleaser: ## Install goreleaser
-	@echo "Installing goreleaser..."
-	@if ! command -v goreleaser >/dev/null 2>&1; then \
-		$(GO) install github.com/goreleaser/goreleaser/v2@v2.19.0; \
-	else \
-		echo "goreleaser already installed"; \
-	fi

@@ -2,7 +2,7 @@
 # Included by main Makefile
 
 .PHONY: dev dev-fast verify pr-check ci-local
-.PHONY: watch pre-commit release-dry
+.PHONY: watch pre-commit
 .PHONY: comments todo deps-graph changelog
 
 # ==============================================================================
@@ -38,22 +38,6 @@ watch: ## Watch for changes and run tests (requires entr)
 
 pre-commit: quality ## Run pre-commit checks
 	@echo "✅ Pre-commit checks passed"
-
-# Reports failure when goreleaser is absent, for the same reason as `security`.
-#
-# Note that this target cannot succeed as the repository stands: there is no
-# .goreleaser.yml, so goreleaser has nothing to read even when installed. The
-# release path that is actually wired up and exercised is
-# `make release-snapshot` plus .github/workflows/build.yml. Add a goreleaser
-# config before relying on this, or drop the target -- what should not continue
-# is a second, half-present release path that reports success by doing nothing.
-release-dry: ## Dry run release (needs goreleaser + a .goreleaser.yml)
-	@echo "Running release dry run..."
-	@command -v goreleaser >/dev/null 2>&1 || { \
-		echo "❌ goreleaser not installed. Run: make install-goreleaser"; \
-		exit 1; \
-	}
-	goreleaser release --snapshot --clean
 
 # ==============================================================================
 # Code Analysis
