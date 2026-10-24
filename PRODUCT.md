@@ -58,7 +58,7 @@ G4. **Clean Architecture 경계**
 
 G5. **Test reliability**
 
-- Target: 커버리지 >= 85% (현재 81.9%; `cmd/gz-pm`·`pkg/domain/cleanup`는 0%)
+- Target: 커버리지 >= 85%. 현재 값은 `make release-quality`가 생성한 `coverage.out`에서 측정하며, `make release-coverage-check`로 같은 보고서의 출시 하한을 검증한다.
 
 G6. **Cleanup execute path (issue 25 minimal)**
 
