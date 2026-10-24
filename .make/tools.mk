@@ -79,7 +79,7 @@ install-mdformat: ## install the pinned Markdown bundle into bin/tools
 install-goreleaser: ## Install goreleaser
 	@echo "Installing goreleaser..."
 	@if ! command -v goreleaser >/dev/null 2>&1; then \
-		$(GO) install github.com/goreleaser/goreleaser@latest; \
+		$(GO) install github.com/goreleaser/goreleaser/v2@v2.19.0; \
 	else \
 		echo "goreleaser already installed"; \
 	fi
