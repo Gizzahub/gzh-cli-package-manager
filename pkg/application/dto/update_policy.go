@@ -9,6 +9,9 @@ type UpdatePolicy struct {
 	MiseDir   string
 	MiseLocal bool
 	MiseTools []string
+	// Packages restricts a manager update to explicit package identifiers.
+	// Bounded updates require this selection so no adapter can widen it.
+	Packages []string
 }
 
 // ValidateUpdateStrategy rejects unknown strategies rather than widening them.

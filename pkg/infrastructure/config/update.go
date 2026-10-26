@@ -23,6 +23,7 @@ type Policy struct {
 	Directory *string            `yaml:"directory"`
 	Local     *bool              `yaml:"local"`
 	Tools     []string           `yaml:"tools"`
+	Packages  []string           `yaml:"packages"`
 }
 
 // UpdateConfig stores defaults and per-manager update policies.
@@ -81,8 +82,8 @@ func (cfg *UpdateConfig) validate() error {
 	if cfg.Defaults.Bump != nil && *cfg.Defaults.Bump {
 		return fmt.Errorf("set bump in managers.mise, not in global defaults")
 	}
-	if cfg.Defaults.Directory != nil || cfg.Defaults.Local != nil || cfg.Defaults.Tools != nil {
-		return fmt.Errorf("directory, local and tools belong in managers.mise")
+	if cfg.Defaults.Directory != nil || cfg.Defaults.Local != nil || cfg.Defaults.Tools != nil || cfg.Defaults.Packages != nil {
+		return fmt.Errorf("directory, local, tools and packages belong in a manager policy")
 	}
 	ids := make([]string, 0, len(cfg.Managers))
 	for id := range cfg.Managers {
@@ -99,9 +100,13 @@ func (cfg *UpdateConfig) validate() error {
 	return nil
 }
 
+//nolint:gocritic // Decoder-owned values are intentionally not mutated while validating.
 func validateManagerPolicy(id manager.ManagerID, policy Policy) error {
 	if policy.Tools != nil && len(policy.Tools) == 0 {
 		return fmt.Errorf("%s: tools selection must not be empty; omit tools to select all", id)
+	}
+	if policy.Packages != nil && len(policy.Packages) == 0 {
+		return fmt.Errorf("%s: packages selection must not be empty; omit packages to select all", id)
 	}
 	if !knownManager(id) {
 		return fmt.Errorf("unknown manager %q in update config", id)
@@ -111,6 +116,9 @@ func validateManagerPolicy(id manager.ManagerID, policy Policy) error {
 	}
 	if id != manager.ManagerMise && (policy.Bump != nil || policy.Directory != nil || policy.Local != nil || policy.Tools != nil) {
 		return fmt.Errorf("%s: bump, directory, local and tools are mise-only settings", id)
+	}
+	if policy.Packages != nil && id != manager.ManagerHomebrew {
+		return fmt.Errorf("%s: packages selection is currently supported only by brew", id)
 	}
 	return nil
 }
@@ -134,6 +142,7 @@ func (cfg *UpdateConfig) Resolve(id manager.ManagerID) dto.UpdatePolicy {
 	return policy
 }
 
+//nolint:gocritic // Apply reads a complete immutable policy value.
 func apply(target *dto.UpdatePolicy, source Policy) {
 	if source.Strategy != "" {
 		target.Strategy = source.Strategy
@@ -149,5 +158,8 @@ func apply(target *dto.UpdatePolicy, source Policy) {
 	}
 	if source.Tools != nil {
 		target.MiseTools = source.Tools
+	}
+	if source.Packages != nil {
+		target.Packages = source.Packages
 	}
 }

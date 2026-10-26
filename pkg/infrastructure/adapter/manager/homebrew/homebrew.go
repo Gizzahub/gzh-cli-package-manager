@@ -5,6 +5,7 @@ package homebrew
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -180,9 +181,7 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 
 	// If dry-run, just simulate
 	if opts.DryRun {
-		result.Message = "Dry-run: would update Homebrew and packages"
-		a.logger.Info(ctx, "Dry-run mode: skipping actual update")
-		return result, nil
+		return a.preview(ctx, opts.Packages, result)
 	}
 
 	// Step 1: Update Homebrew itself
@@ -207,32 +206,10 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 		return result, nil
 	}
 
-	upgradeResult, err := a.executor.Execute(ctx, "brew", "upgrade")
-	if err != nil {
-		a.logger.Warn(ctx, "brew upgrade failed", output.Field{Key: "error", Value: err.Error()})
-		result.Message = "Homebrew updated, but package upgrade failed"
-		//nolint:nilerr // brew update succeeded; package upgrades are a non-fatal partial success.
-		return result, nil
-	}
-
-	if upgradeResult.ExitCode != 0 {
-		a.logger.Warn(ctx, "brew upgrade returned non-zero exit code",
-			output.Field{Key: "exit_code", Value: upgradeResult.ExitCode})
-		result.Message = "Homebrew updated, but some packages failed to upgrade"
-		return result, nil
-	}
-
-	// Parse upgraded packages from output
-	// Homebrew upgrade output typically shows "Upgrading <package> ..." lines
-	lines := strings.SplitSeq(upgradeResult.Stdout, "\n")
-	for line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "Upgrading ") {
-			parts := strings.Fields(line)
-			if len(parts) >= 2 {
-				result.UpdatedPackages = append(result.UpdatedPackages, parts[1])
-			}
-		}
+	if err := a.upgrade(ctx, opts.Packages, result); err != nil {
+		result.Success = false
+		result.Message = err.Error()
+		return result, err
 	}
 
 	result.Message = fmt.Sprintf("Homebrew and %d packages updated successfully", len(result.UpdatedPackages))
@@ -240,4 +217,67 @@ func (a *Adapter) Update(ctx context.Context, opts adapterm.UpdateOptions) (*ada
 		output.Field{Key: "updated_packages", Value: len(result.UpdatedPackages)})
 
 	return result, nil
+}
+
+func (a *Adapter) upgrade(ctx context.Context, packages []string, result *adapterm.UpdateResult) error {
+	if len(packages) == 0 {
+		upgradeResult, err := a.executor.Execute(ctx, "brew", "upgrade")
+		if resultErr := cmdutil.CheckResult(upgradeResult, err, "brew upgrade"); resultErr != nil {
+			return resultErr
+		}
+		appendUpgraded(result, upgradeResult.Stdout)
+		return nil
+	}
+	for _, pkg := range packages {
+		upgradeResult, err := a.executor.Execute(ctx, "brew", "upgrade", pkg)
+		if resultErr := cmdutil.CheckResult(upgradeResult, err, "brew upgrade "+pkg); resultErr != nil {
+			result.FailedPackages = append(result.FailedPackages, pkg)
+			return resultErr
+		}
+		appendUpgraded(result, upgradeResult.Stdout)
+	}
+	return nil
+}
+
+func (a *Adapter) preview(ctx context.Context, packages []string, result *adapterm.UpdateResult) (*adapterm.UpdateResult, error) {
+	args := []string{"outdated", "--formula", "--json=v2"}
+	r, execErr := a.executor.Execute(ctx, "brew", args...)
+	if err := cmdutil.CheckResult(r, execErr, "list outdated brew formulae"); err != nil {
+		result.Success, result.Message = false, err.Error()
+		return result, err
+	}
+	var payload struct {
+		Formulae []struct {
+			Name    string `json:"name"`
+			Current string `json:"current_version"`
+		} `json:"formulae"`
+	}
+	if err := json.Unmarshal([]byte(r.Stdout), &payload); err != nil {
+		return result, fmt.Errorf("parse outdated brew formulae: %w", err)
+	}
+	selected := make(map[string]bool, len(packages))
+	for _, pkg := range packages {
+		selected[pkg] = true
+	}
+	available := make([]string, 0, len(payload.Formulae))
+	for _, formula := range payload.Formulae {
+		if len(selected) == 0 || selected[formula.Name] {
+			available = append(available, formula.Name)
+		}
+	}
+	if len(available) == 0 {
+		result.Message = "Dry-run: selected Homebrew formulae are up to date"
+	} else {
+		result.Message = "Dry-run: available Homebrew formula updates: " + strings.Join(available, ", ")
+	}
+	return result, nil
+}
+
+func appendUpgraded(result *adapterm.UpdateResult, stdout string) {
+	for line := range strings.SplitSeq(stdout, "\n") {
+		parts := strings.Fields(strings.TrimSpace(line))
+		if len(parts) >= 2 && parts[0] == "Upgrading" {
+			result.UpdatedPackages = append(result.UpdatedPackages, parts[1])
+		}
+	}
 }

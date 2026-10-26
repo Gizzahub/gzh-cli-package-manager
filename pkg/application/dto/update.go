@@ -1,6 +1,10 @@
 package dto
 
-import "github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+import (
+	"time"
+
+	"github.com/gizzahub/gzh-cli-package-manager/pkg/domain/manager"
+)
 
 // UpdateRequest contains parameters for updating package managers.
 type UpdateRequest struct {
@@ -38,6 +42,20 @@ type UpdateRequest struct {
 	// PipAllowConda allows pip updates even in conda environments.
 	// By default, pip updates in conda environments are skipped with a warning.
 	PipAllowConda bool
+
+	// Bounded makes selected mise and Homebrew packages run one at a time.
+	// It is opt-in because it refuses unselected manager-wide upgrades.
+	Bounded BoundedUpdateOptions
+}
+
+// BoundedUpdateOptions controls a resumable, resource-checked update run.
+type BoundedUpdateOptions struct {
+	Enabled     bool
+	BatchSize   int
+	StateFile   string
+	MaxDuration time.Duration
+	MinFreeGiB  uint64
+	MaxSwapGiB  uint64
 }
 
 // UpdateStrategy defines how packages should be updated.
@@ -62,6 +80,20 @@ type UpdateResponse struct {
 
 	// DryRun indicates if this was a dry-run (preview only).
 	DryRun bool
+
+	// Deferred means resource, batch, or duration limits left selected work pending.
+	Deferred bool
+
+	// Progress is durable package state; Results covers only this invocation.
+	Progress []BoundedPackageProgress `json:",omitempty"`
+}
+
+// BoundedPackageProgress distinguishes processed work from version changes.
+type BoundedPackageProgress struct {
+	Manager manager.ManagerID
+	Package string
+	Status  string
+	Error   string `json:",omitempty"`
 }
 
 // ManagerUpdateResult represents the update result for a single manager.

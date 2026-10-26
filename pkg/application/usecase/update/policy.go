@@ -23,8 +23,15 @@ func (uc *UseCase) updateOptions(id manager.ManagerID, req *dto.UpdateRequest) a
 		DryRun:    req.DryRun,
 		MiseDir:   policy.MiseDir,
 		MiseLocal: policy.MiseLocal,
-		Packages:  policy.MiseTools,
+		Packages:  selectedPackages(id, &policy),
 	}
+}
+
+func selectedPackages(id manager.ManagerID, policy *dto.UpdatePolicy) []string {
+	if id == manager.ManagerMise {
+		return policy.MiseTools
+	}
+	return policy.Packages
 }
 
 // Validate every selected policy before starting any manager update.
@@ -56,8 +63,11 @@ func validateManagerOptions(id manager.ManagerID, opts adapterm.UpdateOptions) e
 		}
 		return nil
 	}
-	if opts.MiseDir != "" || opts.MiseLocal || len(opts.Packages) != 0 {
-		return fmt.Errorf("%s: directory, local scope and tools are supported only by mise", id)
+	if opts.MiseDir != "" || opts.MiseLocal {
+		return fmt.Errorf("%s: directory and local scope are supported only by mise", id)
+	}
+	if len(opts.Packages) != 0 && id != manager.ManagerHomebrew {
+		return fmt.Errorf("%s: package selection is supported only by mise and brew", id)
 	}
 	if opts.Bump {
 		return fmt.Errorf("%s: bump is supported only by mise", id)
