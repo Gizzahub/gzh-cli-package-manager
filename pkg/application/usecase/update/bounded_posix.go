@@ -38,6 +38,11 @@ func checkResources(options dto.BoundedUpdateOptions) error {
 		if err := syscall.Statfs("/", &stat); err != nil {
 			return fmt.Errorf("measure free disk: %w", err)
 		}
+		// Bsize is int64 on Linux and uint32 on Darwin; a non-positive block
+		// size would make the free-space figure meaningless.
+		if stat.Bsize <= 0 {
+			return fmt.Errorf("measure free disk: invalid block size %d", stat.Bsize)
+		}
 		free := stat.Bavail * uint64(stat.Bsize) / (1024 * 1024 * 1024)
 		if free < options.MinFreeGiB {
 			return fmt.Errorf("free disk %d GiB is below %d GiB", free, options.MinFreeGiB)
