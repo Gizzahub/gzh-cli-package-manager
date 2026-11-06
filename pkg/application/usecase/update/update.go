@@ -63,6 +63,9 @@ func (uc *UseCase) Update(ctx context.Context, req *dto.UpdateRequest) (*dto.Upd
 	if err := uc.validatePolicies(managers, req); err != nil {
 		return nil, err
 	}
+	if req.Bounded.Enabled {
+		return uc.updateBounded(ctx, managers, req)
+	}
 
 	if len(managers) == 0 {
 		uc.logger.Info(ctx, "No managers to update")

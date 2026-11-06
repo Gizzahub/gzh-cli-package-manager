@@ -11,7 +11,7 @@ import (
 
 func TestLoadAndResolveUpdatePreferences(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
-	data := "version: 1\ndefaults:\n  strategy: stable\nmanagers:\n  mise:\n    strategy: micro\n    bump: true\n    directory: /workspace\n    local: true\n  brew:\n    strategy: fixed\n"
+	data := "version: 1\ndefaults:\n  strategy: stable\nmanagers:\n  mise:\n    strategy: micro\n    bump: true\n    directory: /workspace\n    local: true\n  brew:\n    strategy: fixed\n    packages: [jq, ripgrep]\n"
 	if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +23,8 @@ func TestLoadAndResolveUpdatePreferences(t *testing.T) {
 	if mise.Strategy != dto.StrategyMicro || !mise.Bump || mise.MiseDir != "/workspace" || !mise.MiseLocal {
 		t.Fatalf("mise policy = %#v", mise)
 	}
-	if cfg.Resolve(manager.ManagerHomebrew).Strategy != dto.StrategyFixed || cfg.Resolve(manager.ManagerNPM).Strategy != dto.StrategyStable {
+	brew := cfg.Resolve(manager.ManagerHomebrew)
+	if brew.Strategy != dto.StrategyFixed || len(brew.Packages) != 2 || cfg.Resolve(manager.ManagerNPM).Strategy != dto.StrategyStable {
 		t.Fatal("manager overrides must preserve defaults for other managers")
 	}
 }
@@ -40,6 +41,8 @@ func TestLoadRejectsInvalidOrAmbiguousPreferences(t *testing.T) {
 		"version: 1\ndefaults:\n  local: true\n",
 		"version: 1\nversion: 1\n",
 		"version: 1\nmanagers:\n  mise:\n    tools: []\n",
+		"version: 1\nmanagers:\n  brew:\n    packages: []\n",
+		"version: 1\nmanagers:\n  npm:\n    packages: [typescript]\n",
 	}
 	for _, data := range tests {
 		t.Run(data, func(t *testing.T) {

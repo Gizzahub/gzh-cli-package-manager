@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -26,6 +27,12 @@ var (
 	updateConfigPath      string
 	updateUseCase         input.UpdateUseCase
 	updateCheckDuplicates bool
+	updateBounded         bool
+	updateBatchSize       int
+	updateStateFile       string
+	updateMaxDuration     time.Duration
+	updateMinFreeGiB      uint64
+	updateMaxSwapGiB      uint64
 )
 
 // SetUpdateUseCase injects the update use case dependency.
@@ -89,6 +96,9 @@ Examples:
 			} else {
 				os.Exit(2) // Complete failure
 			}
+		}
+		if resp.Deferred {
+			os.Exit(3)
 		}
 		return nil
 	},
@@ -210,4 +220,10 @@ func init() {
 	updateCmd.Flags().StringVarP(&updateOutput, "output", "o", outputFormatText, "Output format (text|json)")
 	updateCmd.Flags().BoolVar(&updatePipAllowConda, "pip-allow-conda", false, "Allow pip updates in conda environments")
 	updateCmd.Flags().BoolVar(&updateCheckDuplicates, "check-duplicates", false, "Print the status duplicates report without failing the update")
+	updateCmd.Flags().BoolVar(&updateBounded, "bounded", false, "Run selected mise and brew packages sequentially with resource checks")
+	updateCmd.Flags().IntVar(&updateBatchSize, "batch-size", 3, "Maximum selected packages to start in one bounded run")
+	updateCmd.Flags().StringVar(&updateStateFile, "state-file", "", "State file required by --bounded for resume")
+	updateCmd.Flags().DurationVar(&updateMaxDuration, "max-duration", 0, "Stop starting bounded packages after this duration (0 disables limit)")
+	updateCmd.Flags().Uint64Var(&updateMinFreeGiB, "min-free-gib", 0, "Defer bounded work below this free disk threshold")
+	updateCmd.Flags().Uint64Var(&updateMaxSwapGiB, "max-swap-gib", 0, "Defer bounded work above this macOS swap threshold")
 }

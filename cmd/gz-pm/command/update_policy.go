@@ -33,7 +33,11 @@ func buildUpdateRequest(cmd *cobra.Command) (*dto.UpdateRequest, error) {
 		MiseTools:       policy.MiseTools,
 		PipAllowConda:   updatePipAllowConda,
 		CheckDuplicates: updateCheckDuplicates,
-		Policies:        make(map[manager.ManagerID]dto.UpdatePolicy, len(cfg.Managers)),
+		Bounded: dto.BoundedUpdateOptions{
+			Enabled: updateBounded, BatchSize: updateBatchSize, StateFile: updateStateFile,
+			MaxDuration: updateMaxDuration, MinFreeGiB: updateMinFreeGiB, MaxSwapGiB: updateMaxSwapGiB,
+		},
+		Policies: make(map[manager.ManagerID]dto.UpdatePolicy, len(cfg.Managers)),
 	}
 	req.ManagerIDs, err = parseUpdateManagers(updateManagers)
 	if err != nil {
@@ -62,6 +66,17 @@ func validateUpdateFlags(cmd *cobra.Command) error {
 	}
 	if updateOutput != outputFormatText && updateOutput != outputFormatJSON {
 		return fmt.Errorf("unknown output format %q (supported: text, json)", updateOutput)
+	}
+	if updateBounded {
+		if updateBatchSize < 1 || updateBatchSize > 3 {
+			return fmt.Errorf("--batch-size must be between 1 and 3 in bounded mode")
+		}
+		if updateStateFile == "" {
+			return fmt.Errorf("--bounded requires --state-file")
+		}
+		if updateMaxDuration < 0 {
+			return fmt.Errorf("--max-duration must not be negative")
+		}
 	}
 	return nil
 }
@@ -97,6 +112,7 @@ func parseUpdateManagers(value string) ([]manager.ManagerID, error) {
 	return ids, nil
 }
 
+//nolint:gocritic // Value copy keeps the caller's persisted policy immutable.
 func resolveUpdatePolicy(cmd *cobra.Command, policy dto.UpdatePolicy) dto.UpdatePolicy {
 	if cmd.Flags().Changed("strategy") {
 		policy.Strategy = dto.UpdateStrategy(updateStrategy)

@@ -634,12 +634,13 @@ func TestAdapter_Update(t *testing.T) {
 		want  homebrewUpdateExpectation
 	}{
 		{
-			name: "dry run mode",
-			opts: adapterm.UpdateOptions{DryRun: true},
+			name:  "dry run mode",
+			opts:  adapterm.UpdateOptions{DryRun: true},
+			calls: []homebrewUpdateCall{{args: []string{"outdated", "--formula", "--json=v2"}, result: testutil.SuccessResult(`{"formulae":[{"name":"jq","current_version":"1.7"}]}`)}},
 			want: homebrewUpdateExpectation{
 				success: true,
 				updated: []string{},
-				message: "Dry-run: would update Homebrew and packages",
+				message: "Dry-run: available Homebrew formula updates: jq",
 			},
 		},
 		{
@@ -701,9 +702,10 @@ func TestAdapter_Update(t *testing.T) {
 				{args: []string{testBrewUpgradeCommand}, err: upgradeErr},
 			},
 			want: homebrewUpdateExpectation{
-				success: true,
+				success: false,
 				updated: []string{},
-				message: "Homebrew updated, but package upgrade failed",
+				message: "brew upgrade: upgrade error",
+				wantErr: true,
 			},
 		},
 		{
@@ -714,9 +716,10 @@ func TestAdapter_Update(t *testing.T) {
 				{args: []string{testBrewUpgradeCommand}, result: testutil.FailureResult(1, "some packages failed")},
 			},
 			want: homebrewUpdateExpectation{
-				success: true,
+				success: false,
 				updated: []string{},
-				message: "Homebrew updated, but some packages failed to upgrade",
+				message: "brew upgrade failed: some packages failed",
+				wantErr: true,
 			},
 		},
 	}
