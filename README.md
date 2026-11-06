@@ -61,8 +61,12 @@ go install github.com/gizzahub/gzh-cli-package-manager/cmd/gz-pm@latest
 git clone https://github.com/gizzahub/gzh-cli-package-manager.git
 cd gzh-cli-package-manager
 make build
-make install  # Installs to $GOPATH/bin (no sudo required)
+make install  # Installs to ~/.local/share/ce/bin (no sudo required)
 ```
+
+Add `~/.local/share/ce/bin` to your `PATH` to use the source build. Set `BINDIR`
+to choose another installation directory, for example `make install BINDIR="$HOME/bin"`.
+This does not change `GOPATH` or `GOBIN`.
 
 ### Binary Releases
 

@@ -89,9 +89,8 @@ CI compatibility job; it is not the recommended local development installation.
 ### 2. Set Up Your Environment
 
 ```bash
-# Set GOPATH (if not already set)
-export GOPATH=$HOME/go
-export PATH=$PATH:$GOPATH/bin
+# Select the locally installed source build
+export PATH="$HOME/.local/share/ce/bin:$PATH"
 
 # Enable Go modules (default in Go 1.16+)
 export GO111MODULE=on

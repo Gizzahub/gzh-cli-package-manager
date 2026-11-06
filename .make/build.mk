@@ -20,11 +20,11 @@ build-all: ## Build for multiple platforms
 	@echo "Built binaries:"
 	@ls -lh $(BUILD_DIR)/
 
-install: build ## Install the binary to GOPATH/bin
+install: build ## Install the binary to BINDIR
 	@echo "Installing $(BINARY_NAME)..."
-	@mkdir -p $(GOPATH)/bin
-	@cp $(BUILD_DIR)/$(BINARY_NAME) $(GOPATH)/bin/$(BINARY_NAME)
-	@echo "Installed to $(GOPATH)/bin/$(BINARY_NAME)"
+	@mkdir -p "$(BINDIR)"
+	@cp "$(BUILD_DIR)/$(BINARY_NAME)" "$(BINDIR)/$(BINARY_NAME)"
+	@echo "Installed to $(BINDIR)/$(BINARY_NAME)"
 
 run: ## Run the application
 	@echo "Running $(BINARY_NAME)..."

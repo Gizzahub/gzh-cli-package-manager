@@ -96,6 +96,12 @@ jobs:
     - name: Verify dependencies
       run: go mod verify
 
+    - name: Verify configurable install directory
+      run: |
+        make install BINDIR="${RUNNER_TEMP}/gz-pm install"
+        test -x "${RUNNER_TEMP}/gz-pm install/gz-pm"
+        "${RUNNER_TEMP}/gz-pm install/gz-pm" --help >/dev/null
+
     - name: Format check
       run: |
         go fmt ./...

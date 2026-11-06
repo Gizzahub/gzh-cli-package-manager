@@ -9,7 +9,7 @@ make build
 # Build for all platforms (macOS, Linux, Windows)
 make build-all
 
-# Install to $GOPATH/bin (no sudo required)
+# Install to ~/.local/share/ce/bin (override with BINDIR=...)
 make install
 
 # Run in development mode

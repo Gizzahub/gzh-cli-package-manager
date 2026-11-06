@@ -5,6 +5,7 @@
 BINARY_NAME := gz-pm
 BUILD_DIR := build
 MAIN_PKG := ./cmd/gz-pm
+BINDIR ?= $(HOME)/.local/share/ce/bin
 
 # Version information
 VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "dev")

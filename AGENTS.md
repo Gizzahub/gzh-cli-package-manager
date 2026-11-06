@@ -45,18 +45,18 @@ ______________________________________________________________________
 
 ## Top 10 Commands
 
-| Command               | Purpose                           | Usage                  |
-| --------------------- | --------------------------------- | ---------------------- |
-| `make build`          | Build binary → `build/gz-pm`      | Before testing         |
-| `make test-unit`      | Unit tests (fast, no Docker)      | Quick validation       |
-| `make quality`        | fmt + lint + test                 | Pre-commit             |
-| `make test-coverage`  | Full coverage report              | Coverage check         |
-| `make fmt`            | Format code (required)            | Before commit          |
-| `make lint`           | Full golangci-lint (pinned)       | Fix issues             |
-| `make lint-diff`      | Incremental lint vs origin/master | First regression check |
-| `make install`        | Install to $GOPATH/bin            | Local install          |
-| `make dev ARGS="..."` | Run in dev mode                   | Quick test             |
-| `make clean`          | Clean artifacts                   | Fresh start            |
+| Command               | Purpose                                            | Usage                  |
+| --------------------- | -------------------------------------------------- | ---------------------- |
+| `make build`          | Build binary → `build/gz-pm`                       | Before testing         |
+| `make test-unit`      | Unit tests (fast, no Docker)                       | Quick validation       |
+| `make quality`        | fmt + lint + test                                  | Pre-commit             |
+| `make test-coverage`  | Full coverage report                               | Coverage check         |
+| `make fmt`            | Format code (required)                             | Before commit          |
+| `make lint`           | Full golangci-lint (pinned)                        | Fix issues             |
+| `make lint-diff`      | Incremental lint vs origin/master                  | First regression check |
+| `make install`        | Install to BINDIR (default: ~/.local/share/ce/bin) | Local install          |
+| `make dev ARGS="..."` | Run in dev mode                                    | Quick test             |
+| `make clean`          | Clean artifacts                                    | Fresh start            |
 
 ______________________________________________________________________
 
