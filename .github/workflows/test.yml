@@ -1,8 +1,9 @@
 name: Test
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ master, 'dev/**' ]
+    branches: [master, 'dev/**']
     # Release tags are verified too. Without this the Build workflow, which runs
     # no Go tests at all, would be the only workflow triggered by a tag, so a tag
     # placed on an unverified commit would publish without any gate failing.
@@ -15,13 +16,12 @@ permissions:
 
 jobs:
   test:
-    name: Test
+    name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        go: ['1.27.3']
 
     steps:
     - name: Checkout code
@@ -30,7 +30,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
       with:
-        go-version: ${{ matrix.go }}
+        go-version: '1.27.3'
 
     - name: Verify Go version
       run: |
