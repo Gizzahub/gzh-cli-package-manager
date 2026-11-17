@@ -263,7 +263,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
 ### Prerequisites
 
-- Go 1.24+ (required; Go 1.27.3 is the recommended development toolchain)
+- Go 1.24+ (required; Go 1.27.4 is the recommended development toolchain)
 - Make
 - Docker (for integration tests)
 

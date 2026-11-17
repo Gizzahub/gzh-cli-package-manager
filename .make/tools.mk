@@ -22,7 +22,7 @@ MDFORMAT_DEPS_OK = "$(MDFORMAT_PYTHON)" -I -c 'import sys, importlib.metadata as
 install-tools: install-lint install-fumpt install-mdformat ## Install all development tools
 	@echo "✅ All tools installed"
 
-# Reports the Go toolchain that built the installed linter, e.g. "go1.27.3",
+# Reports the Go toolchain that built the installed linter, e.g. "go1.27.4",
 # or nothing when it is absent or unreadable.
 #
 # Read from the binary's embedded build info rather than from golangci-lint's

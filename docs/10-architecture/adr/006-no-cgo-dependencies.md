@@ -114,7 +114,7 @@ Without CGO (GitHub Actions):
 ```yaml
 - uses: actions/setup-go@v5
   with:
-    go-version: '1.27.3'
+    go-version: '1.27.4'
 - run: make build  # Just works
 ```
 
@@ -384,7 +384,7 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/setup-go@v5
       with:
-        go-version: '1.27.3'
+        go-version: '1.27.4'
 
     - name: Build
       run: make build

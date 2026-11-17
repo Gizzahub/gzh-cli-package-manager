@@ -32,7 +32,7 @@ ______________________________________________________________________
 
 ### Prerequisites
 
-- **Go 1.24.0+** (required - see ADR-004); Go 1.27.3 is recommended for development
+- **Go 1.24.0+** (required - see ADR-004); Go 1.27.4 is recommended for development
 - **Git** for version control
 - **Make** for build automation
 - **Docker** (optional, for integration tests)
@@ -61,7 +61,7 @@ ______________________________________________________________________
 
 ## Development Setup
 
-### 1. Install the recommended Go 1.27.3 development toolchain
+### 1. Install the recommended Go 1.27.4 development toolchain
 
 **macOS (Homebrew)**:
 
@@ -72,15 +72,15 @@ brew install go
 **Linux**:
 
 ```bash
-wget https://go.dev/dl/go1.27.3.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.27.3.linux-amd64.tar.gz
+wget https://go.dev/dl/go1.27.4.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.27.4.linux-amd64.tar.gz
 export PATH=$PATH:/usr/local/go/bin
 ```
 
 **Verify Installation**:
 
 ```bash
-go version  # Should show go1.27.3
+go version  # Should show go1.27.4
 ```
 
 Go 1.24.0+ remains the consumer minimum. Go 1.24.11 is exercised only by the

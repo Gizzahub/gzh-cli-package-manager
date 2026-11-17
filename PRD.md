@@ -489,7 +489,7 @@ ______________________________________________________________________
 
 **Go Version**:
 
-- Minimum: Go 1.24.0 (Go 1.27.3 recommended for development and regular CI)
+- Minimum: Go 1.24.0 (Go 1.27.4 recommended for development and regular CI)
 - No CGO dependencies (pure Go)
 - Cross-compilation support
 

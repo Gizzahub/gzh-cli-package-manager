@@ -812,7 +812,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.27.3'
+        go-version: '1.27.4'
 
     - name: Build gz-pm
       run: make build

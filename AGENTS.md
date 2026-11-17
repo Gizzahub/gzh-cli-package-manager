@@ -29,7 +29,7 @@ ______________________________________________________________________
 **Binary**: `gz-pm` (Package Manager Control)
 **Status**: Active implementation and quality hardening; v1.0 release readiness remains to be verified
 **Architecture**: Clean Architecture + Hexagonal (Ports & Adapters)
-**Go Version**: 1.24+ consumer baseline; Go 1.27.3 recommended for development
+**Go Version**: 1.24+ consumer baseline; Go 1.27.4 recommended for development
 
 Think of it as a "package manager for package managers" - unified interface for the
 eleven adapters in `pkg/infrastructure/adapter/registry`:
