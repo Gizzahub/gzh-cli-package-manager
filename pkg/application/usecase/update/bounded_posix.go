@@ -21,7 +21,7 @@ func lockBounded(path string) (func(), error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return nil, fmt.Errorf("create bounded update lock directory: %w", err)
 	}
-	file, err := os.OpenFile(path+".lock", os.O_CREATE|os.O_RDWR, 0o600)
+	file, err := os.OpenFile(path+".lock", os.O_CREATE|os.O_RDWR, 0o600) // #nosec G304 -- lock beside the --state-file path chosen by the invoking user
 	if err != nil {
 		return nil, fmt.Errorf("open bounded update lock: %w", err)
 	}

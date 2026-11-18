@@ -34,6 +34,8 @@ func (e *ShellExecutor) Execute(ctx context.Context, command string, args ...str
 		output.Field{Key: "args", Value: args},
 	)
 
+	// #nosec G204 -- argv without a shell; every adapter passes a package-manager
+	// executable name from its own string constants, and each argument stays one argv element.
 	cmd := exec.CommandContext(ctx, command, args...)
 
 	var stdout, stderr bytes.Buffer
@@ -83,6 +85,8 @@ func (e *ShellExecutor) ExecuteWithInput(ctx context.Context, input string, comm
 		output.Field{Key: "args", Value: args},
 	)
 
+	// #nosec G204 -- argv without a shell; every adapter passes a package-manager
+	// executable name from its own string constants, and each argument stays one argv element.
 	cmd := exec.CommandContext(ctx, command, args...)
 
 	var stdout, stderr bytes.Buffer

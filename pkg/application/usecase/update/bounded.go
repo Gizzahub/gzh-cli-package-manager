@@ -154,7 +154,7 @@ func loadBounded(path string, managers []*manager.Manager, req *dto.UpdateReques
 	if err != nil {
 		return nil, err
 	}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- --state-file path chosen by the invoking user, read with that user's permissions
 	if err == nil {
 		var state boundedState
 		if decodeErr := json.Unmarshal(data, &state); decodeErr != nil {
