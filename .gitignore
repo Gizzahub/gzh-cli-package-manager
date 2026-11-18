@@ -74,3 +74,6 @@ Thumbs.db
 
 # Retired machine-local workflow state.
 .ce/
+
+# Task cards live in the gzh-cli-devbox board (user decision 2026-11-18).
+/tasks/
