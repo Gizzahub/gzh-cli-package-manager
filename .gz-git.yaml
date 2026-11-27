@@ -5,7 +5,7 @@
 # dev/<actor>/<type>/<slug>.
 branch:
   integrationBranch:
-    - master
+    - develop
   taskPattern:
     - dev/*/*/*
     - hotfix/*
